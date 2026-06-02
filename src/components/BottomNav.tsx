@@ -12,7 +12,7 @@ const navItems = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2">
+    <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-2">
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[1.75rem] border border-white/55 bg-theme-card/92 p-2 shadow-2xl shadow-theme-main-dark/15 backdrop-blur-xl">
         {navItems.map((item) => {
           const Icon = item.icon;

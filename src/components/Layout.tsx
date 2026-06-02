@@ -11,7 +11,7 @@ export function Layout() {
   return (
     <div className="min-h-screen text-theme-text">
       {showChrome ? <Header /> : null}
-      <main className="mx-auto min-h-screen max-w-md pb-28">
+      <main className="mx-auto min-h-screen max-w-md pb-[calc(env(safe-area-inset-bottom)+8.5rem)]">
         <Outlet />
       </main>
       {showChrome ? <BottomNav /> : null}
