@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, CheckCircle2, Flower2, MapPin, Palette, Tags, UserRound } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Flower2, MapPin, Palette, Tags, Ticket, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '../components/Badge';
@@ -11,11 +11,12 @@ import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
 import { upsertMyProfile } from '../lib/profileApi';
 import type { CurrentUserProfile } from '../types/user';
 
 const tags = ['読書', '映画', '散歩', '料理', '花', 'カフェ', '旅行', '音楽'];
-const steps = ['基本情報', '温度感', 'テーマ'];
+const steps = ['基本情報', '温度感', '招待コード'];
 
 export function OnboardingPage() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export function OnboardingPage() {
     occupation: currentUser.occupation,
     datingTemperature: currentUser.datingTemperature,
     interests: currentUser.interests,
+    inviteCode: '',
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -51,6 +53,13 @@ export function OnboardingPage() {
       return;
     }
 
+    const inviteCode = form.inviteCode.trim().toUpperCase();
+
+    if (isSupabaseMode && isAuthenticated && user && !inviteCode) {
+      setError('招待コードを入力してください。紹介者から受け取ったコードが必要です。');
+      return;
+    }
+
     const profile: CurrentUserProfile = {
       ...currentUser,
       name: form.name.trim(),
@@ -67,6 +76,12 @@ export function OnboardingPage() {
 
     try {
       if (isSupabaseMode && isAuthenticated && user) {
+        const inviteValidation = await validateInviteCode(inviteCode);
+        if (!inviteValidation.ok) {
+          setError(inviteValidation.error);
+          return;
+        }
+
         await upsertMyProfile({
           id: user.id,
           display_name: profile.name,
@@ -80,7 +95,15 @@ export function OnboardingPage() {
           onboarding_completed: true,
           visibility: 'public',
           role: 'user',
+          invited_by: inviteValidation.inviteCode.created_by,
+          invite_code_used: inviteValidation.inviteCode.code,
         });
+
+        const inviteUse = await redeemInviteCode(inviteValidation.inviteCode.code, user.id);
+        if (!inviteUse.ok) {
+          setError(inviteUse.error);
+          return;
+        }
       }
 
       completeOnboarding(profile);
@@ -145,8 +168,24 @@ export function OnboardingPage() {
         </div>
       </Card>
 
+
       <Card className="space-y-4">
-        <SectionTitle icon={<Palette size={18} />} label="Step 3" title="テーマを選ぶ" />
+        <SectionTitle icon={<Ticket size={18} />} label="Step 3" title="招待コード" />
+        <Input
+          helperText={isSupabaseMode ? '紹介者から受け取った招待コードを入力してください。Supabase接続時は必須です。' : 'ローカルデモでは任意です。MYPACE-2026 のようなテストコードも入力できます。'}
+          label="招待コード"
+          name="inviteCode"
+          onChange={(event) => updateField('inviteCode', event.target.value.toUpperCase())}
+          placeholder="例：MYPACE-2026"
+          value={form.inviteCode}
+        />
+        <div className="rounded-[1.15rem] bg-theme-accent-soft/45 p-3 text-xs font-bold leading-5 text-theme-main-dark">
+          招待コードは1回限りのチケットではなく、紹介者に紐づいた参加ルートです。同じコードで参加した方は、紹介者からのご縁として記録されます。
+        </div>
+      </Card>
+
+      <Card className="space-y-4">
+        <SectionTitle icon={<Palette size={18} />} label="Step 4" title="テーマを選ぶ" />
         <p className="text-sm leading-6 text-theme-muted">画面の雰囲気を選べます。テーマはプロフィール登録後も設定から変更できます。</p>
         <ThemeSwitcher />
         <Badge className="w-fit">現在のテーマ: {themeId}</Badge>
