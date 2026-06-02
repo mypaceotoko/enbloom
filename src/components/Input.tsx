@@ -1,11 +1,12 @@
-import type { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../lib/utils';
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
+  helperText?: ReactNode;
   label?: string;
 };
 
-export function Input({ className, label, id, ...props }: InputProps) {
+export function Input({ className, helperText, label, id, ...props }: InputProps) {
   const inputId = id ?? props.name;
 
   return (
@@ -19,6 +20,7 @@ export function Input({ className, label, id, ...props }: InputProps) {
         id={inputId}
         {...props}
       />
+      {helperText ? <span className="block text-xs font-medium leading-5 text-theme-muted">{helperText}</span> : null}
     </label>
   );
 }

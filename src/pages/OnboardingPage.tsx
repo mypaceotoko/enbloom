@@ -84,7 +84,7 @@ export function OnboardingPage() {
       }
 
       completeOnboarding(profile);
-      navigate('/home');
+      navigate('/home', { state: { profileSaved: true } });
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'プロフィール保存に失敗しました。時間をおいて再度お試しください。');
     } finally {
@@ -93,10 +93,12 @@ export function OnboardingPage() {
   }
 
   return (
-    <PageShell description={isSupabaseMode && isAuthenticated ? '入力内容はSupabase profilesへ保存し、移行期間中の表示安定のためlocalStorageにも反映します。' : '入力内容はlocalStorageへ保存され、自分のプロフィールに反映されます。'} eyebrow="First Bloom" title="はじめてのプロフィール">
+    <PageShell description="まずは、あなたのプロフィールを作りましょう。ここで入力した内容はマイプロフィールに保存され、あとから編集できます。" eyebrow="プロフィール作成" title="はじめてのプロフィール">
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/78 p-3.5 backdrop-blur">
-          <div className="flex items-center gap-1.5 text-sm font-black text-theme-main-dark"><Flower2 size={18} />3ステップで、あなたらしい出会いの準備</div>
+          <div className="flex items-center gap-1.5 text-sm font-black text-theme-main-dark"><Flower2 size={18} />まずは、あなたのプロフィールを作りましょう</div>
+          <p className="mt-2 text-[13px] leading-6 text-theme-muted">ここで入力した内容は、あなたのマイプロフィールに保存されます。まだ公開前のため、今はテスト入力でOKです。</p>
+          <p className="mt-1 text-[13px] leading-6 text-theme-muted">登録後は今日のご縁へ進みます。プロフィールは、あとから設定やマイプロフィールで確認・編集できます。</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {steps.map((step, index) => (
               <div className="rounded-xl bg-theme-card/80 p-2.5 text-center" key={step}>
@@ -112,18 +114,19 @@ export function OnboardingPage() {
 
       <Card className="space-y-4">
         <SectionTitle icon={<UserRound size={18} />} label="Step 1" title="基本情報" />
-        <Input label="表示名" name="displayName" onChange={(event) => updateField('name', event.target.value)} placeholder="例：美桜" value={form.name} />
+        <Input helperText="アプリ内で表示される名前です。あとからマイプロフィールで編集できます。" label="表示名" name="displayName" onChange={(event) => updateField('name', event.target.value)} placeholder="マイペース男" value={form.name} />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="年齢" name="age" onChange={(event) => updateField('age', event.target.value)} placeholder="30" type="number" value={form.age} />
-          <Input label="地域" name="location" onChange={(event) => updateField('location', event.target.value)} placeholder="東京都" value={form.location} />
+          <Input helperText="18歳未満は利用できません。" label="年齢" name="age" onChange={(event) => updateField('age', event.target.value)} placeholder="39" type="number" value={form.age} />
+          <Input helperText="大まかな地域でOKです。" label="地域" name="location" onChange={(event) => updateField('location', event.target.value)} placeholder="東京都・世田谷区" value={form.location} />
         </div>
-        <Input label="職業・雰囲気" name="occupation" onChange={(event) => updateField('occupation', event.target.value)} placeholder="例：編集者 / カフェ巡りが好き" value={form.occupation} />
+        <Input helperText="未入力でも大丈夫です。あなたらしい一言としてあとから編集できます。" label="職業・雰囲気" name="occupation" onChange={(event) => updateField('occupation', event.target.value)} placeholder="例：会社員 / 休日はカフェ巡り" value={form.occupation} />
       </Card>
 
       <Card className="space-y-4">
         <SectionTitle icon={<MapPin size={18} />} label="Step 2" title="出会いの温度感" />
         <label className="block space-y-2 text-sm font-semibold text-theme-text">
           <span>今の気持ちに近いもの</span>
+          <p className="text-xs font-medium leading-5 text-theme-muted">どのくらいのペースで出会いを進めたいかを選びます。あとから編集できます。</p>
           <select className="min-h-11 w-full rounded-xl border border-theme-main/20 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-main focus:ring-4 focus:ring-theme-main/15" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
             <option>ゆっくり会話から始めたい</option>
             <option>安心感があれば会ってみたい</option>
@@ -138,18 +141,19 @@ export function OnboardingPage() {
               return <button className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected ? 'bg-theme-accent text-white' : 'bg-theme-background/80 text-theme-text'}`} key={tag} onClick={() => toggleTag(tag)} type="button">{tag}</button>;
             })}
           </div>
-          <p className="text-xs leading-5 text-theme-muted">選んだタグはmy-profileに反映されます。</p>
+          <p className="text-xs leading-5 text-theme-muted">興味のあるものを1つ以上選んでください。選んだタグはマイプロフィールに保存され、あとから編集できます。</p>
         </div>
       </Card>
 
       <Card className="space-y-4">
         <SectionTitle icon={<Palette size={18} />} label="Step 3" title="テーマを選ぶ" />
-        <p className="text-sm leading-6 text-theme-muted">テーマは既存のThemeProvider仕様を維持し、localStorageへ保存します。</p>
+        <p className="text-sm leading-6 text-theme-muted">画面の雰囲気を選べます。テーマはプロフィール登録後も設定から変更できます。</p>
         <ThemeSwitcher />
         <Badge className="w-fit">現在のテーマ: {themeId}</Badge>
       </Card>
 
       <div className="sticky bottom-24 z-10 rounded-[1.25rem] border border-white/60 bg-theme-card/90 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
+        <p className="mb-2 px-1 text-center text-xs font-bold leading-5 text-theme-muted">入力内容を保存して、今日のご縁を見に行きます。プロフィールはあとから編集できます。</p>
         <Button className="w-full" disabled={saving} onClick={handleComplete}>
           <CheckCircle2 size={16} />
           {saving ? '保存中...' : '今日のご縁へ進む'}

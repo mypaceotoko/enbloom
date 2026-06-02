@@ -1,17 +1,26 @@
-import { CalendarHeart, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { CalendarHeart, CheckCircle2, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { ProfileCard } from '../components/ProfileCard';
 import { mockUsers } from '../data/mockUsers';
+import { useLocation } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
 
 export function HomePage() {
   const { blockedUserIds } = useAppState();
+  const location = useLocation();
+  const profileSaved = Boolean((location.state as { profileSaved?: boolean } | null)?.profileSaved);
   const todaysUsers = mockUsers.filter((user) => !blockedUserIds.includes(user.id)).slice(0, 3);
 
   return (
     <PageShell description="ログイン後のホームでは、大量に選ぶのではなく、今日向き合いやすい少人数のご縁だけを丁寧に紹介します。" eyebrow="Home" title="今日のご縁">
+      {profileSaved ? (
+        <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">
+          <span className="flex items-center gap-1.5"><CheckCircle2 size={16} />プロフィールを保存しました。今日のご縁を見てみましょう。</span>
+        </div>
+      ) : null}
+
       <Card className="flower-gradient relative overflow-hidden border-0 p-1">
         <div className="absolute -right-8 -top-8 size-28 rounded-full bg-white/30" />
         <div className="absolute -bottom-10 left-8 size-24 rounded-full bg-theme-accent-soft/50 blur-2xl" />

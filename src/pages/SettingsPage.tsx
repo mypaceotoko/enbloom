@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Bell, Languages, LogOut, Palette, ShieldCheck, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Bell, Languages, LogOut, Palette, ShieldCheck, UserRound, UserRoundCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -63,6 +63,20 @@ export function SettingsPage() {
       ) : null}
 
       {notice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{notice}</div> : null}
+
+
+      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/my-profile')} type="button">
+        <Card className="space-y-2 bg-theme-card/86 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><UserRound size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-black text-theme-text">マイプロフィール</span>
+              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">登録したプロフィールを確認・編集できます。</span>
+            </span>
+            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
+          </div>
+        </Card>
+      </button>
 
       <SupabaseConnectionDebug status={supabaseStatus} />
 
