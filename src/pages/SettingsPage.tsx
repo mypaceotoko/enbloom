@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Bell, Languages, LogOut, Palette, ShieldCheck, UserRound, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Bell, ChevronDown, ChevronUp, Languages, LogOut, Palette, ShieldCheck, UserRound, UserRoundCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -18,6 +18,7 @@ export function SettingsPage() {
   const { isAuthenticated, isSupabaseMode, signOut } = useAuth();
   const [notice, setNotice] = useState('');
   const [signingOut, setSigningOut] = useState(false);
+  const [showDeveloperStatus, setShowDeveloperStatus] = useState(false);
   const supabaseStatus = getSupabaseConnectionStatus();
 
   async function handleSignOut() {
@@ -43,19 +44,6 @@ export function SettingsPage() {
 
   return (
     <PageShell description="テーマ設定のみlocalStorageへ保存します。他は将来実装のプレースホルダーです。" eyebrow="Settings" title="設定">
-      <Card className="flower-gradient border-0 p-1">
-        <div className="rounded-[1.25rem] bg-theme-card/78 p-3.5 backdrop-blur">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-theme-main text-white"><Palette size={18} /></span>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Current theme</p>
-              <h2 className="text-lg font-black text-theme-text">{currentTheme.name}</h2>
-            </div>
-          </div>
-          <p className="mt-2 text-[13px] leading-5 text-theme-muted">Natural / Sakura / Mint / Lavender / Night の5テーマを切り替えて、アプリの雰囲気を確認できます。</p>
-        </div>
-      </Card>
-
       {!isSupabaseMode || !isAuthenticated ? (
         <div className="rounded-full border border-theme-main/15 bg-theme-card/80 px-3 py-1.5 text-center text-[11px] font-black text-theme-main-dark shadow-sm">
           ローカルデモ / Supabase未接続
@@ -63,7 +51,6 @@ export function SettingsPage() {
       ) : null}
 
       {notice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{notice}</div> : null}
-
 
       <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/my-profile')} type="button">
         <Card className="space-y-2 bg-theme-card/86 py-3">
@@ -78,30 +65,50 @@ export function SettingsPage() {
         </Card>
       </button>
 
-      <SupabaseConnectionDebug status={supabaseStatus} />
-
-      <Card className="space-y-3">
-        <h2 className="text-sm font-black">テーマカラー</h2>
-        <ThemeSwitcher />
-      </Card>
-
-      <Card className="space-y-3 bg-theme-card/86 py-3">
-        <div className="flex gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><LogOut size={18} /></span>
-          <span>
-            <span className="block text-sm font-black">ログアウト</span>
-            <span className="mt-0.5 block text-xs leading-5 text-theme-muted">Supabaseログイン時はセッションを終了し、デモ時はlocalStorageのデモ状態を初期化します。</span>
-          </span>
+      <Card className="flower-gradient border-0 p-1">
+        <div className="space-y-3 rounded-[1.25rem] bg-theme-card/78 p-3.5 backdrop-blur">
+          <div className="flex items-center gap-3">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-theme-main text-white"><Palette size={18} /></span>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Theme color</p>
+              <h2 className="text-lg font-black text-theme-text">テーマカラー</h2>
+            </div>
+          </div>
+          <p className="text-[13px] leading-5 text-theme-muted">現在のテーマは「{currentTheme.name}」です。Natural / Sakura / Mint / Lavender / Night の5テーマを切り替えられます。</p>
+          <ThemeSwitcher />
         </div>
-        <Button className="w-full" disabled={signingOut} onClick={handleSignOut} variant="secondary">
-          {signingOut ? 'ログアウト中...' : 'ログアウト'}
-        </Button>
       </Card>
 
       <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語 / 英語切り替えは将来実装予定です。" />
       <Placeholder icon={<Bell size={18} />} title="通知設定" body="マッチ・メッセージ通知の設定を次フェーズ以降に追加します。" />
       <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲をユーザー設定として保存できるようにします。" />
       <Placeholder icon={<ShieldCheck size={18} />} title="安全設定" body="本人確認・年齢確認は次フェーズ以降の検討項目です。今回はUIのみです。" />
+
+      <Card className="space-y-3 border-white/40 bg-theme-card/72 py-3 shadow-sm">
+        <div className="flex gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft/60 text-theme-main-dark"><LogOut size={18} /></span>
+          <span>
+            <span className="block text-sm font-black">ログアウト</span>
+            <span className="mt-0.5 block text-xs leading-5 text-theme-muted">Supabaseログイン時はセッションを終了し、デモ時はlocalStorageのデモ状態を初期化します。</span>
+          </span>
+        </div>
+        <Button className="w-full bg-theme-card/90 hover:bg-theme-accent-soft/70" disabled={signingOut} onClick={handleSignOut} variant="secondary">
+          {signingOut ? 'ログアウト中...' : 'ログアウト'}
+        </Button>
+      </Card>
+
+      <div className="pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <button
+          aria-expanded={showDeveloperStatus}
+          className="mx-auto flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-black text-theme-muted transition hover:bg-theme-card/70 hover:text-theme-main-dark active:scale-[0.98]"
+          onClick={() => setShowDeveloperStatus((current) => !current)}
+          type="button"
+        >
+          {showDeveloperStatus ? '開発ステータスを閉じる' : '開発ステータスを表示'}
+          {showDeveloperStatus ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+        {showDeveloperStatus ? <SupabaseConnectionDebug status={supabaseStatus} /> : null}
+      </div>
     </PageShell>
   );
 }
@@ -126,7 +133,7 @@ function SupabaseConnectionDebug({
   ];
 
   return (
-    <Card className="space-y-2 bg-theme-card/86 py-3">
+    <Card className="mt-2 space-y-2 bg-theme-card/86 py-3">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">
           Developer status
