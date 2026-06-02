@@ -6,7 +6,7 @@ import { Card } from '../components/Card';
 
 export function LandingPage() {
   return (
-    <section className="relative min-h-screen overflow-hidden px-4 pb-[calc(env(safe-area-inset-bottom)+2.75rem)] pt-6">
+    <section className="relative min-h-screen overflow-hidden px-4 pb-[calc(env(safe-area-inset-bottom)+4rem)] pt-6">
       <div className="pointer-events-none absolute -left-20 top-24 size-56 rounded-full bg-theme-accent-soft/70 blur-3xl" />
       <div className="pointer-events-none absolute -right-16 top-8 size-52 rounded-full bg-theme-main/20 blur-3xl" />
       <div className="pointer-events-none absolute bottom-12 left-1/2 size-72 -translate-x-1/2 rounded-full bg-theme-main/10 blur-3xl" />
