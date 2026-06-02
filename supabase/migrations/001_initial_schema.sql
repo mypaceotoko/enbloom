@@ -2,11 +2,14 @@
 -- This migration prepares the relational foundation for moving the current
 -- localStorage demo experience to Supabase. It intentionally does not implement
 -- Google login, production auth flows, billing, or verification workflows.
+--
+-- Supabase SQL Editorで全文を一括実行しやすいように、テーブルに依存する
+-- helper関数とRLS policyは、参照先テーブル作成後に定義します。
 
 create extension if not exists pgcrypto;
 
 -- -----------------------------------------------------------------------------
--- Shared helpers
+-- Shared helpers that do not depend on application tables
 -- -----------------------------------------------------------------------------
 
 create or replace function public.set_updated_at()
@@ -17,21 +20,6 @@ begin
   new.updated_at = now();
   return new;
 end;
-$$;
-
-create or replace function public.is_admin(user_id uuid default auth.uid())
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.profiles
-    where id = user_id
-      and role = 'admin'
-  );
 $$;
 
 -- -----------------------------------------------------------------------------
@@ -135,10 +123,6 @@ create table if not exists public.profile_photos (
   unique (user_id, position)
 );
 
-create unique index if not exists profile_photos_one_primary_per_user
-  on public.profile_photos (user_id)
-  where is_primary;
-
 create table if not exists public.user_preferences (
   user_id uuid primary key references public.profiles(id) on delete cascade,
   theme text not null default 'natural',
@@ -170,7 +154,7 @@ create table if not exists public.app_settings (
 );
 
 -- -----------------------------------------------------------------------------
--- Indexes for future Supabase queries
+-- Indexes / constraints for future Supabase queries
 -- -----------------------------------------------------------------------------
 
 create index if not exists profiles_visibility_idx on public.profiles (visibility);
@@ -185,6 +169,9 @@ create index if not exists blocks_blocker_id_idx on public.blocks (blocker_id);
 create index if not exists blocks_blocked_id_idx on public.blocks (blocked_id);
 create index if not exists reports_status_idx on public.reports (status);
 create index if not exists profile_photos_user_position_idx on public.profile_photos (user_id, position);
+create unique index if not exists profile_photos_one_primary_per_user
+  on public.profile_photos (user_id)
+  where is_primary;
 create index if not exists introductions_introducer_idx on public.introductions (introducer_id);
 create index if not exists introductions_introduced_user_idx on public.introductions (introduced_user_id);
 create index if not exists introductions_target_user_idx on public.introductions (target_user_id);
@@ -209,7 +196,26 @@ before update on public.app_settings
 for each row execute function public.set_updated_at();
 
 -- -----------------------------------------------------------------------------
--- RLS helper functions
+-- RLS helper functions that depend on profiles
+-- -----------------------------------------------------------------------------
+
+create or replace function public.is_admin(user_id uuid default auth.uid())
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = user_id
+      and role = 'admin'
+  );
+$$;
+
+-- -----------------------------------------------------------------------------
+-- RLS helper functions that depend on matches / messages relationships
 -- -----------------------------------------------------------------------------
 
 create or replace function public.is_match_participant(match_uuid uuid, user_id uuid default auth.uid())
@@ -258,21 +264,29 @@ alter table public.user_preferences enable row level security;
 alter table public.introductions enable row level security;
 alter table public.app_settings enable row level security;
 
+-- -----------------------------------------------------------------------------
+-- RLS policies
+-- -----------------------------------------------------------------------------
+
 -- profiles: self-management, public discovery, admin moderation.
+drop policy if exists "profiles_select_self_public_or_admin" on public.profiles;
 create policy "profiles_select_self_public_or_admin"
   on public.profiles for select
   using (id = auth.uid() or visibility = 'public' or public.is_admin());
 
+drop policy if exists "profiles_insert_self" on public.profiles;
 create policy "profiles_insert_self"
   on public.profiles for insert
   with check (id = auth.uid());
 
+drop policy if exists "profiles_update_self_or_admin" on public.profiles;
 create policy "profiles_update_self_or_admin"
   on public.profiles for update
   using (id = auth.uid() or public.is_admin())
   with check (id = auth.uid() or public.is_admin());
 
 -- invite_codes: creators and admins manage codes; authenticated users may read active usable codes for invite validation.
+drop policy if exists "invite_codes_select_active_or_owner_or_admin" on public.invite_codes;
 create policy "invite_codes_select_active_or_owner_or_admin"
   on public.invite_codes for select
   using (
@@ -281,84 +295,102 @@ create policy "invite_codes_select_active_or_owner_or_admin"
     or public.is_admin()
   );
 
+drop policy if exists "invite_codes_insert_creator_or_admin" on public.invite_codes;
 create policy "invite_codes_insert_creator_or_admin"
   on public.invite_codes for insert
   with check (created_by = auth.uid() or public.is_admin());
 
+drop policy if exists "invite_codes_update_owner_or_admin" on public.invite_codes;
 create policy "invite_codes_update_owner_or_admin"
   on public.invite_codes for update
   using (created_by = auth.uid() or public.is_admin())
   with check (created_by = auth.uid() or public.is_admin());
 
 -- likes: only the sender, receiver, and admins can see relationship data.
+drop policy if exists "likes_select_participants_or_admin" on public.likes;
 create policy "likes_select_participants_or_admin"
   on public.likes for select
   using (from_user_id = auth.uid() or to_user_id = auth.uid() or public.is_admin());
 
+drop policy if exists "likes_insert_sender" on public.likes;
 create policy "likes_insert_sender"
   on public.likes for insert
   with check (from_user_id = auth.uid());
 
+drop policy if exists "likes_delete_sender_or_admin" on public.likes;
 create policy "likes_delete_sender_or_admin"
   on public.likes for delete
   using (from_user_id = auth.uid() or public.is_admin());
 
 -- matches: participants only; admins for moderation.
+drop policy if exists "matches_select_participants_or_admin" on public.matches;
 create policy "matches_select_participants_or_admin"
   on public.matches for select
   using (user1_id = auth.uid() or user2_id = auth.uid() or public.is_admin());
 
+drop policy if exists "matches_insert_participant_or_admin" on public.matches;
 create policy "matches_insert_participant_or_admin"
   on public.matches for insert
   with check (user1_id = auth.uid() or user2_id = auth.uid() or public.is_admin());
 
+drop policy if exists "matches_update_participant_or_admin" on public.matches;
 create policy "matches_update_participant_or_admin"
   on public.matches for update
   using (user1_id = auth.uid() or user2_id = auth.uid() or public.is_admin())
   with check (user1_id = auth.uid() or user2_id = auth.uid() or public.is_admin());
 
 -- messages: match participants can read and send messages; sender must be part of the match.
+drop policy if exists "messages_select_match_participants_or_admin" on public.messages;
 create policy "messages_select_match_participants_or_admin"
   on public.messages for select
   using (public.is_match_participant(match_id) or public.is_admin());
 
+drop policy if exists "messages_insert_match_sender" on public.messages;
 create policy "messages_insert_match_sender"
   on public.messages for insert
   with check (sender_id = auth.uid() and public.is_message_sender_in_match(match_id, sender_id));
 
+drop policy if exists "messages_update_match_participants_or_admin" on public.messages;
 create policy "messages_update_match_participants_or_admin"
   on public.messages for update
   using (public.is_match_participant(match_id) or public.is_admin())
   with check (public.is_match_participant(match_id) or public.is_admin());
 
 -- blocks: only the blocker manages their own block list; admins can inspect for safety operations.
+drop policy if exists "blocks_select_blocker_or_admin" on public.blocks;
 create policy "blocks_select_blocker_or_admin"
   on public.blocks for select
   using (blocker_id = auth.uid() or public.is_admin());
 
+drop policy if exists "blocks_insert_blocker" on public.blocks;
 create policy "blocks_insert_blocker"
   on public.blocks for insert
   with check (blocker_id = auth.uid());
 
+drop policy if exists "blocks_delete_blocker_or_admin" on public.blocks;
 create policy "blocks_delete_blocker_or_admin"
   on public.blocks for delete
   using (blocker_id = auth.uid() or public.is_admin());
 
 -- reports: users create and read their own reports; admins review all reports.
+drop policy if exists "reports_select_reporter_or_admin" on public.reports;
 create policy "reports_select_reporter_or_admin"
   on public.reports for select
   using (reporter_id = auth.uid() or public.is_admin());
 
+drop policy if exists "reports_insert_reporter" on public.reports;
 create policy "reports_insert_reporter"
   on public.reports for insert
   with check (reporter_id = auth.uid());
 
+drop policy if exists "reports_update_admin" on public.reports;
 create policy "reports_update_admin"
   on public.reports for update
   using (public.is_admin())
   with check (public.is_admin());
 
 -- profile_photos: public photos follow public profile visibility; owners and admins manage rows.
+drop policy if exists "profile_photos_select_visible_owner_or_admin" on public.profile_photos;
 create policy "profile_photos_select_visible_owner_or_admin"
   on public.profile_photos for select
   using (
@@ -371,34 +403,41 @@ create policy "profile_photos_select_visible_owner_or_admin"
     )
   );
 
+drop policy if exists "profile_photos_insert_owner" on public.profile_photos;
 create policy "profile_photos_insert_owner"
   on public.profile_photos for insert
   with check (user_id = auth.uid());
 
+drop policy if exists "profile_photos_update_owner_or_admin" on public.profile_photos;
 create policy "profile_photos_update_owner_or_admin"
   on public.profile_photos for update
   using (user_id = auth.uid() or public.is_admin())
   with check (user_id = auth.uid() or public.is_admin());
 
+drop policy if exists "profile_photos_delete_owner_or_admin" on public.profile_photos;
 create policy "profile_photos_delete_owner_or_admin"
   on public.profile_photos for delete
   using (user_id = auth.uid() or public.is_admin());
 
 -- user_preferences: private to the user.
+drop policy if exists "user_preferences_select_self_or_admin" on public.user_preferences;
 create policy "user_preferences_select_self_or_admin"
   on public.user_preferences for select
   using (user_id = auth.uid() or public.is_admin());
 
+drop policy if exists "user_preferences_insert_self" on public.user_preferences;
 create policy "user_preferences_insert_self"
   on public.user_preferences for insert
   with check (user_id = auth.uid());
 
+drop policy if exists "user_preferences_update_self" on public.user_preferences;
 create policy "user_preferences_update_self"
   on public.user_preferences for update
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
 -- introductions: involved users can read; introducers and admins can manage.
+drop policy if exists "introductions_select_involved_or_public_or_admin" on public.introductions;
 create policy "introductions_select_involved_or_public_or_admin"
   on public.introductions for select
   using (
@@ -409,24 +448,29 @@ create policy "introductions_select_involved_or_public_or_admin"
     or public.is_admin()
   );
 
+drop policy if exists "introductions_insert_introducer" on public.introductions;
 create policy "introductions_insert_introducer"
   on public.introductions for insert
   with check (introducer_id = auth.uid());
 
+drop policy if exists "introductions_update_introducer_or_admin" on public.introductions;
 create policy "introductions_update_introducer_or_admin"
   on public.introductions for update
   using (introducer_id = auth.uid() or public.is_admin())
   with check (introducer_id = auth.uid() or public.is_admin());
 
 -- app_settings: readable by authenticated users for feature flags; writable by admins only.
+drop policy if exists "app_settings_select_authenticated" on public.app_settings;
 create policy "app_settings_select_authenticated"
   on public.app_settings for select
   using (auth.uid() is not null);
 
+drop policy if exists "app_settings_insert_admin" on public.app_settings;
 create policy "app_settings_insert_admin"
   on public.app_settings for insert
   with check (public.is_admin());
 
+drop policy if exists "app_settings_update_admin" on public.app_settings;
 create policy "app_settings_update_admin"
   on public.app_settings for update
   using (public.is_admin())

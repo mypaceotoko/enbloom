@@ -32,8 +32,13 @@ VITE_SUPABASE_ANON_KEY=your-anon-public-key
 ## 4. SQL Editorで初期スキーマを実行する
 
 1. Dashboardの **SQL Editor** を開きます。
-2. `supabase/migrations/001_initial_schema.sql` の内容を貼り付けます。
+2. `supabase/migrations/001_initial_schema.sql` のSQL全文をコピーして貼り付けます。SQL Editorにはファイルパスではなく、ファイルの中身そのものを貼ってください。
 3. 実行して、以下のテーブル・trigger・RLS policyが作成されることを確認します。
+
+SQL実行時の注意:
+
+- 途中でエラーになった場合は、修正版の `supabase/migrations/001_initial_schema.sql` からSQL全文を貼り直し、全文を再実行してください。
+- migrationは、テーブル作成後に `public.is_admin()` などのhelper関数とRLS policyを作る順番にしています。これにより、helper関数やpolicyが参照するテーブルが未作成の状態で評価されることを避けます。
 
 主なテーブル:
 
