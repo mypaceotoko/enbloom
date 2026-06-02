@@ -15,6 +15,8 @@ export type ProfileRow = {
   onboarding_completed: boolean;
   visibility: 'public' | 'private' | 'hidden';
   role: 'user' | 'moderator' | 'admin';
+  invited_by: string | null;
+  invite_code_used: string | null;
 };
 
 export type ProfileUpsert = Partial<Omit<ProfileRow, 'id'>> & {
@@ -34,6 +36,8 @@ const profileColumns = [
   'onboarding_completed',
   'visibility',
   'role',
+  'invited_by',
+  'invite_code_used',
 ].join(',');
 
 export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
@@ -94,6 +98,8 @@ export async function ensureProfileForUser(user: User): Promise<ProfileRow> {
     onboarding_completed: false,
     visibility: 'public',
     role: 'user',
+    invited_by: null,
+    invite_code_used: null,
   });
 }
 
