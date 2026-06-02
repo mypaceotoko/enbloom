@@ -24,8 +24,20 @@ export type InviteCodeValidationResult =
   | { ok: false; error: string };
 
 export type InviteCodeUseResult =
-  | { ok: true; inviteCodeId: string; introducerId: string; code: string }
+  | { ok: true; inviteCodeId: string; introducerId: string; code: string; message?: string }
   | { ok: false; error: string };
+
+type InviteCodeRpcResult = {
+  success?: boolean;
+  ok?: boolean;
+  error?: string;
+  reason?: string;
+  message?: string;
+  invite_code?: InviteCodeRow;
+  invite_code_id?: string;
+  introducer_id?: string;
+  code?: string;
+};
 
 const inviteCodeColumns = [
   'id',
@@ -50,55 +62,69 @@ function isExpired(inviteCode: InviteCodeRow) {
   return Boolean(inviteCode.expires_at && new Date(inviteCode.expires_at).getTime() <= Date.now());
 }
 
+function pickRpcResult(data: unknown): InviteCodeRpcResult | null {
+  if (Array.isArray(data)) return (data[0] as InviteCodeRpcResult | undefined) ?? null;
+  if (data && typeof data === 'object') return data as InviteCodeRpcResult;
+  return null;
+}
+
 function formatSupabaseInviteError(message: string) {
-  if (message.includes('INVITE_CODE_NOT_FOUND')) return '招待コードが見つかりません';
-  if (message.includes('INVITE_CODE_INACTIVE')) return 'この招待コードは現在利用できません';
-  if (message.includes('INVITE_CODE_EXPIRED')) return 'この招待コードは期限切れです';
-  if (message.includes('INVITE_CODE_LIMIT_REACHED')) return 'この招待コードは利用上限に達しています';
-  if (message.includes('INVITE_CODE_CREATOR_NOT_FOUND')) return 'この招待コードの紹介者を確認できません';
-  if (message.includes('INVITE_CODE_SELF_USE_NOT_ALLOWED')) return '自分で作成した招待コードは利用できません';
-  if (message.includes('INVITE_CODE_AUTH_REQUIRED')) return 'ログイン後に招待コードを利用してください';
-  return message || '招待コードの確認に失敗しました。時間をおいて再度お試しください。';
+  if (message.includes('INVITE_CODE_NOT_FOUND')) return '招待コードが見つかりません。コードを確認してもう一度お試しください。';
+  if (message.includes('INVITE_CODE_INACTIVE')) return 'この招待コードは現在利用できません。紹介者に確認してください。';
+  if (message.includes('INVITE_CODE_EXPIRED')) return 'この招待コードは期限切れです。新しいコードを紹介者に確認してください。';
+  if (message.includes('INVITE_CODE_LIMIT_REACHED')) return 'この招待コードは利用上限に達しています。紹介者に確認してください。';
+  if (message.includes('INVITE_CODE_CREATOR_NOT_FOUND')) return 'この招待コードの紹介者を確認できません。紹介者に確認してください。';
+  if (message.includes('INVITE_CODE_SELF_USE_NOT_ALLOWED')) return '自分で作成した招待コードは利用できません。別の紹介者のコードを入力してください。';
+  if (message.includes('INVITE_CODE_AUTH_REQUIRED')) return 'ログイン後に招待コードを利用してください。';
+  if (message.includes('duplicate key')) return '紹介情報はすでに保存されています。画面を更新してもう一度お試しください。';
+  return message || '招待コードの確認に失敗しました。少し時間を置いてもう一度お試しください。';
+}
+
+function inviteErrorFromRpc(result: InviteCodeRpcResult | null, fallback: string) {
+  const rawMessage = result?.message ?? result?.reason ?? result?.error ?? '';
+  return formatSupabaseInviteError(rawMessage) || fallback;
 }
 
 export async function validateInviteCode(code: string): Promise<InviteCodeValidationResult> {
   const normalizedCode = normalizeInviteCode(code);
-  if (!normalizedCode) return { ok: false, error: '招待コードを入力してください' };
+  if (!normalizedCode) return { ok: false, error: '招待コードを入力してください。' };
 
   const { data, error } = await requireSupabaseClient().rpc('validate_invite_code', {
     invite_code: normalizedCode,
   });
 
-  if (error) return { ok: false, error: formatSupabaseInviteError(error.message) };
+  if (error) return { ok: false, error: `招待コードの確認に失敗しました。${formatSupabaseInviteError(error.message)}` };
 
-  const result = data as { success?: boolean; error?: string; invite_code?: InviteCodeRow } | null;
-  if (!result?.success || !result.invite_code) {
-    return { ok: false, error: formatSupabaseInviteError(result?.error ?? '') };
+  const result = pickRpcResult(data);
+  const isSuccess = result?.success === true || result?.ok === true;
+  if (!isSuccess || !result?.invite_code) {
+    return { ok: false, error: `招待コードの確認に失敗しました。${inviteErrorFromRpc(result, 'コードを確認してもう一度お試しください。')}` };
   }
 
   const inviteCode = result.invite_code;
-  if (!inviteCode.created_by) return { ok: false, error: 'この招待コードの紹介者を確認できません' };
-  if (!inviteCode.is_active) return { ok: false, error: 'この招待コードは現在利用できません' };
-  if (isExpired(inviteCode)) return { ok: false, error: 'この招待コードは期限切れです' };
-  if (isLimitReached(inviteCode)) return { ok: false, error: 'この招待コードは利用上限に達しています' };
+  if (!inviteCode.created_by) return { ok: false, error: 'この招待コードの紹介者を確認できません。紹介者に確認してください。' };
+  if (!inviteCode.is_active) return { ok: false, error: 'この招待コードは現在利用できません。紹介者に確認してください。' };
+  if (isExpired(inviteCode)) return { ok: false, error: 'この招待コードは期限切れです。新しいコードを紹介者に確認してください。' };
+  if (isLimitReached(inviteCode)) return { ok: false, error: 'この招待コードは利用上限に達しています。紹介者に確認してください。' };
 
   return { ok: true, inviteCode };
 }
 
 export async function useInviteCode(code: string, userId: string): Promise<InviteCodeUseResult> {
   const normalizedCode = normalizeInviteCode(code);
-  if (!normalizedCode) return { ok: false, error: '招待コードを入力してください' };
+  if (!normalizedCode) return { ok: false, error: '招待コードを入力してください。' };
 
   const { data, error } = await requireSupabaseClient().rpc('use_invite_code', {
     invite_code: normalizedCode,
     user_id: userId,
   });
 
-  if (error) return { ok: false, error: formatSupabaseInviteError(error.message) };
+  if (error) return { ok: false, error: `紹介情報の保存に失敗しました。${formatSupabaseInviteError(error.message)}` };
 
-  const result = data as { success?: boolean; error?: string; invite_code_id?: string; introducer_id?: string; code?: string } | null;
-  if (!result?.success || !result.invite_code_id || !result.introducer_id || !result.code) {
-    return { ok: false, error: formatSupabaseInviteError(result?.error ?? '') };
+  const result = pickRpcResult(data);
+  const isSuccess = result?.success === true || result?.ok === true;
+  if (!isSuccess || !result?.invite_code_id || !result.introducer_id || !result.code) {
+    return { ok: false, error: `紹介情報の保存に失敗しました。${inviteErrorFromRpc(result, '少し時間を置いてもう一度お試しください。')}` };
   }
 
   return {
@@ -106,16 +132,17 @@ export async function useInviteCode(code: string, userId: string): Promise<Invit
     inviteCodeId: result.invite_code_id,
     introducerId: result.introducer_id,
     code: result.code,
+    message: result.message,
   };
 }
 
 export async function createInviteCode(params: InviteCodeCreateParams): Promise<InviteCodeRow> {
   const normalizedCode = normalizeInviteCode(params.code);
-  if (!normalizedCode) throw new Error('招待コードを入力してください');
+  if (!normalizedCode) throw new Error('招待コードを入力してください。');
 
   const maxUses = params.maxUses ?? null;
   if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses <= 0)) {
-    throw new Error('利用上限は1以上の整数で入力してください');
+    throw new Error('利用上限は1以上の整数で入力してください。');
   }
 
   const { data, error } = await requireSupabaseClient()

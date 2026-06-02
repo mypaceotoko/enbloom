@@ -120,8 +120,8 @@ export function AdminPage() {
         isActive: form.isActive,
         expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
       });
-      setInviteCodes((current) => [createdInviteCode, ...current]);
-      setInviteNotice(`${createdInviteCode.code} を作成しました。無制限コードは max_uses = null で保存されます。`);
+      setInviteCodes((current) => [createdInviteCode, ...current.filter((inviteCode) => inviteCode.id !== createdInviteCode.id)]);
+      setInviteNotice(`${createdInviteCode.code} を作成しました。一覧に反映しました。無制限コードは max_uses = null で保存されます。`);
       setForm(defaultInviteCodeForm);
     } catch (caughtError) {
       setInviteError(caughtError instanceof Error ? caughtError.message : '招待コードの作成に失敗しました。');
@@ -188,8 +188,10 @@ export function AdminPage() {
               <span>used_count: {inviteCode.used_count}</span>
               <span>max_uses: {inviteCode.max_uses ?? 'null'}</span>
               <span>無制限: {inviteCode.max_uses === null ? 'はい' : 'いいえ'}</span>
+              <span>is_active: {inviteCode.is_active ? 'true' : 'false'}</span>
               <span>expires_at: {formatDateTime(inviteCode.expires_at)}</span>
-              <span className="col-span-2">created_at: {formatDateTime(inviteCode.created_at)}</span>
+              <span>created_at: {formatDateTime(inviteCode.created_at)}</span>
+              <span className="col-span-2 break-all">created_by: {inviteCode.created_by}</span>
             </div>
           </div>
         ))}

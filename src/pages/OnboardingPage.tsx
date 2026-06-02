@@ -33,6 +33,7 @@ export function OnboardingPage() {
     inviteCode: '',
   });
   const [error, setError] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   const [saving, setSaving] = useState(false);
 
   function updateField(field: keyof typeof form, value: string | string[]) {
@@ -46,17 +47,38 @@ export function OnboardingPage() {
     }));
   }
 
+  function showError(message: string) {
+    setError(message);
+    setStatusMessage('');
+  }
+
+  function logOnboardingStep(step: string, details: Record<string, boolean | string | number | null> = {}) {
+    console.info('[Onboarding] ' + step, details);
+  }
+
   async function handleComplete() {
+    logOnboardingStep('submit started', {
+      supabaseMode: isSupabaseMode,
+      authenticated: isAuthenticated,
+      inviteCodeExists: Boolean(form.inviteCode.trim()),
+      saving,
+    });
+
+    if (saving) {
+      logOnboardingStep('submit ignored while saving');
+      return;
+    }
+
     const age = Number(form.age);
     if (!form.name.trim() || !form.location.trim() || !form.datingTemperature || form.interests.length === 0 || Number.isNaN(age) || age < 18) {
-      setError('表示名・年齢（18歳以上）・地域・温度感・趣味タグを入力してください。');
+      showError('表示名・年齢（18歳以上）・地域・温度感・趣味タグを入力してください。');
       return;
     }
 
     const inviteCode = form.inviteCode.trim().toUpperCase();
 
     if (isSupabaseMode && isAuthenticated && user && !inviteCode) {
-      setError('招待コードを入力してください。紹介者から受け取ったコードが必要です。');
+      showError('招待コードを入力してください。紹介者から受け取ったコードが必要です。');
       return;
     }
 
@@ -73,43 +95,65 @@ export function OnboardingPage() {
 
     setSaving(true);
     setError('');
+    setStatusMessage('保存を開始しています。');
 
     try {
       if (isSupabaseMode && isAuthenticated && user) {
+        setStatusMessage('招待コードを確認しています。');
         const inviteValidation = await validateInviteCode(inviteCode);
+        logOnboardingStep('validateInviteCode finished', { success: inviteValidation.ok, inviteCodeExists: Boolean(inviteCode) });
         if (!inviteValidation.ok) {
-          setError(inviteValidation.error);
+          showError(inviteValidation.error);
+          logOnboardingStep('validateInviteCode error', { message: inviteValidation.error });
           return;
         }
 
-        await upsertMyProfile({
-          id: user.id,
-          display_name: profile.name,
-          age: profile.age,
-          location: profile.location,
-          occupation: profile.occupation,
-          bio: profile.bio,
-          interests: profile.interests,
-          relationship_goal: profile.relationshipGoal,
-          dating_temperature: profile.datingTemperature,
-          onboarding_completed: true,
-          visibility: 'public',
-          role: 'user',
-          invited_by: inviteValidation.inviteCode.created_by,
-          invite_code_used: inviteValidation.inviteCode.code,
-        });
+        setStatusMessage('招待コードを確認しました。プロフィールを保存しています。');
+        try {
+          await upsertMyProfile({
+            id: user.id,
+            display_name: profile.name,
+            age: profile.age,
+            location: profile.location,
+            occupation: profile.occupation,
+            bio: profile.bio,
+            interests: profile.interests,
+            relationship_goal: profile.relationshipGoal,
+            dating_temperature: profile.datingTemperature,
+            onboarding_completed: true,
+            visibility: 'public',
+            role: 'user',
+          });
+          logOnboardingStep('profile save finished', { success: true });
+        } catch (profileError) {
+          const message = profileError instanceof Error ? profileError.message : '';
+          const userMessage = message ? `プロフィール保存に失敗しました。${message}` : 'プロフィール保存に失敗しました。少し時間を置いてもう一度お試しください。';
+          showError(userMessage);
+          logOnboardingStep('profile save error', { success: false, message: userMessage });
+          return;
+        }
 
+        setStatusMessage('プロフィールを保存しました。紹介情報を保存しています。');
         const inviteUse = await redeemInviteCode(inviteValidation.inviteCode.code, user.id);
+        logOnboardingStep('useInviteCode finished', { success: inviteUse.ok });
         if (!inviteUse.ok) {
-          setError(inviteUse.error);
+          showError(inviteUse.error);
+          logOnboardingStep('useInviteCode error', { success: false, message: inviteUse.error });
           return;
         }
+        setStatusMessage('紹介情報を保存しました。今日のご縁へ進みます。');
       }
 
       completeOnboarding(profile);
-      navigate('/home', { state: { profileSaved: true } });
+      logOnboardingStep('navigate home', { success: true });
+      setStatusMessage('プロフィールを保存しました。今日のご縁へ進みます。');
+      setTimeout(() => {
+        navigate('/home', { state: { profileSaved: true, message: 'プロフィールを保存しました。今日のご縁へ進みます。' } });
+      }, 350);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : 'プロフィール保存に失敗しました。時間をおいて再度お試しください。');
+      const message = caughtError instanceof Error ? caughtError.message : '通信に失敗しました。少し時間を置いてもう一度お試しください。';
+      showError(message);
+      logOnboardingStep('unexpected error', { success: false, message });
     } finally {
       setSaving(false);
     }
@@ -133,7 +177,8 @@ export function OnboardingPage() {
         </div>
       </Card>
 
-      {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{error}</div> : null}
+      {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold leading-6 text-red-600" role="alert">{error}</div> : null}
+      {statusMessage ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark" role="status">{statusMessage}</div> : null}
 
       <Card className="space-y-4">
         <SectionTitle icon={<UserRound size={18} />} label="Step 1" title="基本情報" />
@@ -193,6 +238,8 @@ export function OnboardingPage() {
 
       <div className="sticky bottom-24 z-10 rounded-[1.25rem] border border-white/60 bg-theme-card/90 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
         <p className="mb-2 px-1 text-center text-xs font-bold leading-5 text-theme-muted">入力内容を保存して、今日のご縁を見に行きます。プロフィールはあとから編集できます。</p>
+        {error ? <div className="mb-2 rounded-xl bg-red-50 p-2.5 text-xs font-bold leading-5 text-red-600" role="alert">{error}</div> : null}
+        {statusMessage ? <div className="mb-2 rounded-xl bg-theme-accent-soft/60 p-2.5 text-xs font-bold leading-5 text-theme-main-dark" role="status">{statusMessage}</div> : null}
         <Button className="w-full" disabled={saving} onClick={handleComplete}>
           <CheckCircle2 size={16} />
           {saving ? '保存中...' : '今日のご縁へ進む'}

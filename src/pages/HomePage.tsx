@@ -10,14 +10,16 @@ import { useAppState } from '../hooks/useAppState';
 export function HomePage() {
   const { blockedUserIds } = useAppState();
   const location = useLocation();
-  const profileSaved = Boolean((location.state as { profileSaved?: boolean } | null)?.profileSaved);
+  const homeState = location.state as { profileSaved?: boolean; message?: string } | null;
+  const profileSaved = Boolean(homeState?.profileSaved);
+  const profileSavedMessage = homeState?.message ?? 'プロフィールを保存しました。今日のご縁を見てみましょう。';
   const todaysUsers = mockUsers.filter((user) => !blockedUserIds.includes(user.id)).slice(0, 3);
 
   return (
     <PageShell description="ログイン後のホームでは、大量に選ぶのではなく、今日向き合いやすい少人数のご縁だけを丁寧に紹介します。" eyebrow="Home" title="今日のご縁">
       {profileSaved ? (
         <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">
-          <span className="flex items-center gap-1.5"><CheckCircle2 size={16} />プロフィールを保存しました。今日のご縁を見てみましょう。</span>
+          <span className="flex items-center gap-1.5"><CheckCircle2 size={16} />{profileSavedMessage}</span>
         </div>
       ) : null}
 
