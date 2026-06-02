@@ -9,6 +9,7 @@ import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { getSupabaseConnectionStatus } from '../lib/supabase';
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export function SettingsPage() {
   const { isAuthenticated, isSupabaseMode, signOut } = useAuth();
   const [notice, setNotice] = useState('');
   const [signingOut, setSigningOut] = useState(false);
+  const supabaseStatus = getSupabaseConnectionStatus();
 
   async function handleSignOut() {
     const confirmed = window.confirm('EnBloomからログアウトしますか？');
@@ -62,6 +64,8 @@ export function SettingsPage() {
 
       {notice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{notice}</div> : null}
 
+      <SupabaseConnectionDebug status={supabaseStatus} />
+
       <Card className="space-y-3">
         <h2 className="text-sm font-black">テーマカラー</h2>
         <ThemeSwitcher />
@@ -85,6 +89,44 @@ export function SettingsPage() {
       <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲をユーザー設定として保存できるようにします。" />
       <Placeholder icon={<ShieldCheck size={18} />} title="安全設定" body="本人確認・年齢確認は次フェーズ以降の検討項目です。今回はUIのみです。" />
     </PageShell>
+  );
+}
+
+function SupabaseConnectionDebug({
+  status,
+}: {
+  status: ReturnType<typeof getSupabaseConnectionStatus>;
+}) {
+  const rows = [
+    ['Supabase configured', String(status.isConfigured)],
+    ['VITE_SUPABASE_URL exists', String(status.supabaseUrlExists)],
+    ['VITE_SUPABASE_ANON_KEY exists', String(status.supabaseAnonKeyExists)],
+    ['Supabase client created', String(status.clientCreated)],
+    ['Auth mode', status.authMode],
+    ['Current origin', status.currentOrigin || '(server render)'],
+    ['Redirect URL', status.redirectUrl || '(server render)'],
+  ];
+
+  return (
+    <Card className="space-y-2 bg-theme-card/86 py-3">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">
+          Developer status
+        </p>
+        <h2 className="text-sm font-black">Supabase接続ステータス</h2>
+      </div>
+      <dl className="space-y-1.5 text-xs">
+        {rows.map(([label, value]) => (
+          <div className="flex items-start justify-between gap-3" key={label}>
+            <dt className="shrink-0 font-bold text-theme-muted">{label}</dt>
+            <dd className="break-all text-right font-black text-theme-text">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-[11px] leading-5 text-theme-muted">
+        環境変数の値やAPI key本体は表示しません。true / false とOAuthリダイレクト先だけを確認できます。
+      </p>
+    </Card>
   );
 }
 

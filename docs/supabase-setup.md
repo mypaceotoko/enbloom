@@ -15,8 +15,8 @@
 1. Dashboardの **Project Settings** を開きます。
 2. **API** セクションで次を確認します。
    - Project URL
-   - `anon` / `public` key
-3. フロントエンドでは `service_role` key を使わないでください。
+   - API Keys の **Publishable key / default**（旧表示では `anon` / `public` key）
+3. フロントエンドでは `secret` key / `service_role` key を使わないでください。
 
 ## 3. ローカルとVercelに環境変数を設定する
 
@@ -28,6 +28,14 @@ VITE_SUPABASE_ANON_KEY=your-anon-public-key
 ```
 
 未設定の場合も、アプリはlocalStorageデモとして動作し続けます。未設定時は `src/lib/supabase.ts` が `console.warn` を出すだけで、アプリを落としません。
+
+Vercelで本番確認する場合の注意:
+
+- `VITE_SUPABASE_URL` と `VITE_SUPABASE_ANON_KEY` は Vercel の **Production** 環境に設定してください。Previewだけに設定してもProductionには反映されません。
+- Vercelの環境変数を追加・変更した後は、必ずProductionを **Redeploy** してください。既存のビルド成果物には新しい環境変数が入りません。
+- Googleログイン時にSupabase側で `No API key found in request` / `No apikey request header or url param was found` が出る場合は、フロントエンドの `VITE_SUPABASE_ANON_KEY` が未設定、空文字、またはProductionビルドへ未反映の可能性が高いです。
+- Supabase API Keysでは **Publishable key / default**（旧 `anon` / `public` key）を `VITE_SUPABASE_ANON_KEY` に設定してください。
+- `secret` key / `service_role` key は管理者権限を持つため、フロントエンドやVercelの公開クライアント用環境変数には絶対に入れないでください。
 
 ## 4. SQL Editorで初期スキーマを実行する
 

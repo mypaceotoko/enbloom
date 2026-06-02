@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import type { Session, User } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isSupabaseConfigured, requireSupabaseClient, supabase } from '../lib/supabase';
 
 type AuthContextValue = {
   session: Session | null;
@@ -74,7 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Supabase未接続のため、Googleログインは利用できません。');
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const supabaseClient = requireSupabaseClient();
+    const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: getAuthRedirectUrl(),

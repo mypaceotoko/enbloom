@@ -7,8 +7,18 @@ type SupabaseEnvironment = {
   missingKeys: string[];
 };
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() ?? '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '';
+export type SupabaseConnectionStatus = {
+  isConfigured: boolean;
+  supabaseUrlExists: boolean;
+  supabaseAnonKeyExists: boolean;
+  clientCreated: boolean;
+  authMode: 'Supabase' | 'Local demo';
+  currentOrigin: string;
+  redirectUrl: string;
+};
+
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 
 const missingKeys = [
   ['VITE_SUPABASE_URL', supabaseUrl],
@@ -20,7 +30,7 @@ const missingKeys = [
 export const supabaseConfig: SupabaseEnvironment = {
   url: supabaseUrl,
   anonKey: supabaseAnonKey,
-  isConfigured: missingKeys.length === 0,
+  isConfigured: Boolean(supabaseUrl && supabaseAnonKey),
   missingKeys,
 };
 
@@ -44,6 +54,22 @@ export const supabase: SupabaseClient | null = supabaseConfig.isConfigured
       },
     })
   : null;
+
+export function getSupabaseConnectionStatus(): SupabaseConnectionStatus {
+  const currentOrigin = typeof window === 'undefined' ? '' : window.location.origin;
+  const redirectUrl = currentOrigin ? `${currentOrigin}/auth/callback` : '';
+  const clientCreated = Boolean(supabase);
+
+  return {
+    isConfigured: supabaseConfig.isConfigured,
+    supabaseUrlExists: Boolean(supabaseConfig.url),
+    supabaseAnonKeyExists: Boolean(supabaseConfig.anonKey),
+    clientCreated,
+    authMode: clientCreated ? 'Supabase' : 'Local demo',
+    currentOrigin,
+    redirectUrl,
+  };
+}
 
 export function assertSupabaseConfigured(): boolean {
   if (supabaseConfig.isConfigured) return true;
