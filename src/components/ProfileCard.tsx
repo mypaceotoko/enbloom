@@ -1,4 +1,4 @@
-import { Heart, Leaf, MapPin, MessageCircleHeart, Sparkles, Sprout, UserRoundCheck } from 'lucide-react';
+import { Heart, Leaf, MapPin, MessageCircleHeart, Sparkles, Sprout, Tags, UserRoundCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { MockUser } from '../data/mockUsers';
 import { Badge } from './Badge';
@@ -55,10 +55,16 @@ export function ProfileCard({ user, compact = false }: ProfileCardProps) {
           <Sprout className="mt-1 shrink-0 text-theme-main" size={26} />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {user.interests.slice(0, compact ? 3 : user.interests.length).map((interest) => (
-            <Badge className="bg-theme-background/80" key={interest}>{interest}</Badge>
-          ))}
+        <div className="space-y-2">
+          <p className="flex items-center gap-1 text-xs font-black uppercase tracking-[0.16em] text-theme-main-dark">
+            <Tags size={14} />
+            共通点
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {user.interests.slice(0, compact ? 3 : user.interests.length).map((interest) => (
+              <Badge className="bg-theme-background/80" key={interest}>{interest}</Badge>
+            ))}
+          </div>
         </div>
 
         <div className="grid gap-3 rounded-[1.5rem] border border-theme-main/10 bg-theme-background/70 p-4 text-sm leading-6">
@@ -77,7 +83,7 @@ export function ProfileCard({ user, compact = false }: ProfileCardProps) {
             いいね
           </Button>
           <Link className="flex-1" to={`/profile/${user.id}`}>
-            <Button className="w-full">詳しく見る</Button>
+            <Button className="w-full">詳細を見る</Button>
           </Link>
         </div>
       </div>
