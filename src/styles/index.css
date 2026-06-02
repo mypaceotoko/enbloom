@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+  --color-theme-main: var(--color-main);
+  --color-theme-main-dark: var(--color-main-dark);
+  --color-theme-accent: var(--color-accent);
+  --color-theme-accent-soft: var(--color-accent-soft);
+  --color-theme-background: var(--color-bg);
+  --color-theme-card: var(--color-card);
+  --color-theme-text: var(--color-text);
+  --color-theme-muted: var(--color-muted);
+}
+
+:root,
+[data-theme='natural'] {
+  --color-main: #6dbe8a;
+  --color-main-dark: #3e7c59;
+  --color-accent: #f48ca8;
+  --color-accent-soft: #fde7ee;
+  --color-bg: #fffdf9;
+  --color-card: #ffffff;
+  --color-text: #2f3a34;
+  --color-muted: #7a8a80;
+}
+
+[data-theme='sakura'] {
+  --color-main: #f48ca8;
+  --color-main-dark: #c85f7d;
+  --color-accent: #6dbe8a;
+  --color-accent-soft: #fde7ee;
+  --color-bg: #fff8fa;
+  --color-card: #ffffff;
+  --color-text: #3a2f34;
+  --color-muted: #8a747c;
+}
+
+[data-theme='mint'] {
+  --color-main: #7bcfa6;
+  --color-main-dark: #3e8a67;
+  --color-accent: #f48ca8;
+  --color-accent-soft: #e4f8ee;
+  --color-bg: #fcfffd;
+  --color-card: #ffffff;
+  --color-text: #263a32;
+  --color-muted: #6f877a;
+}
+
+[data-theme='lavender'] {
+  --color-main: #9b8fe8;
+  --color-main-dark: #6e61ba;
+  --color-accent: #f48ca8;
+  --color-accent-soft: #eeeafe;
+  --color-bg: #fffcff;
+  --color-card: #ffffff;
+  --color-text: #302b3a;
+  --color-muted: #7d758a;
+}
+
+[data-theme='night'] {
+  --color-main: #6dbe8a;
+  --color-main-dark: #9ee3b4;
+  --color-accent: #f48ca8;
+  --color-accent-soft: #392632;
+  --color-bg: #16221b;
+  --color-card: #213128;
+  --color-text: #f4fff8;
+  --color-muted: #afc8b7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-bg);
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent-soft) 75%, transparent), transparent 34rem),
+    linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-bg) 82%, var(--color-main) 18%));
+  font-family: var(--font-sans);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.soft-shadow {
+  box-shadow: 0 18px 55px color-mix(in srgb, var(--color-main-dark) 14%, transparent);
+}
+
+.flower-gradient {
+  background:
+    radial-gradient(circle at 25% 20%, color-mix(in srgb, var(--color-accent) 42%, transparent), transparent 26%),
+    radial-gradient(circle at 75% 18%, color-mix(in srgb, var(--color-main) 38%, transparent), transparent 28%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-accent-soft) 80%, white), color-mix(in srgb, var(--color-main) 42%, white));
+}
