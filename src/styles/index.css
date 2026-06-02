@@ -82,6 +82,7 @@ body {
   color: var(--color-text);
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent-soft) 75%, transparent), transparent 34rem),
+    radial-gradient(circle at 85% 12%, color-mix(in srgb, var(--color-main) 20%, transparent), transparent 22rem),
     linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-bg) 82%, var(--color-main) 18%));
   font-family: var(--font-sans);
 }
@@ -106,5 +107,6 @@ a {
   background:
     radial-gradient(circle at 25% 20%, color-mix(in srgb, var(--color-accent) 42%, transparent), transparent 26%),
     radial-gradient(circle at 75% 18%, color-mix(in srgb, var(--color-main) 38%, transparent), transparent 28%),
-    linear-gradient(135deg, color-mix(in srgb, var(--color-accent-soft) 80%, white), color-mix(in srgb, var(--color-main) 42%, white));
+    radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--color-accent-soft) 82%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-accent-soft) 80%, var(--color-card)), color-mix(in srgb, var(--color-main) 42%, var(--color-card)));
 }
