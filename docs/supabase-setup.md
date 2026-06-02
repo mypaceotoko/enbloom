@@ -10,13 +10,15 @@
 2. Region、Database password、Project nameを設定します。
 3. Project作成完了後、Dashboardを開きます。
 
-## 2. Project URL と anon public key を確認する
+## 2. Project URL と公開API keyを確認する
 
 1. Dashboardの **Project Settings** を開きます。
 2. **API** セクションで次を確認します。
-   - Project URL
+   - Project URL（`https://your-project.supabase.co` 形式のproject base URL）
    - API Keys の **Publishable key / default**（旧表示では `anon` / `public` key）
 3. フロントエンドでは `secret` key / `service_role` key を使わないでください。
+
+`VITE_SUPABASE_URL` には、Data API URLではなくproject base URLだけを入れます。`https://your-project.supabase.co/rest/v1` のように `/rest/v1` が付いた値をコピーした場合は、必ず `/rest/v1` を削除してください。
 
 ## 3. ローカルとVercelに環境変数を設定する
 
@@ -24,7 +26,7 @@
 
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-public-key
+VITE_SUPABASE_ANON_KEY=your-publishable-default-key
 ```
 
 未設定の場合も、アプリはlocalStorageデモとして動作し続けます。未設定時は `src/lib/supabase.ts` が `console.warn` を出すだけで、アプリを落としません。
@@ -33,8 +35,9 @@ Vercelで本番確認する場合の注意:
 
 - `VITE_SUPABASE_URL` と `VITE_SUPABASE_ANON_KEY` は Vercel の **Production** 環境に設定してください。Previewだけに設定してもProductionには反映されません。
 - Vercelの環境変数を追加・変更した後は、必ずProductionを **Redeploy** してください。既存のビルド成果物には新しい環境変数が入りません。
-- Googleログイン時にSupabase側で `No API key found in request` / `No apikey request header or url param was found` が出る場合は、フロントエンドの `VITE_SUPABASE_ANON_KEY` が未設定、空文字、またはProductionビルドへ未反映の可能性が高いです。
-- Supabase API Keysでは **Publishable key / default**（旧 `anon` / `public` key）を `VITE_SUPABASE_ANON_KEY` に設定してください。
+- `VITE_SUPABASE_URL` は `https://your-project.supabase.co` のproject base URLにしてください。Data API URLの `https://your-project.supabase.co/rest/v1` や末尾スラッシュ付きURLを設定している場合は、`/rest/v1` と余計なスラッシュを削除してください。
+- `VITE_SUPABASE_ANON_KEY` には、Supabaseの新UIでは **Publishable key / default** を設定してください。Legacy `anon` keyを使う場合も、フロントエンド用の公開キーだけを使います。
+- Googleログイン時にSupabase側で `No API key found in request` / `No apikey request header or url param was found` が出る場合は、`VITE_SUPABASE_URL` に `/rest/v1` が混ざっていないか、`VITE_SUPABASE_ANON_KEY` に先頭末尾の引用符や改行が混ざっていないか、Productionビルドへ環境変数が反映されているかを確認してください。
 - `secret` key / `service_role` key は管理者権限を持つため、フロントエンドやVercelの公開クライアント用環境変数には絶対に入れないでください。
 
 ## 4. SQL Editorで初期スキーマを実行する

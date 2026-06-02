@@ -70,19 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    if (!supabase) {
+    if (!isSupabaseConfigured) {
       throw new Error('Supabase未接続のため、Googleログインは利用できません。');
+    }
+
+    const redirectTo = getAuthRedirectUrl();
+    if (!redirectTo) {
+      throw new Error('Googleログインのリダイレクト先を取得できませんでした。');
     }
 
     const supabaseClient = requireSupabaseClient();
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: getAuthRedirectUrl(),
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
+        redirectTo,
+        scopes: 'email profile',
       },
     });
 
