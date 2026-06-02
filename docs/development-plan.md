@@ -73,6 +73,11 @@ EnBloom は、友達の紹介や信頼できるつながりから、恋や縁が
 
 ## 5. 将来的な機能
 
+招待コード思想とご縁会構想の詳細は、以下のドキュメントを参照してください。
+
+- 招待コード思想: [docs/invite-code-concept.md](./invite-code-concept.md)
+- ご縁会構想: [docs/event-matching-concept.md](./event-matching-concept.md)
+
 - 年齢確認
 - 本人確認
 - Apple ログイン
@@ -81,6 +86,9 @@ EnBloom は、友達の紹介や信頼できるつながりから、恋や縁が
 - 初回メッセージテンプレート
 - 共通点ハイライト
 - 紹介者コメント
+- 紹介者ごとの参加者一覧
+- ご縁会 / Bloom Meet / EnBloom Circle などの少人数イベント
+- イベント後の「また話したい」によるマッチング
 - 通知
 - PWA 対応
 - ネイティブアプリ化
@@ -211,7 +219,7 @@ EnBloom は、友達の紹介や信頼できるつながりから、恋や縁が
 | テーブル | 用途 | 主なカラム | 初期実装で必要な範囲 |
 | --- | --- | --- | --- |
 | `profiles` | ユーザーの基本プロフィールを管理する | `id`, `user_id`, `display_name`, `birthdate`, `gender`, `bio`, `interests`, `temperature`, `theme`, `created_at`, `updated_at` | オンボーディング、ユーザー一覧、プロフィール詳細に必要な基本情報を実装する |
-| `invite_codes` | 招待コードと利用状況を管理する | `id`, `code`, `created_by`, `used_by`, `used_at`, `expires_at`, `created_at` | ログイン後または初回登録時に有効な招待コードを確認できるようにする |
+| `invite_codes` | 招待コードと利用状況を管理する | `id`, `code`, `created_by`, `used_count`, `max_uses`, `expires_at`, `created_at` | 使い切りチケットではなく、紹介者に紐づく参加ルートとして扱う。`max_uses = null` は無制限利用とする |
 | `likes` | いいねの送受信を管理する | `id`, `from_user_id`, `to_user_id`, `created_at` | 重複いいねを防ぎ、相互いいね検出の基礎にする |
 | `matches` | 相互いいねで成立したマッチを管理する | `id`, `user_a_id`, `user_b_id`, `created_at`, `last_message_at` | マッチ一覧と DM の参加者判定に利用する |
 | `messages` | マッチ後の DM を管理する | `id`, `match_id`, `sender_id`, `body`, `read_at`, `created_at` | マッチ参加者間のテキストメッセージ送受信を実装する |
@@ -219,7 +227,7 @@ EnBloom は、友達の紹介や信頼できるつながりから、恋や縁が
 | `reports` | 通報内容を管理する | `id`, `reporter_id`, `reported_user_id`, `reason`, `detail`, `status`, `created_at`, `resolved_at` | 通報作成と管理画面での確認に必要な最低限を実装する |
 | `profile_photos` | プロフィール写真のメタデータを管理する | `id`, `user_id`, `storage_path`, `display_order`, `created_at` | 写真登録、プロフィール表示、Storage 参照に利用する |
 | `user_preferences` | ユーザーの検索条件や表示設定を管理する | `id`, `user_id`, `preferred_age_min`, `preferred_age_max`, `preferred_gender`, `language`, `notifications_enabled`, `created_at`, `updated_at` | 今日のご縁、条件検索、設定画面の土台にする |
-| `introductions` | 紹介者や紹介コメントを管理する | `id`, `introducer_id`, `introduced_user_id`, `comment`, `visibility`, `created_at` | 初期 MVP では任意。招待制や紹介者コメントの将来拡張を見据えて設計する |
+| `introductions` | 紹介者や紹介コメントを管理する | `id`, `introducer_id`, `introduced_user_id`, `comment`, `visibility`, `created_at` | 初期 MVP では任意。招待制、紹介者コメント、紹介者イベントの将来拡張を見据えて設計する |
 | `app_settings` | アプリ全体の設定や管理値を管理する | `id`, `key`, `value`, `updated_at` | 管理画面、テーマ、運用設定の将来拡張を見据えた土台にする |
 
 ## 9. RLS 方針
@@ -293,6 +301,9 @@ EnBloom は、友達の紹介や信頼できるつながりから、恋や縁が
 
 ### Phase 7：将来拡張
 
+- 紹介者ごとの参加者一覧
+- ご縁会 / Bloom Meet / EnBloom Circle などの少人数イベント
+- イベント後の「また話したい」によるマッチング
 - 年齢確認
 - 本人確認
 - Apple ログイン
@@ -334,3 +345,10 @@ EnBloom は恋愛・出会いを目的とするサービスであるため、本
 - 共通レイアウトの土台作成
 - テーマ CSS 変数の定義
 - モバイルファーストなトップページの仮実装
+
+## 13. 招待コード・ご縁会構想の参照
+
+EnBloom の招待コードは、単なる入場券ではなく「誰のご縁から来たかを記録する参加ルート」として扱います。詳細は [招待コード思想](./invite-code-concept.md) を参照してください。
+
+また、将来的には紹介者がひらく少人数の安心できる出会いの場として、[ご縁会 / イベントマッチング構想](./event-matching-concept.md) を検討します。現時点ではイベント作成、決済、チケット販売、大規模街コン運営、ご縁会の本番運用は実装しません。
+

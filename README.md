@@ -4,6 +4,8 @@
 
 EnBloom（エンブルーム）は、「縁が花開く」をテーマにしたマッチング Web アプリです。友達の紹介や信頼できるつながりを起点に、恋や縁が自然に花開く、安心感のある出会いの場を目指します。
 
+EnBloomは、招待制・紹介制のマッチング体験に加えて、将来的には紹介者がひらく少人数の「ご縁会」機能も視野に入れています。
+
 ## 技術スタック予定
 
 - React
@@ -101,3 +103,8 @@ Vercelへデプロイする場合は、Vercel側にも `VITE_SUPABASE_URL` と `
 ## 開発計画
 
 詳細な開発計画は [`docs/development-plan.md`](docs/development-plan.md) を参照してください。
+
+関連する思想ドキュメント:
+
+- [招待コード思想](docs/invite-code-concept.md)
+- [ご縁会 / イベントマッチング構想](docs/event-matching-concept.md)
