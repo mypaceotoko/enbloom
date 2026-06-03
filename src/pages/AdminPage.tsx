@@ -8,7 +8,7 @@ import { PageShell } from '../components/PageShell';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
-import { createInviteCode, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
+import { createInviteCode, deactivateInviteCode, deleteInviteCode, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
 
 type InviteCodeForm = {
   code: string;
@@ -61,6 +61,7 @@ export function AdminPage() {
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
   const [form, setForm] = useState<InviteCodeForm>(defaultInviteCodeForm);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState('');
   const [inviteNotice, setInviteNotice] = useState('');
   const reportedUsers = mockUsers.filter((mockUser) => reportedUserIds.includes(mockUser.id));
@@ -144,6 +145,74 @@ export function AdminPage() {
     }
   }
 
+  async function handleDeleteInviteCode(inviteCode: InviteCodeRow) {
+    setInviteError('');
+    setInviteNotice('');
+
+    if (!isSupabaseMode) {
+      setInviteNotice('ローカルデモではSupabaseに保存されていないため、削除操作はUI確認のみです。');
+      return;
+    }
+
+    if (!isAuthenticated || !user) {
+      setInviteError('招待コードを削除するにはログインしてください。');
+      return;
+    }
+
+    if (inviteCode.used_count > 0) {
+      setInviteError('すでに使われた招待コードは削除できません。無効化してください。');
+      return;
+    }
+
+    const confirmed = window.confirm('この招待コードを削除しますか？まだ誰にも使われていないため、完全に削除されます。');
+    if (!confirmed) return;
+
+    setManagingInviteCodeId(inviteCode.id);
+    try {
+      await deleteInviteCode(inviteCode.id);
+      setInviteCodes((current) => current.filter((currentInviteCode) => currentInviteCode.id !== inviteCode.id));
+      setInviteNotice('招待コードを削除しました。');
+    } catch (caughtError) {
+      setInviteError(caughtError instanceof Error ? caughtError.message : '招待コードの削除に失敗しました。');
+    } finally {
+      setManagingInviteCodeId(null);
+    }
+  }
+
+  async function handleDeactivateInviteCode(inviteCode: InviteCodeRow) {
+    setInviteError('');
+    setInviteNotice('');
+
+    if (!isSupabaseMode) {
+      setInviteNotice('ローカルデモではSupabaseに保存されていないため、無効化操作はUI確認のみです。');
+      return;
+    }
+
+    if (!isAuthenticated || !user) {
+      setInviteError('招待コードを無効化するにはログインしてください。');
+      return;
+    }
+
+    if (!inviteCode.is_active) {
+      setInviteNotice('この招待コードはすでに無効化済みです。');
+      return;
+    }
+
+    const confirmed = window.confirm('この招待コードを無効化しますか？すでに使われているため、履歴を残したまま新規利用だけ停止します。');
+    if (!confirmed) return;
+
+    setManagingInviteCodeId(inviteCode.id);
+    try {
+      const deactivatedInviteCode = await deactivateInviteCode(inviteCode.id);
+      setInviteCodes((current) => current.map((currentInviteCode) => (currentInviteCode.id === deactivatedInviteCode.id ? deactivatedInviteCode : currentInviteCode)));
+      setInviteNotice('招待コードを無効化しました。');
+    } catch (caughtError) {
+      setInviteError(caughtError instanceof Error ? caughtError.message : '招待コードの無効化に失敗しました。');
+    } finally {
+      setManagingInviteCodeId(null);
+    }
+  }
+
   return (
     <PageShell description="紹介制・信頼ベースを運用するための管理画面です。ログイン中ユーザーは自分用の招待コードを発行できます。" eyebrow="Admin" title="管理画面">
       {adminCards.map((item) => {
@@ -193,23 +262,41 @@ export function AdminPage() {
       <Card className="space-y-3">
         <h2 className="font-black">自分が作成した招待コード</h2>
         {inviteCodes.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ招待コードはありません。まずは MYPACE-2026 を無制限で作成して、紹介ルートを用意してください。</p> : null}
-        {inviteCodes.map((inviteCode) => (
-          <div className="space-y-2 rounded-[1.15rem] bg-theme-accent-soft/45 p-3" key={inviteCode.id}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-black text-theme-main-dark">{inviteCode.code}</span>
-              <Badge className={inviteCode.is_active ? '' : 'bg-red-50 text-red-600'}>{inviteCode.is_active ? '有効' : '停止中'}</Badge>
+        {inviteCodes.map((inviteCode) => {
+          const isManaging = managingInviteCodeId === inviteCode.id;
+          const canDelete = inviteCode.is_active && inviteCode.used_count === 0;
+          const actionDisabled = inviteLoading || isManaging || !inviteCode.is_active;
+
+          return (
+            <div className={`space-y-3 rounded-[1.15rem] bg-theme-accent-soft/45 p-3 ${inviteCode.is_active ? '' : 'opacity-70'}`} key={inviteCode.id}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-black text-theme-main-dark">{inviteCode.code}</span>
+                <Badge className={inviteCode.is_active ? '' : 'bg-red-50 text-red-600'}>{inviteCode.is_active ? '有効' : '無効'}</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs font-bold text-theme-muted">
+                <span>used_count: {inviteCode.used_count}</span>
+                <span>max_uses: {inviteCode.max_uses ?? 'null'}</span>
+                <span>無制限: {inviteCode.max_uses === null ? 'はい' : 'いいえ'}</span>
+                <span>ステータス: {inviteCode.is_active ? '有効' : '無効'}</span>
+                <span>is_active: {inviteCode.is_active ? 'true' : 'false'}</span>
+                <span>expires_at: {formatDateTime(inviteCode.expires_at)}</span>
+                <span>created_at: {formatDateTime(inviteCode.created_at)}</span>
+                <span className="col-span-2 break-all">created_by: {inviteCode.created_by}</span>
+              </div>
+              <div className="flex justify-end">
+                {canDelete ? (
+                  <Button className="min-h-9 px-3 py-1.5" disabled={actionDisabled} onClick={() => handleDeleteInviteCode(inviteCode)} type="button" variant="danger">
+                    {isManaging ? '削除中...' : '削除'}
+                  </Button>
+                ) : (
+                  <Button className="min-h-9 px-3 py-1.5" disabled={actionDisabled} onClick={() => handleDeactivateInviteCode(inviteCode)} type="button" variant={inviteCode.is_active ? 'secondary' : 'ghost'}>
+                    {inviteCode.is_active ? (isManaging ? '無効化中...' : '無効化') : '無効化済み'}
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs font-bold text-theme-muted">
-              <span>used_count: {inviteCode.used_count}</span>
-              <span>max_uses: {inviteCode.max_uses ?? 'null'}</span>
-              <span>無制限: {inviteCode.max_uses === null ? 'はい' : 'いいえ'}</span>
-              <span>is_active: {inviteCode.is_active ? 'true' : 'false'}</span>
-              <span>expires_at: {formatDateTime(inviteCode.expires_at)}</span>
-              <span>created_at: {formatDateTime(inviteCode.created_at)}</span>
-              <span className="col-span-2 break-all">created_by: {inviteCode.created_by}</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </Card>
 
       <Card className="space-y-2.5">
