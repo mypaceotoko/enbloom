@@ -1,4 +1,4 @@
-import type { Match, MatchCreateResult, MatchStatus, MatchWithProfile } from '../types/match';
+import type { DirectConversationResult, Match, MatchCreateResult, MatchStatus, MatchWithProfile } from '../types/match';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoApi';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { requireSupabaseClient } from './supabase';
@@ -22,6 +22,14 @@ type MatchRpcRow = {
   matched?: boolean;
   match_id?: string | null;
   already_exists?: boolean;
+  message?: string | null;
+};
+
+type DirectConversationRpcRow = {
+  success?: boolean;
+  match_id?: string | null;
+  already_exists?: boolean;
+  blocked?: boolean;
   message?: string | null;
 };
 
@@ -108,6 +116,26 @@ function mapRpcResult(row: MatchRpcRow | null | undefined): MatchCreateResult {
     alreadyExists: Boolean(row?.already_exists),
     message: row?.message ?? undefined,
   };
+}
+
+
+function mapDirectConversationResult(row: DirectConversationRpcRow | null | undefined): DirectConversationResult {
+  return {
+    success: Boolean(row?.success),
+    matchId: row?.match_id ?? undefined,
+    alreadyExists: Boolean(row?.already_exists),
+    blocked: Boolean(row?.blocked),
+    message: row?.message ?? undefined,
+  };
+}
+
+function mapDirectConversationError(error: unknown, fallback: string) {
+  if (error instanceof Error) {
+    if (/block|blocked|ブロック/i.test(error.message)) return 'ブロック中のため会話を開始できません。';
+    if (/auth|login|ログイン/i.test(error.message)) return 'ログイン状態を確認できませんでした。';
+    return `${fallback}: ${error.message}`;
+  }
+  return fallback;
 }
 
 function isMissingRpcError(error: { code?: string; message?: string }) {
@@ -229,4 +257,56 @@ export async function createMatchIfMutualLike(targetUserId: string): Promise<Mat
 export async function getMatchedUserIds(userId: string): Promise<string[]> {
   const matches = await getMyMatches(userId);
   return matches.map((match) => match.otherUserId);
+}
+
+
+export async function getOrCreateMatchForUsers(userAId: string, userBId: string): Promise<DirectConversationResult> {
+  const currentUserId = await getCurrentUserId();
+  const targetUserId = currentUserId === userAId ? userBId : userAId;
+
+  if (!targetUserId || targetUserId === currentUserId || (currentUserId !== userAId && currentUserId !== userBId)) {
+    return { success: false, message: '会話の相手を確認できませんでした。' };
+  }
+
+  const { data, error } = await requireSupabaseClient()
+    .rpc('ensure_direct_conversation', { target_user_id: targetUserId });
+
+  if (error) {
+    console.info('[ConnectBloom] direct conversation ensure success', { success: false });
+    return { success: false, message: mapDirectConversationError(error, '会話の作成に失敗しました') };
+  }
+
+  const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
+  console.info('[ConnectBloom] direct conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
+  return result;
+}
+
+export async function ensureDirectConversation(userAId: string, userBId: string): Promise<DirectConversationResult> {
+  return getOrCreateMatchForUsers(userAId, userBId);
+}
+
+export async function ensureConversationForActivityInterest(postId: string, interestId: string): Promise<DirectConversationResult> {
+  const { data, error } = await requireSupabaseClient()
+    .rpc('ensure_activity_interest_match', { target_post_id: postId, target_interest_id: interestId });
+
+  if (error) {
+    console.info('[ConnectBloom] activity conversation ensure success', { success: false });
+    return { success: false, message: mapDirectConversationError(error, '会話の作成に失敗しました') };
+  }
+
+  const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
+  console.info('[ConnectBloom] activity conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
+  return result;
+}
+
+export async function getConversationPathForUser(targetUserId: string, postId?: string): Promise<string> {
+  const currentUserId = await getCurrentUserId();
+  const result = await ensureDirectConversation(currentUserId, targetUserId);
+
+  if (!result.success || !result.matchId) {
+    throw new Error(result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : '会話への移動に失敗しました。'));
+  }
+
+  const query = postId ? `?postId=${encodeURIComponent(postId)}` : '';
+  return `/messages/${result.matchId}${query}`;
 }

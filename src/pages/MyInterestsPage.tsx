@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, MapPin, Undo2, UserRound, UsersRound } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { CalendarDays, MapPin, MessageSquareText, Undo2, UserRound, UsersRound } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { useAuth } from '../hooks/useAuth';
 import { cancelActivityPostInterest, getMyInterestedPosts } from '../lib/activityBoardApi';
+import { ensureConversationForActivityInterest } from '../lib/matchApi';
 import type { ActivityInterestStatus, MyInterestedActivityPost } from '../types/activityBoard';
 
 function formatDate(value: string | null) {
@@ -29,12 +30,14 @@ function getInterestStatusClass(status: ActivityInterestStatus) {
 }
 
 export function MyInterestsPage() {
+  const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [interests, setInterests] = useState<MyInterestedActivityPost[]>([]);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [cancellingPostId, setCancellingPostId] = useState<string | null>(null);
+  const [openingInterestId, setOpeningInterestId] = useState<string | null>(null);
   const useSupabaseBoard = isSupabaseMode && isAuthenticated;
 
   useEffect(() => {
@@ -76,6 +79,36 @@ export function MyInterestsPage() {
       mounted = false;
     };
   }, [useSupabaseBoard, user?.id]);
+
+  async function handleOpenConversation(interest: MyInterestedActivityPost) {
+    if (!useSupabaseBoard) {
+      setError('ログインすると会話を始められます。');
+      return;
+    }
+    if (!user?.id) {
+      setError('ログイン状態を確認できませんでした。');
+      return;
+    }
+    if (interest.status !== 'accepted') {
+      setError('参加希望が承認済みではありません。');
+      return;
+    }
+
+    setOpeningInterestId(interest.id);
+    setError('');
+    try {
+      const result = await ensureConversationForActivityInterest(interest.post_id, interest.id);
+      if (!result.success || !result.matchId) {
+        setError(result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : '会話の作成に失敗しました。'));
+        return;
+      }
+      navigate(`/messages/${result.matchId}?postId=${encodeURIComponent(interest.post_id)}`);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? `会話への移動に失敗しました: ${caughtError.message}` : '会話への移動に失敗しました。');
+    } finally {
+      setOpeningInterestId(null);
+    }
+  }
 
   async function handleCancel(interest: MyInterestedActivityPost) {
     if (!useSupabaseBoard) return;
@@ -135,8 +168,14 @@ export function MyInterestsPage() {
             </div>
             <div className="flex flex-wrap gap-1.5">{interest.post?.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/60 pt-3">
-              <Link className="text-sm font-black text-theme-main-dark" to={`/board/${interest.post_id}`}>詳細を見る</Link>
-              <Button disabled={!useSupabaseBoard || cancellingPostId === interest.post_id || interest.status === 'cancelled'} onClick={() => void handleCancel(interest)} variant="secondary"><Undo2 size={16} />参加希望を取り消す</Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link className="text-sm font-black text-theme-main-dark" to={`/board/${interest.post_id}`}>詳細を見る</Link>
+                {interest.status === 'accepted' ? <span className="text-xs font-bold text-cyan-700">承認済み。会話を始められます</span> : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {interest.status === 'accepted' ? <Button disabled={!useSupabaseBoard || openingInterestId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />投稿者と会話する</Button> : null}
+                <Button disabled={!useSupabaseBoard || cancellingPostId === interest.post_id || interest.status === 'cancelled'} onClick={() => void handleCancel(interest)} variant="secondary"><Undo2 size={16} />参加希望を取り消す</Button>
+              </div>
             </div>
           </Card>
         ))}

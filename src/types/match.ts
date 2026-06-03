@@ -23,3 +23,12 @@ export type MatchCreateResult = {
   alreadyExists?: boolean;
   message?: string;
 };
+
+
+export type DirectConversationResult = {
+  success: boolean;
+  matchId?: string;
+  alreadyExists?: boolean;
+  blocked?: boolean;
+  message?: string;
+};

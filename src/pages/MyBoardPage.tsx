@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Archive, CalendarDays, Eye, MapPin, Pencil, RotateCcw, Trash2, UsersRound, XCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Archive, CalendarDays, Eye, MapPin, MessageSquareText, Pencil, RotateCcw, Trash2, UsersRound, XCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { mockActivityPosts } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
-import { archiveActivityPost, closeActivityPost, deleteActivityPost, getMyActivityPosts, reopenActivityPost } from '../lib/activityBoardApi';
-import type { ActivityPostStatus, ActivityPostWithStats } from '../types/activityBoard';
+import { archiveActivityPost, closeActivityPost, deleteActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost } from '../lib/activityBoardApi';
+import { ensureConversationForActivityInterest } from '../lib/matchApi';
+import type { ActivityPostInterestWithProfile, ActivityPostStatus, ActivityPostWithStats } from '../types/activityBoard';
 
 function formatDate(value: string | null) {
   if (!value) return '未定';
@@ -22,12 +23,15 @@ function getStatusLabel(status: ActivityPostStatus) {
 }
 
 export function MyBoardPage() {
+  const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [posts, setPosts] = useState<ActivityPostWithStats[]>([]);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [updatingPostId, setUpdatingPostId] = useState<string | null>(null);
+  const [acceptedInterestsByPostId, setAcceptedInterestsByPostId] = useState<Record<string, ActivityPostInterestWithProfile[]>>({});
+  const [openingInterestId, setOpeningInterestId] = useState<string | null>(null);
   const useSupabaseBoard = isSupabaseMode && isAuthenticated;
 
   useEffect(() => {
@@ -45,6 +49,7 @@ export function MyBoardPage() {
 
       if (!user?.id) {
         setPosts([]);
+        setAcceptedInterestsByPostId({});
         setError('ログイン状態を確認できませんでした');
         return;
       }
@@ -52,8 +57,14 @@ export function MyBoardPage() {
       setLoading(true);
       try {
         const nextPosts = await getMyActivityPosts(user.id);
+        const acceptedEntries = await Promise.all(
+          nextPosts
+            .filter((post) => post.accepted_count > 0)
+            .map(async (post) => [post.id, (await getActivityPostInterestsForOwner(post.id)).filter((interest) => interest.status === 'accepted')] as const),
+        );
         if (!mounted) return;
         setPosts(nextPosts);
+        setAcceptedInterestsByPostId(Object.fromEntries(acceptedEntries));
       } catch (caughtError) {
         if (!mounted) return;
         console.warn('[ConnectBloom] my activity posts fetch failed', { success: false });
@@ -74,6 +85,36 @@ export function MyBoardPage() {
     setPosts((current) => current.map((post) => (
       post.id === postId ? { ...post, status, closed_at: closedAt ?? post.closed_at } : post
     )));
+  }
+
+  async function handleOpenConversation(postId: string, interest: ActivityPostInterestWithProfile) {
+    if (!useSupabaseBoard) {
+      setError('ログインすると会話を始められます。');
+      return;
+    }
+    if (!user?.id) {
+      setError('ログイン状態を確認できませんでした。');
+      return;
+    }
+    if (interest.status !== 'accepted') {
+      setError('参加希望が承認済みではありません。');
+      return;
+    }
+
+    setOpeningInterestId(interest.id);
+    setError('');
+    try {
+      const result = await ensureConversationForActivityInterest(postId, interest.id);
+      if (!result.success || !result.matchId) {
+        setError(result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : '会話の作成に失敗しました。'));
+        return;
+      }
+      navigate(`/messages/${result.matchId}?postId=${encodeURIComponent(postId)}`);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? `会話への移動に失敗しました: ${caughtError.message}` : '会話への移動に失敗しました。');
+    } finally {
+      setOpeningInterestId(null);
+    }
   }
 
   async function handleClose(postId: string) {
@@ -177,6 +218,16 @@ export function MyBoardPage() {
               <span className="inline-flex items-center gap-1"><UsersRound size={14} />承認済み数 {post.accepted_count}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
+            {acceptedInterestsByPostId[post.id]?.length ? (
+              <div className="rounded-2xl border border-cyan-100 bg-cyan-50/45 p-3">
+                <p className="text-xs font-black text-cyan-700">承認済み。会話を始められます</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {acceptedInterestsByPostId[post.id].map((interest) => (
+                    <Button disabled={openingInterestId === interest.id} key={interest.id} onClick={() => void handleOpenConversation(post.id, interest)} variant="secondary"><MessageSquareText size={16} />{interest.profile?.name ?? '参加者'}さんと会話へ</Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="grid gap-2 border-t border-white/60 pt-3 sm:grid-cols-2 lg:grid-cols-6">
               <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-4 py-2 text-[13px] font-bold text-theme-text" to={`/board/${post.id}`}><Eye size={16} />詳細を見る</Link>
               <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-4 py-2 text-[13px] font-bold text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />管理する</Link>

@@ -11,6 +11,7 @@ import type {
   ActivityPostWithStats,
   MyInterestedActivityPost,
 } from '../types/activityBoard';
+import { ensureConversationForActivityInterest } from './matchApi';
 import { getMyProfile, profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { requireSupabaseClient } from './supabase';
 
@@ -442,7 +443,12 @@ export async function updateActivityPostInterestStatus(interestId: string, statu
 }
 
 export async function acceptActivityPostInterest(interestId: string): Promise<ActivityPostInterest> {
-  return updateActivityPostInterestStatus(interestId, 'accepted');
+  const updatedInterest = await updateActivityPostInterestStatus(interestId, 'accepted');
+  const conversation = await ensureConversationForActivityInterest(updatedInterest.post_id, updatedInterest.id);
+  if (!conversation.success) {
+    console.info('[ConnectBloom] accepted activity interest without conversation', { success: false, blocked: conversation.blocked });
+  }
+  return updatedInterest;
 }
 
 export async function declineActivityPostInterest(interestId: string): Promise<ActivityPostInterest> {

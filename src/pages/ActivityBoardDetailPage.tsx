@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, UsersRound, XCircle } from 'lucide-react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -17,6 +17,7 @@ import {
   getActivityPostInterestsForOwner,
   getMyInterestedPostIds,
 } from '../lib/activityBoardApi';
+import { ensureConversationForActivityInterest } from '../lib/matchApi';
 import { getChatRoomById } from '../lib/chatRoomApi';
 import type { ActivityInterestStatus, ActivityPostInterestWithProfile, ActivityPostMode, ActivityPostWithAuthor } from '../types/activityBoard';
 
@@ -54,6 +55,7 @@ function getInterestStatusClass(status: ActivityInterestStatus) {
 export function ActivityBoardDetailPage() {
   const { postId = '' } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [post, setPost] = useState<ActivityPostWithAuthor | null>(null);
   const [sourceRoomName, setSourceRoomName] = useState('');
@@ -65,6 +67,7 @@ export function ActivityBoardDetailPage() {
   const [interestsLoading, setInterestsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingInterestId, setUpdatingInterestId] = useState<string | null>(null);
+  const [openingConversationId, setOpeningConversationId] = useState<string | null>(null);
   const useSupabaseBoard = isSupabaseMode && isAuthenticated;
   const isOwnPost = Boolean(user?.id && post?.created_by === user.id);
 
@@ -83,7 +86,7 @@ export function ActivityBoardDetailPage() {
         setPost(demoPost);
         const demoRoom = demoPost?.room_id ? demoChatRooms.find((room) => room.slug === demoPost.room_id || room.id === demoPost.room_id) : null;
         setSourceRoomName(demoRoom?.name ?? '');
-        if (!location.state?.message) setNotice('Supabaseログイン時に参加希望者を管理できます。');
+        if (!location.state?.message) setNotice('ログインすると会話を始められます。');
         return;
       }
 
@@ -198,6 +201,37 @@ export function ActivityBoardDetailPage() {
     }
   }
 
+  async function handleOpenConversation(interest: ActivityPostInterestWithProfile) {
+    if (!post) return;
+    if (!useSupabaseBoard) {
+      setInterestError('ログインすると会話を始められます。');
+      return;
+    }
+    if (!user?.id) {
+      setInterestError('ログイン状態を確認できませんでした。');
+      return;
+    }
+    if (interest.status !== 'accepted') {
+      setInterestError('参加希望が承認済みではありません。');
+      return;
+    }
+
+    setOpeningConversationId(interest.id);
+    setInterestError('');
+    try {
+      const result = await ensureConversationForActivityInterest(post.id, interest.id);
+      if (!result.success || !result.matchId) {
+        setInterestError(result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : '会話の作成に失敗しました。'));
+        return;
+      }
+      navigate(`/messages/${result.matchId}?postId=${encodeURIComponent(post.id)}`);
+    } catch (caughtError) {
+      setInterestError(caughtError instanceof Error ? `会話への移動に失敗しました: ${caughtError.message}` : '会話への移動に失敗しました。');
+    } finally {
+      setOpeningConversationId(null);
+    }
+  }
+
   return (
     <PageShell description="活動・興味・共創を軸にした募集の詳細です。" eyebrow="Activity Detail" title="募集詳細">
       <Link className="inline-flex items-center gap-1 text-sm font-black text-theme-main-dark" to="/board"><ArrowLeft size={16} />募集ボードへ戻る</Link>
@@ -246,7 +280,7 @@ export function ActivityBoardDetailPage() {
               <div className="space-y-2">
                 <h2 className="flex items-center gap-1.5 text-lg font-black text-theme-text"><UsersRound size={18} />参加希望者</h2>
                 <p className="text-sm leading-6 text-theme-muted">この募集に興味を持っている人を確認し、承認または見送りできます。</p>
-                <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認後の会話導線は既存DMに接続できるか確認中です。会話導線は次フェーズで整理します。</p>
+                <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認済みになると、参加者と1対1の会話を始められます。まずは日程や進め方を相談してみましょう。</p>
               </div>
               {interestError ? <div className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{interestError}</div> : null}
               {interestsLoading ? <p className="text-sm font-bold text-theme-muted">参加希望者を読み込んでいます...</p> : null}
@@ -282,7 +316,7 @@ export function ActivityBoardDetailPage() {
                         {interest.status === 'accepted' ? (
                           <>
                             <span className="inline-flex min-h-11 items-center rounded-xl bg-cyan-50 px-4 py-2 text-[13px] font-black text-cyan-700">承認済み</span>
-                            <Button disabled title="会話導線は次フェーズで整理します" variant="secondary"><MessageSquareText size={16} />会話へ</Button>
+                            <Button disabled={openingConversationId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />会話へ</Button>
                           </>
                         ) : null}
                         {interest.status === 'declined' ? <span className="inline-flex min-h-11 items-center rounded-xl bg-slate-100 px-4 py-2 text-[13px] font-black text-slate-600">見送り</span> : null}

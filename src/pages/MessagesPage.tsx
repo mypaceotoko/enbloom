@@ -1,6 +1,6 @@
 import { Ban, Flag, Loader2, MessageCircle, Send, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -10,6 +10,7 @@ import { ProfileAvatar } from '../components/ProfileAvatar';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { getActivityPostById } from '../lib/activityBoardApi';
 import { blockUser as blockSupabaseUser, hasSafetyBlockBetween } from '../lib/blockApi';
 import { getMessageMatchById, getMessagesByMatchId, sendMessage as sendSupabaseMessage } from '../lib/messageApi';
 import { reportUser as reportSupabaseUser } from '../lib/reportApi';
@@ -20,6 +21,7 @@ const reportReasonOptions = ['不適切なプロフィール', '迷惑行為', '
 export function MessagesPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const demoUser = mockUsers.find((mockUser) => mockUser.id === matchId);
   const { blockUser, ensureMatchMessages, isMatched, messagesByMatchId, reportUser, sendMessage: sendDemoMessage } = useAppState();
   const { isAuthenticated, isSupabaseMode, user: authUser } = useAuth();
@@ -33,7 +35,9 @@ export function MessagesPage() {
   const [savingSafety, setSavingSafety] = useState(false);
   const [supabaseMessages, setSupabaseMessages] = useState<Message[]>([]);
   const [messageMatch, setMessageMatch] = useState<MessageMatch | null>(null);
+  const [activityContextTitle, setActivityContextTitle] = useState('');
   const useSupabaseMessages = isSupabaseMode && isAuthenticated && Boolean(authUser);
+  const activityPostId = searchParams.get('postId') ?? '';
 
   useEffect(() => {
     if (!useSupabaseMessages && matchId) ensureMatchMessages(matchId);
@@ -104,6 +108,27 @@ export function MessagesPage() {
   const headerDescription = useSupabaseMessages
     ? 'ご縁がつながった相手とだけ話せます。焦らず、丁寧にやり取りしましょう。'
     : '送信内容はlocalStorageに保存され、リロード後も残るデモです。';
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadActivityContext() {
+      setActivityContextTitle('');
+      if (!useSupabaseMessages || !activityPostId) return;
+
+      try {
+        const activityPost = await getActivityPostById(activityPostId);
+        if (mounted) setActivityContextTitle(activityPost?.title ?? '');
+      } catch {
+        if (mounted) setActivityContextTitle('');
+      }
+    }
+
+    void loadActivityContext();
+    return () => {
+      mounted = false;
+    };
+  }, [activityPostId, useSupabaseMessages]);
+
   const emptyText = useMemo(() => (
     useSupabaseMessages
       ? 'まだ会話はありません。まずはゆっくり、安心できるひと言から始めましょう。'
@@ -230,6 +255,13 @@ export function MessagesPage() {
           <Badge>{loading ? '取得中' : <><Sparkles size={12} />ご縁</>}</Badge>
         </div>
       </Card>
+
+      {activityPostId ? (
+        <Card className="space-y-1 bg-cyan-50/70 shadow-sm">
+          <p className="text-sm font-black text-cyan-800">募集ボードからつながった会話です。</p>
+          <p className="text-xs font-bold leading-5 text-cyan-700">{activityContextTitle ? `この会話は「${activityContextTitle}」への参加から始まりました。` : 'まずは日程や進め方を相談してみましょう。'}</p>
+        </Card>
+      ) : null}
 
       {messageMatch?.otherProfile ? (
         <Card className="flex items-center gap-3 bg-theme-background/75 shadow-sm">
