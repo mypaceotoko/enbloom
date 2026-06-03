@@ -4,7 +4,7 @@ import { isSupabaseConfigured, requireSupabaseClient, supabase } from './supabas
 import type { Report, ReportStatus, ReportWithProfiles } from '../types/report';
 
 const localAppStateKey = 'enbloom.appState.v1';
-const reportColumns = 'id,reporter_id,reported_user_id,reason,detail,status,reviewed_by,reviewed_at,admin_note,created_at';
+const reportColumns = 'id,reporter_id,reported_user_id,reason,detail,status,reviewed_by,reviewed_at,admin_note,archived_at,archived_by,created_at';
 const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 const reportWithProfilesColumns = [
   reportColumns,
@@ -30,6 +30,16 @@ type UpdateReportReviewResult = {
   report_id: string;
   status: ReportStatus;
   reviewed_at: string;
+};
+
+type ArchiveReportResult = {
+  success: boolean;
+  report_id: string;
+  archived_at: string | null;
+};
+
+type GetAdminReportsOptions = {
+  includeArchived?: boolean;
 };
 
 function readLocalReportedUserIds() {
@@ -125,6 +135,8 @@ export async function getMyReports(userId?: string): Promise<Report[]> {
       reviewed_by: null,
       reviewed_at: null,
       admin_note: null,
+      archived_at: null,
+      archived_by: null,
       created_at: new Date(0).toISOString(),
     }));
   }
@@ -141,10 +153,16 @@ export async function getMyReports(userId?: string): Promise<Report[]> {
   return (data ?? []) as Report[];
 }
 
-export async function getAdminReports(): Promise<ReportWithProfiles[]> {
-  const { data, error } = await requireSupabaseClient()
+export async function getAdminReports(options: GetAdminReportsOptions = {}): Promise<ReportWithProfiles[]> {
+  let query = requireSupabaseClient()
     .from('reports')
-    .select(reportWithProfilesColumns)
+    .select(reportWithProfilesColumns);
+
+  if (!options.includeArchived) {
+    query = query.is('archived_at', null);
+  }
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(100);
 
@@ -192,4 +210,36 @@ export async function updateReportStatus(reportId: string, status: ReportStatus)
 
 export async function updateReportAdminNote(reportId: string, adminNote: string): Promise<UpdateReportReviewResult> {
   return updateReportReview(reportId, { adminNote });
+}
+
+
+async function updateReportArchive(reportId: string, archived: boolean): Promise<ArchiveReportResult> {
+  console.info('[EnBloom] report archive started');
+  console.info('[EnBloom] reportId exists', Boolean(reportId));
+
+  if (!reportId) {
+    console.info('[EnBloom] report archive success', false);
+    throw new Error('通報IDを確認できませんでした。');
+  }
+
+  await getCurrentUserId();
+
+  const { data, error } = await requireSupabaseClient()
+    .rpc(archived ? 'archive_report' : 'unarchive_report', { p_report_id: reportId })
+    .single<ArchiveReportResult>();
+
+  const success = !error && Boolean(data?.success);
+  console.info('[EnBloom] report archive success', success);
+  if (error) throw error;
+  if (!data?.success) throw new Error('通報の整理に失敗しました。');
+
+  return data;
+}
+
+export async function archiveReport(reportId: string): Promise<ArchiveReportResult> {
+  return updateReportArchive(reportId, true);
+}
+
+export async function unarchiveReport(reportId: string): Promise<ArchiveReportResult> {
+  return updateReportArchive(reportId, false);
 }

@@ -12,6 +12,8 @@ export type Report = {
   reviewed_by: string | null;
   reviewed_at: string | null;
   admin_note: string | null;
+  archived_at: string | null;
+  archived_by: string | null;
   created_at: string;
 };
 

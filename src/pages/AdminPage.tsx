@@ -1,4 +1,4 @@
-import { KeyRound, RefreshCw, ShieldAlert, UsersRound } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronDown, KeyRound, RefreshCw, ShieldAlert, UsersRound } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -9,7 +9,7 @@ import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { createInviteCode, deactivateInviteCode, deleteInviteCode, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
-import { getAdminReports, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
+import { archiveReport, getAdminReports, unarchiveReport, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
 import type { ReportStatus, ReportWithProfiles } from '../types/report';
 
 type InviteCodeForm = {
@@ -73,13 +73,26 @@ export function AdminPage() {
   const [reportNoteDrafts, setReportNoteDrafts] = useState<Record<string, string>>({});
   const [updatingReportStatusId, setUpdatingReportStatusId] = useState<string | null>(null);
   const [savingReportNoteId, setSavingReportNoteId] = useState<string | null>(null);
+  const [archivingReportId, setArchivingReportId] = useState<string | null>(null);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  const [includeArchivedReports, setIncludeArchivedReports] = useState(false);
   const [form, setForm] = useState<InviteCodeForm>(defaultInviteCodeForm);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState('');
   const [inviteNotice, setInviteNotice] = useState('');
   const reportedUsers = mockUsers.filter((mockUser) => reportedUserIds.includes(mockUser.id));
-  const reportCount = isSupabaseMode && isAuthenticated ? supabaseReports.length : reportedUserIds.length;
+  const reportStats = useMemo(() => ({
+    total: supabaseReports.length,
+    open: supabaseReports.filter((report) => report.status === 'open').length,
+    reviewing: supabaseReports.filter((report) => report.status === 'reviewing').length,
+    resolved: supabaseReports.filter((report) => report.status === 'resolved').length,
+    dismissed: supabaseReports.filter((report) => report.status === 'dismissed').length,
+  }), [supabaseReports]);
+  const reportCount = isSupabaseMode && isAuthenticated ? reportStats.total : reportedUserIds.length;
+  const displayedReportStats = isSupabaseMode && isAuthenticated
+    ? reportStats
+    : { total: reportedUserIds.length, open: reportedUserIds.length, reviewing: 0, resolved: 0, dismissed: 0 };
   const inviteCountLabel = useMemo(() => {
     if (!isSupabaseMode) return 'ローカル';
     if (!isAuthenticated) return '未ログイン';
@@ -95,7 +108,7 @@ export function AdminPage() {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
 
     let ignore = false;
-    getAdminReports()
+    getAdminReports({ includeArchived: includeArchivedReports })
       .then((reports) => {
         if (!ignore) {
           setSupabaseReports(reports);
@@ -109,7 +122,7 @@ export function AdminPage() {
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, isSupabaseMode, user]);
+  }, [includeArchivedReports, isAuthenticated, isSupabaseMode, user]);
 
   useEffect(() => {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
@@ -218,6 +231,25 @@ export function AdminPage() {
     return reportStatusOptions.find((option) => option.value === status)?.label ?? status;
   }
 
+  function getReportStatusBadgeClass(status: ReportStatus) {
+    const classes: Record<ReportStatus, string> = {
+      open: 'bg-theme-accent-soft text-theme-main-dark ring-1 ring-theme-accent/25',
+      reviewing: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/80',
+      resolved: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
+      dismissed: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
+    };
+
+    return classes[status];
+  }
+
+  function canArchiveReport(report: ReportWithProfiles) {
+    return report.status === 'resolved' || report.status === 'dismissed';
+  }
+
+  function toggleReport(reportId: string) {
+    setExpandedReportId((current) => (current === reportId ? null : reportId));
+  }
+
   function updateReportNoteDraft(reportId: string, value: string) {
     setReportNoteDrafts((current) => ({ ...current, [reportId]: value }));
   }
@@ -271,6 +303,48 @@ export function AdminPage() {
       setReportError(caughtError instanceof Error ? `管理メモの保存に失敗しました（${caughtError.message}）` : '管理メモの保存に失敗しました');
     } finally {
       setSavingReportNoteId(null);
+    }
+  }
+
+
+  async function handleToggleReportArchive(report: ReportWithProfiles) {
+    setReportError('');
+    setReportNotice('');
+
+    if (!isSupabaseMode || !isAuthenticated) {
+      setReportError('通報の整理はSupabase接続時に管理できます。');
+      return;
+    }
+
+    if (!canArchiveReport(report)) {
+      setReportError('未対応または確認中の通報は整理できません。先に対応済みまたは対応不要にしてください。');
+      return;
+    }
+
+    const isArchived = Boolean(report.archived_at);
+    const confirmed = window.confirm(isArchived
+      ? 'この通報のアーカイブを解除しますか？通常の通報一覧に戻ります。'
+      : 'この通報をアーカイブしますか？対応済みの通報として通常の一覧から非表示になります。');
+    if (!confirmed) return;
+
+    setArchivingReportId(report.id);
+    try {
+      const result = isArchived ? await unarchiveReport(report.id) : await archiveReport(report.id);
+      setSupabaseReports((current) => {
+        const nextReports = current.map((currentReport) => (
+          currentReport.id === report.id
+            ? { ...currentReport, archived_at: result.archived_at, archived_by: isArchived ? null : user?.id ?? currentReport.archived_by }
+            : currentReport
+        ));
+
+        return includeArchivedReports ? nextReports : nextReports.filter((currentReport) => currentReport.id !== report.id);
+      });
+      if (!includeArchivedReports && !isArchived) setExpandedReportId((current) => (current === report.id ? null : current));
+      setReportNotice(isArchived ? '通報のアーカイブを解除しました' : '通報をアーカイブしました');
+    } catch (caughtError) {
+      setReportError(caughtError instanceof Error ? `通報の整理に失敗しました（${caughtError.message}）` : '通信に失敗しました。少し時間を置いてもう一度お試しください');
+    } finally {
+      setArchivingReportId(null);
     }
   }
 
@@ -402,6 +476,22 @@ export function AdminPage() {
           </div>
           <Badge>{isSupabaseMode && isAuthenticated ? 'Supabase reports' : 'ローカルデモ'}</Badge>
         </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          <Badge className="bg-theme-background text-theme-main-dark">通報 {displayedReportStats.total}件</Badge>
+          <Badge className={getReportStatusBadgeClass('open')}>未対応 {displayedReportStats.open}件</Badge>
+          <Badge className={getReportStatusBadgeClass('reviewing')}>確認中 {displayedReportStats.reviewing}件</Badge>
+          <Badge className={getReportStatusBadgeClass('resolved')}>対応済み {displayedReportStats.resolved}件</Badge>
+          <Badge className={getReportStatusBadgeClass('dismissed')}>対応不要 {displayedReportStats.dismissed}件</Badge>
+        </div>
+
+        {isSupabaseMode && isAuthenticated ? (
+          <label className="inline-flex w-fit items-center gap-2 rounded-full bg-theme-background/80 px-3 py-1.5 text-xs font-black text-theme-muted">
+            <input checked={includeArchivedReports} className="size-4 accent-theme-main" onChange={(event) => setIncludeArchivedReports(event.target.checked)} type="checkbox" />
+            アーカイブ済みも表示
+          </label>
+        ) : null}
+
         {reportError ? <p className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{reportError}</p> : null}
         {reportNotice ? <p className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{reportNotice}</p> : null}
         {isSupabaseMode && isAuthenticated ? (
@@ -410,64 +500,102 @@ export function AdminPage() {
             {supabaseReports.map((report) => {
               const isUpdatingStatus = updatingReportStatusId === report.id;
               const isSavingNote = savingReportNoteId === report.id;
+              const isArchiving = archivingReportId === report.id;
+              const isExpanded = expandedReportId === report.id;
+              const isArchived = Boolean(report.archived_at);
+              const archiveAllowed = canArchiveReport(report);
               const noteDraft = reportNoteDrafts[report.id] ?? '';
 
               return (
-                <div className="space-y-3 rounded-[1.25rem] bg-theme-accent-soft/45 p-3" key={report.id}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-theme-muted">通報された相手</p>
-                      <p className="break-all font-black text-theme-main-dark">{report.reportedUser?.name ?? report.reported_user_id}</p>
+                <article className={`overflow-hidden rounded-[1.25rem] border border-theme-main/10 bg-theme-accent-soft/35 ${isExpanded ? 'shadow-sm shadow-theme-main/10' : ''}`} key={report.id}>
+                  <button
+                    aria-expanded={isExpanded}
+                    className="grid w-full gap-3 p-3 text-left transition hover:bg-white/35"
+                    onClick={() => toggleReport(report.id)}
+                    type="button"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs font-bold text-theme-muted">通報された相手</p>
+                        <p className="break-all font-black text-theme-main-dark">{report.reportedUser?.name ?? report.reported_user_id}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {isArchived ? <Badge className="bg-slate-100 text-slate-600">アーカイブ済み</Badge> : null}
+                        <Badge className={getReportStatusBadgeClass(report.status)}>{getReportStatusLabel(report.status)}</Badge>
+                      </div>
                     </div>
-                    <Badge className="bg-theme-background text-theme-main-dark">{getReportStatusLabel(report.status)}</Badge>
-                  </div>
-
-                  <div className="grid gap-2 rounded-[1rem] bg-white/55 p-3 text-xs font-bold leading-5 text-theme-muted">
-                    <span className="break-words">通報者: {report.reporter?.name ?? report.reporter_id}</span>
-                    <span className="break-words">理由: {report.reason}</span>
-                    <span className="break-words">補足: {report.detail || '未入力'}</span>
-                    <span>ステータス: {getReportStatusLabel(report.status)}（{report.status}）</span>
-                    <span>通報日時: {formatDateTime(report.created_at)}</span>
-                    <span>reviewed_at: {formatDateTime(report.reviewed_at, '未レビュー')}</span>
-                    <span className="break-words">admin_note: {report.admin_note || '未入力'}</span>
-                  </div>
-
-                  <label className="grid gap-1.5 text-sm font-black text-theme-text">
-                    ステータス変更
-                    <select
-                      className="min-h-11 w-full rounded-[1rem] border border-theme-main/15 bg-white px-3 text-sm font-bold text-theme-text outline-none transition focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
-                      disabled={isUpdatingStatus || isSavingNote}
-                      onChange={(event) => handleUpdateReportStatus(report, event.target.value as ReportStatus)}
-                      value={report.status}
-                    >
-                      {reportStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}（{option.value}）</option>)}
-                    </select>
-                  </label>
-
-                  <div className="space-y-2">
-                    <label className="grid gap-1.5 text-sm font-black text-theme-text">
-                      管理メモ
-                      <textarea
-                        className="min-h-24 w-full resize-y rounded-[1rem] border border-theme-main/15 bg-white px-3 py-2 text-sm font-bold leading-6 text-theme-text outline-none transition placeholder:text-theme-muted/70 focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
-                        disabled={isUpdatingStatus || isSavingNote}
-                        onChange={(event) => updateReportNoteDraft(report.id, event.target.value)}
-                        placeholder="対応方針や確認メモを、必要な範囲だけ残します。"
-                        value={noteDraft}
-                      />
-                    </label>
-                    <div className="flex justify-end">
-                      <Button className="min-h-9 px-3 py-1.5" disabled={isUpdatingStatus || isSavingNote} onClick={() => handleSaveReportAdminNote(report)} type="button" variant="secondary">
-                        {isSavingNote ? '保存中...' : 'メモを保存'}
-                      </Button>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-theme-muted">
+                      <span className="break-words">理由: {report.reason}</span>
+                      <span>通報日時: {formatDateTime(report.created_at)}</span>
                     </div>
-                  </div>
-                </div>
+                    <span className="inline-flex items-center gap-1 self-start text-xs font-black text-theme-main-dark">
+                      {isExpanded ? '閉じる' : '詳細を見る'}
+                      <ChevronDown className={`transition ${isExpanded ? 'rotate-180' : ''}`} size={14} />
+                    </span>
+                  </button>
+
+                  {isExpanded ? (
+                    <div className="space-y-3 border-t border-white/70 p-3 pt-3">
+                      <div className="grid gap-2 rounded-[1rem] bg-white/60 p-3 text-xs font-bold leading-5 text-theme-muted">
+                        <span className="break-words">通報された相手: {report.reportedUser?.name ?? report.reported_user_id}</span>
+                        <span className="break-words">通報者: {report.reporter?.name ?? report.reporter_id}</span>
+                        <span className="break-words">理由: {report.reason}</span>
+                        <span className="break-words">補足: {report.detail || '未入力'}</span>
+                        <span>ステータス: {getReportStatusLabel(report.status)}（{report.status}）</span>
+                        <span>通報日時: {formatDateTime(report.created_at)}</span>
+                        <span>reviewed_at: {formatDateTime(report.reviewed_at, '未レビュー')}</span>
+                        <span className="break-words">admin_note: {report.admin_note || '未入力'}</span>
+                        <span>archived_at: {formatDateTime(report.archived_at, '未アーカイブ')}</span>
+                      </div>
+
+                      <label className="grid gap-1.5 text-sm font-black text-theme-text">
+                        ステータス変更
+                        <select
+                          className="min-h-11 w-full rounded-[1rem] border border-theme-main/15 bg-white px-3 text-sm font-bold text-theme-text outline-none transition focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
+                          disabled={isUpdatingStatus || isSavingNote || isArchiving}
+                          onChange={(event) => handleUpdateReportStatus(report, event.target.value as ReportStatus)}
+                          value={report.status}
+                        >
+                          {reportStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}（{option.value}）</option>)}
+                        </select>
+                      </label>
+
+                      <div className="space-y-2">
+                        <label className="grid gap-1.5 text-sm font-black text-theme-text">
+                          管理メモ
+                          <textarea
+                            className="min-h-24 w-full resize-y rounded-[1rem] border border-theme-main/15 bg-white px-3 py-2 text-sm font-bold leading-6 text-theme-text outline-none transition placeholder:text-theme-muted/70 focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
+                            disabled={isUpdatingStatus || isSavingNote || isArchiving}
+                            onChange={(event) => updateReportNoteDraft(report.id, event.target.value)}
+                            placeholder="対応方針や確認メモを、必要な範囲だけ残します。"
+                            value={noteDraft}
+                          />
+                        </label>
+                        <div className="flex justify-end">
+                          <Button className="min-h-9 px-3 py-1.5" disabled={isUpdatingStatus || isSavingNote || isArchiving} onClick={() => handleSaveReportAdminNote(report)} type="button" variant="secondary">
+                            {isSavingNote ? '保存中...' : 'メモを保存'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="rounded-[1rem] bg-theme-background/70 p-3">
+                        <p className="text-xs font-bold leading-5 text-theme-muted">対応済み・対応不要の通報だけアーカイブできます。履歴は残しながら通常の一覧から整理します。</p>
+                        <div className="mt-2 flex flex-wrap justify-end gap-2">
+                          <Button disabled={isUpdatingStatus || isSavingNote || isArchiving || !archiveAllowed} onClick={() => handleToggleReportArchive(report)} type="button" variant={isArchived ? 'secondary' : 'ghost'}>
+                            {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+                            {isArchiving ? '整理中...' : isArchived ? 'アーカイブ解除' : 'アーカイブ'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </article>
               );
             })}
           </>
         ) : (
           <>
-            <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは通報済みユーザーの仮表示を維持します。ステータス更新と管理メモ保存はSupabase接続時に管理できます。</p>
+            <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは通報済みユーザーの仮表示を維持します。ステータス更新・管理メモ保存・アーカイブはSupabase接続時に管理できます。</p>
             {reportedUsers.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたはDM画面の通報ボタンから反映されます。</p> : null}
             {reportedUsers.map((reportedUser) => (
               <div className="flex items-center gap-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-2.5" key={reportedUser.id}>
