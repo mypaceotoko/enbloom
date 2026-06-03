@@ -12,10 +12,24 @@ const reportWithProfilesColumns = [
   `reported_profile:profiles!reports_reported_user_id_fkey(${profileColumns})`,
 ].join(',');
 
+const reportStatuses = ['open', 'reviewing', 'resolved', 'dismissed'] as const satisfies readonly ReportStatus[];
+
 type ReportRow = Report;
 type ReportRowWithProfiles = ReportRow & {
   reporter_profile?: ProfileRow | ProfileRow[] | null;
   reported_profile?: ProfileRow | ProfileRow[] | null;
+};
+
+type UpdateReportReviewParams = {
+  status?: ReportStatus;
+  adminNote?: string;
+};
+
+type UpdateReportReviewResult = {
+  success: boolean;
+  report_id: string;
+  status: ReportStatus;
+  reviewed_at: string;
 };
 
 function readLocalReportedUserIds() {
@@ -47,6 +61,12 @@ function mapReportWithProfiles(row: ReportRowWithProfiles): ReportWithProfiles {
     reporter: reporter ? profileRowToUserProfile(reporter) : null,
     reportedUser: reportedUser ? profileRowToUserProfile(reportedUser) : null,
   };
+}
+
+function assertReportStatus(status: ReportStatus) {
+  if (!reportStatuses.includes(status)) {
+    throw new Error('通報ステータスが不正です。');
+  }
 }
 
 async function getCurrentUserId() {
@@ -131,4 +151,45 @@ export async function getAdminReports(): Promise<ReportWithProfiles[]> {
   if (error) throw error;
   console.info('[EnBloom] reports count', { count: data?.length ?? 0 });
   return (data ?? []).map((row) => mapReportWithProfiles(row as unknown as ReportRowWithProfiles));
+}
+
+export async function updateReportReview(reportId: string, review: UpdateReportReviewParams): Promise<UpdateReportReviewResult> {
+  console.info('[EnBloom] report update started');
+  console.info('[EnBloom] reportId exists', Boolean(reportId));
+
+  if (!reportId) {
+    console.info('[EnBloom] report status update success', false);
+    console.info('[EnBloom] report admin note update success', false);
+    throw new Error('通報IDを確認できませんでした。');
+  }
+
+  await getCurrentUserId();
+
+  if (review.status) assertReportStatus(review.status);
+
+  const updatesStatus = typeof review.status !== 'undefined';
+  const updatesAdminNote = typeof review.adminNote !== 'undefined';
+  const { data, error } = await requireSupabaseClient()
+    .rpc('update_report_review', {
+      p_report_id: reportId,
+      new_status: review.status ?? null,
+      new_admin_note: updatesAdminNote ? review.adminNote ?? '' : null,
+    })
+    .single<UpdateReportReviewResult>();
+
+  const success = !error && Boolean(data?.success);
+  if (updatesStatus) console.info('[EnBloom] report status update success', success);
+  if (updatesAdminNote) console.info('[EnBloom] report admin note update success', success);
+  if (error) throw error;
+  if (!data?.success) throw new Error('通報レビューの更新に失敗しました。');
+
+  return data;
+}
+
+export async function updateReportStatus(reportId: string, status: ReportStatus): Promise<UpdateReportReviewResult> {
+  return updateReportReview(reportId, { status });
+}
+
+export async function updateReportAdminNote(reportId: string, adminNote: string): Promise<UpdateReportReviewResult> {
+  return updateReportReview(reportId, { adminNote });
 }
