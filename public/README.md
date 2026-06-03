@@ -1,14 +1,17 @@
 # Brand assets
 
-Replace these files to update ConnectBloom branding without changing application code.
+ConnectBloom now uses the uploaded official horizontal logo PNG for primary brand placements.
 
 ## Header logo
 
-- `logo.png` is the default raster logo path.
-- `logo.svg` is preferred when present, then the app falls back to `logo.png`.
-- Future variants can be added with matching names: `logo-light`, `logo-dark`, and `logo-icon` using `.svg` and/or `.png` extensions.
+- Official horizontal logo: `assets/brand/connectbloom-logo-horizontal.png`
+- The app references this file from `src/config/brandAssets.ts` and renders it through `src/components/BrandLogo.tsx`.
+- Replace this PNG at the same path to update the primary header/landing/login logo without changing application code.
+- Keep the original image dimensions and avoid recompressing the PNG so the logo remains sharp on high-density displays.
 
-If none of the configured logo files are present, the header keeps using the built-in temporary flower mark and app-name text.
+## Legacy SVG assets
+
+The older SVG files (`logo.svg`, `logo-light.svg`, `logo-dark.svg`, `logo-icon.svg`, and `icon.svg`) remain in `public/` for favicon/app-icon fallback and legacy references. Primary brand placements should use the official PNG above.
 
 ## App icons
 

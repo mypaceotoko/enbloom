@@ -1,10 +1,12 @@
 export type LogoVariant = 'default' | 'light' | 'dark' | 'icon';
 
+export const officialHorizontalLogo = '/assets/brand/connectbloom-logo-horizontal.png';
+
 export type LogoAsset = {
   variant: LogoVariant;
   /**
-   * Ordered by preference. SVG assets are generated from the current
-   * ConnectBloom yellow × blue brand system.
+   * Ordered by preference. The horizontal PNG is the official ConnectBloom
+   * brand logo and should be used for primary brand placements.
    */
   sources: string[];
   alt: string;
@@ -13,18 +15,18 @@ export type LogoAsset = {
 export const logoAssets: Record<LogoVariant, LogoAsset> = {
   default: {
     variant: 'default',
-    sources: ['/logo.svg'],
-    alt: 'ConnectBloom',
+    sources: [officialHorizontalLogo],
+    alt: 'ConnectBloom | 紹介から、共創がひらく。',
   },
   light: {
     variant: 'light',
-    sources: ['/logo-light.svg', '/logo.svg'],
-    alt: 'ConnectBloom',
+    sources: [officialHorizontalLogo],
+    alt: 'ConnectBloom | 紹介から、共創がひらく。',
   },
   dark: {
     variant: 'dark',
-    sources: ['/logo-dark.svg', '/logo.svg'],
-    alt: 'ConnectBloom',
+    sources: [officialHorizontalLogo],
+    alt: 'ConnectBloom | 紹介から、共創がひらく。',
   },
   icon: {
     variant: 'icon',

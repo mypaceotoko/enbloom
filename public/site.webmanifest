@@ -4,8 +4,8 @@
   "description": "紹介から、共創がひらく。",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#0057FF",
+  "background_color": "#F7FCFF",
+  "theme_color": "#40B5FF",
   "icons": [
     {
       "src": "/icon.svg",
