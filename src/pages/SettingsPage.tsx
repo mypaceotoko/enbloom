@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Bell, ChevronDown, ChevronUp, ClipboardList, HeartHandshake, Languages, LogOut, Palette, ShieldCheck, ShieldMinus, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Bell, ChevronDown, ChevronUp, ClipboardList, HeartHandshake, Languages, LogOut, Palette, ShieldCheck, ShieldMinus, Sparkles, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -9,7 +9,7 @@ import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
-import { getUnreadNotificationCount } from '../lib/notificationApi';
+import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
 import { getSupabaseConnectionStatus } from '../lib/supabase';
 
 export function SettingsPage() {
@@ -32,17 +32,11 @@ export function SettingsPage() {
         return;
       }
 
-      try {
-        const count = await getUnreadNotificationCount();
-        if (mounted) setUnreadNotificationCount(count);
-      } catch (caughtError) {
-        console.warn('[ConnectBloom] notification count fetch failed', { error: caughtError });
-        if (mounted) setUnreadNotificationCount(0);
-      }
+      const count = await safeGetUnreadNotificationCount();
+      if (mounted) setUnreadNotificationCount(count);
     }
 
     void loadUnreadNotificationCount();
-
     return () => {
       mounted = false;
     };
@@ -70,7 +64,7 @@ export function SettingsPage() {
   }
 
   return (
-    <PageShell description="テーマ設定のみlocalStorageへ保存します。他は将来実装のプレースホルダーです。" eyebrow="Settings" title="設定">
+    <PageShell description="通知・活動管理・テーマをまとめて確認できます。" eyebrow="Settings" title="設定">
       {!isSupabaseMode || !isAuthenticated ? (
         <div className="rounded-full border border-theme-main/15 bg-theme-card/80 px-3 py-1.5 text-center text-[11px] font-black text-theme-main-dark shadow-sm">
           ローカルデモ / Supabase未接続
@@ -79,59 +73,20 @@ export function SettingsPage() {
 
       {notice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{notice}</div> : null}
 
-      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/my-profile')} type="button">
-        <Card className="space-y-2 bg-theme-card/86 py-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><UserRound size={18} /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-theme-text">マイプロフィール</span>
-              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">登録したプロフィールを確認・編集できます。</span>
-            </span>
-            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
-          </div>
-        </Card>
-      </button>
+      <SettingsLink body="登録したプロフィールを確認・編集できます。" icon={<UserRound size={18} />} onClick={() => navigate('/my-profile')} title="マイプロフィール" />
 
-
-      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/my-board')} type="button">
-        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark"><ClipboardList size={18} /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-theme-text">自分の募集</span>
-              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">投稿した募集と届いた参加希望を管理できます。</span>
-            </span>
-            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
-          </div>
-        </Card>
-      </button>
-
-      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/my-interests')} type="button">
-        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><HeartHandshake size={18} /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-theme-text">参加希望した募集</span>
-              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">自分が送った参加希望の状態を確認・取り消しできます。</span>
-            </span>
-            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
-          </div>
-        </Card>
-      </button>
-
-      {/* TODO: 招待コード管理は将来的に /invite-codes へ分離し、一般ユーザー向けの紹介コード管理画面として整理する。 */}
-      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/admin')} type="button">
-        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/90 text-white"><Ticket size={18} /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-theme-text">招待コード管理</span>
-              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">あなたのご縁から参加する人のために、招待コードを作成・確認できます。</span>
-            </span>
-            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
-          </div>
-        </Card>
-      </button>
+      <section className="space-y-3">
+        <div className="px-1">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Activity management</p>
+          <h2 className="text-lg font-black text-theme-text">活動管理</h2>
+        </div>
+        <SettingsLink badge={unreadNotificationCount > 0 ? `未読 ${unreadNotificationCount}件` : '通知はありません'} body="参加希望・承認・メッセージを確認できます。" icon={<Bell size={18} />} onClick={() => navigate('/notifications')} title="通知" />
+        <SettingsLink body="募集・参加希望・通知・会話への導線を1か所で確認できます。" icon={<Sparkles size={18} />} onClick={() => navigate('/my-activity')} title="マイアクティビティ" />
+        <SettingsLink body="投稿した募集と届いた参加希望を管理できます。" icon={<ClipboardList size={18} />} onClick={() => navigate('/my-board')} title="自分の募集" />
+        <SettingsLink body="自分が送った参加希望の状態を確認・取り消しできます。" icon={<HeartHandshake size={18} />} onClick={() => navigate('/my-interests')} title="参加希望した募集" />
+        <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigate('/blocked-users')} title="ブロック中のユーザー" />
+        <SettingsLink body="あなたのご縁から参加する人のために、招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigate('/admin')} title="招待コード管理" />
+      </section>
 
       <Card className="flower-gradient border-0 p-1">
         <div className="space-y-3 rounded-[1.25rem] bg-theme-card/78 p-3.5 backdrop-blur">
@@ -148,38 +103,8 @@ export function SettingsPage() {
       </Card>
 
       <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語 / 英語切り替えは将来実装予定です。" />
-
-      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/notifications')} type="button">
-        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark"><Bell size={18} /></span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-2 text-sm font-black text-theme-text">
-                通知
-                {unreadNotificationCount > 0 ? <span className="rounded-full bg-theme-main px-2 py-0.5 text-[10px] font-black text-white">未読 {unreadNotificationCount}</span> : null}
-              </span>
-              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">参加希望・承認・メッセージを確認できます。</span>
-            </span>
-            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
-          </div>
-        </Card>
-      </button>
-
       <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲をユーザー設定として保存できるようにします。" />
       <Placeholder icon={<ShieldCheck size={18} />} title="安全設定" body="本人確認・年齢確認は次フェーズ以降の検討項目です。今回はUIのみです。" />
-
-      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/blocked-users')} type="button">
-        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark"><ShieldMinus size={18} /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-theme-text">ブロック中のユーザー</span>
-              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">ブロックした相手の確認・解除ができます。</span>
-            </span>
-            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
-          </div>
-        </Card>
-      </button>
 
       <Card className="space-y-3 border-white/40 bg-theme-card/72 py-3 shadow-sm">
         <div className="flex gap-2.5">
@@ -210,11 +135,27 @@ export function SettingsPage() {
   );
 }
 
-function SupabaseConnectionDebug({
-  status,
-}: {
-  status: ReturnType<typeof getSupabaseConnectionStatus>;
-}) {
+function SettingsLink({ badge, body, icon, onClick, title }: { badge?: string; body: string; icon: ReactNode; onClick: () => void; title: string }) {
+  return (
+    <button className="w-full text-left transition active:scale-[0.99]" onClick={onClick} type="button">
+      <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark">{icon}</span>
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-2 text-sm font-black text-theme-text">
+              {title}
+              {badge ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${badge.startsWith('未読') ? 'bg-theme-main text-white' : 'bg-theme-accent-soft text-theme-main-dark'}`}>{badge}</span> : null}
+            </span>
+            <span className="mt-0.5 block text-xs leading-5 text-theme-muted">{body}</span>
+          </span>
+          <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
+        </div>
+      </Card>
+    </button>
+  );
+}
+
+function SupabaseConnectionDebug({ status }: { status: ReturnType<typeof getSupabaseConnectionStatus> }) {
   const rows = [
     ['Supabase configured', String(status.isConfigured)],
     ['VITE_SUPABASE_URL exists', String(status.supabaseUrlExists)],
@@ -232,9 +173,7 @@ function SupabaseConnectionDebug({
   return (
     <Card className="mt-2 space-y-2 bg-theme-card/86 py-3">
       <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">
-          Developer status
-        </p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Developer status</p>
         <h2 className="text-sm font-black">Supabase接続ステータス</h2>
       </div>
       <dl className="space-y-1.5 text-xs">
@@ -245,9 +184,7 @@ function SupabaseConnectionDebug({
           </div>
         ))}
       </dl>
-      <p className="text-[11px] leading-5 text-theme-muted">
-        環境変数の値やAPI key本体は表示しません。true / false とOAuthリダイレクト先だけを確認できます。
-      </p>
+      <p className="text-[11px] leading-5 text-theme-muted">環境変数の値やAPI key本体は表示しません。true / false とOAuthリダイレクト先だけを確認できます。</p>
     </Card>
   );
 }

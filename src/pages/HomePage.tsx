@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { Bell, CalendarHeart, CheckCircle2, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { Bell, CalendarHeart, CheckCircle2, ClipboardList, DoorOpen, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -12,7 +13,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
-import { getUnreadNotificationCount } from '../lib/notificationApi';
+import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from '../lib/profilePhotoApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
 import type { UserProfile } from '../types/user';
@@ -46,7 +47,7 @@ export function HomePage() {
       }
 
       try {
-        const count = await getUnreadNotificationCount();
+        const count = await safeGetUnreadNotificationCount();
         if (mounted) setUnreadNotificationCount(count);
       } catch (caughtError) {
         console.warn('[ConnectBloom] notification count fetch failed', { error: caughtError });
@@ -157,6 +158,22 @@ export function HomePage() {
         </Card>
       ) : null}
 
+      <Card className="space-y-3 border-theme-main/15 bg-theme-card/86 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span>
+            <span className="block text-sm font-black text-theme-text">最近の動き</span>
+            <span className="mt-1 block text-xs leading-5 text-theme-muted">通知・募集・参加希望・ルームをまとめて確認できます。</span>
+          </span>
+          <Link to="/my-activity"><Button className="min-h-9 px-3 text-xs" variant="secondary">マイアクティビティ</Button></Link>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <HomeQuickLink icon={<Bell size={16} />} label={unreadNotificationCount > 0 ? `未読通知 ${unreadNotificationCount}件` : '通知'} path="/notifications" />
+          <HomeQuickLink icon={<ClipboardList size={16} />} label="募集ボード" path="/board" />
+          <HomeQuickLink icon={<HeartHandshake size={16} />} label="参加希望" path="/my-interests" />
+          <HomeQuickLink icon={<DoorOpen size={16} />} label="ルーム" path="/rooms" />
+        </div>
+      </Card>
+
       <Card className="flower-gradient relative overflow-hidden border-0 p-1">
         <div className="absolute -right-8 -top-8 size-28 rounded-full bg-white/30" />
         <div className="absolute -bottom-10 left-8 size-24 rounded-full bg-theme-accent-soft/50 blur-2xl" />
@@ -191,5 +208,13 @@ export function HomePage() {
         ))}
       </div>
     </PageShell>
+  );
+}
+function HomeQuickLink({ icon, label, path }: { icon: ReactNode; label: string; path: string }) {
+  return (
+    <Link className="flex items-center gap-2 rounded-2xl bg-theme-accent-soft/55 px-3 py-2 text-xs font-black text-theme-main-dark transition hover:bg-theme-accent-soft active:scale-[0.98]" to={path}>
+      {icon}
+      {label}
+    </Link>
   );
 }
