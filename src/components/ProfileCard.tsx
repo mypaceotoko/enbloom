@@ -10,19 +10,45 @@ import { Card } from './Card';
 export type ProfileCardProps = {
   user: UserProfile;
   compact?: boolean;
+  liked?: boolean;
+  isCurrentUser?: boolean;
+  onToggleLike?: (userId: string, nextLiked: boolean) => Promise<boolean | void> | boolean | void;
 };
 
-export function ProfileCard({ user, compact = false }: ProfileCardProps) {
+export function ProfileCard({ user, compact = false, liked: likedOverride, isCurrentUser = false, onToggleLike }: ProfileCardProps) {
   const { isLiked, isMatched, toggleLike } = useAppState();
   const [showMatch, setShowMatch] = useState(false);
+  const [likeError, setLikeError] = useState('');
+  const [likeSaving, setLikeSaving] = useState(false);
   const previewBio = compact && user.bio.length > 58 ? `${user.bio.slice(0, 58)}...` : user.bio;
-  const liked = isLiked(user.id);
+  const liked = likedOverride ?? isLiked(user.id);
   const matched = isMatched(user.id);
 
-  function handleLike() {
-    const becameMatched = toggleLike(user.id);
-    if (becameMatched) {
-      setShowMatch(true);
+  async function handleLike() {
+    if (isCurrentUser || likeSaving) return;
+
+    setLikeError('');
+
+    if (!onToggleLike) {
+      const becameMatched = toggleLike(user.id);
+      if (becameMatched) {
+        setShowMatch(true);
+      }
+      return;
+    }
+
+    const nextLiked = !liked;
+    setLikeSaving(true);
+
+    try {
+      const becameMatched = await onToggleLike(user.id, nextLiked);
+      if (becameMatched) {
+        setShowMatch(true);
+      }
+    } catch (caughtError) {
+      setLikeError(caughtError instanceof Error ? caughtError.message : '通信に失敗しました。少し時間を置いてもう一度お試しください。');
+    } finally {
+      setLikeSaving(false);
     }
   }
 
@@ -96,11 +122,15 @@ export function ProfileCard({ user, compact = false }: ProfileCardProps) {
           </div>
         </div>
 
+        {likeError ? <p className="rounded-[1rem] bg-theme-accent-soft/70 px-3 py-2 text-xs font-bold text-theme-text">{likeError}</p> : null}
+
         <div className="flex gap-2 pt-0.5">
-          <Button className={`flex-1 shadow-lg ${liked ? 'bg-theme-accent text-white shadow-theme-accent/25 hover:bg-theme-accent/90' : 'bg-theme-accent-soft text-theme-text'}`} onClick={handleLike} variant="secondary">
-            <Heart fill={liked ? 'currentColor' : 'none'} size={16} />
-            {liked ? 'いいね済み' : 'いいね'}
-          </Button>
+          {isCurrentUser ? null : (
+            <Button className={`flex-1 shadow-lg ${liked ? 'bg-theme-accent text-white shadow-theme-accent/25 hover:bg-theme-accent/90' : 'bg-theme-accent-soft text-theme-text'}`} disabled={likeSaving} onClick={handleLike} variant="secondary">
+              <Heart fill={liked ? 'currentColor' : 'none'} size={16} />
+              {liked ? 'いいね済み' : 'いいね'}
+            </Button>
+          )}
           <Link className="flex-1" to={`/profile/${user.id}`}>
             <Button className="w-full">詳細を見る</Button>
           </Link>

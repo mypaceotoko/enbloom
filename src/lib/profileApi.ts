@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js';
-import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile, type ThemeId } from '../types/user';
+import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile, type ThemeId, type UserProfile } from '../types/user';
 import { requireSupabaseClient } from './supabase';
 
 export type ProfileRow = {
@@ -22,6 +22,20 @@ export type ProfileRow = {
 export type ProfileUpsert = Partial<Omit<ProfileRow, 'id'>> & {
   id: string;
 };
+
+
+const profileGradients = [
+  'from-pink-100 via-rose-50 to-emerald-100',
+  'from-emerald-100 via-lime-50 to-pink-100',
+  'from-rose-100 via-orange-50 to-teal-100',
+  'from-sky-100 via-emerald-50 to-purple-100',
+  'from-fuchsia-100 via-pink-50 to-green-100',
+];
+
+function getProfileGradient(profileId: string) {
+  const charTotal = [...profileId].reduce((total, char) => total + char.charCodeAt(0), 0);
+  return profileGradients[charTotal % profileGradients.length];
+}
 
 const profileColumns = [
   'id',
@@ -115,5 +129,40 @@ export function profileRowToCurrentUser(profile: ProfileRow, fallbackTheme: Them
     datingTemperature: profile.dating_temperature || DEFAULT_DATING_TEMPERATURE,
     relationshipGoal: profile.relationship_goal,
     themePreference: fallbackTheme,
+  };
+}
+
+
+export async function getPublicProfiles(currentUserId?: string, limit = 24): Promise<ProfileRow[]> {
+  let query = requireSupabaseClient()
+    .from('profiles')
+    .select(profileColumns)
+    .eq('visibility', 'public')
+    .eq('onboarding_completed', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (currentUserId) {
+    query = query.neq('id', currentUserId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as unknown as ProfileRow[];
+}
+
+export function profileRowToUserProfile(profile: ProfileRow): UserProfile {
+  return {
+    id: profile.id,
+    name: profile.display_name || 'EnBloomユーザー',
+    age: profile.age ?? 18,
+    location: profile.location || '地域未設定',
+    occupation: profile.occupation || '自然体のプロフィール',
+    bio: profile.bio || 'プロフィールを準備中です。ゆっくりご縁を育てていきたいです。',
+    interests: profile.interests?.length ? profile.interests : ['紹介経由'],
+    datingTemperature: profile.dating_temperature || DEFAULT_DATING_TEMPERATURE,
+    relationshipGoal: profile.relationship_goal || '自然体で長く付き合える関係',
+    introducedBy: profile.invited_by ? '紹介者' : 'EnBloom',
+    gradient: getProfileGradient(profile.id),
   };
 }
