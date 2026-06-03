@@ -1,12 +1,12 @@
 export type LogoVariant = 'default' | 'light' | 'dark' | 'icon';
 
-export const officialHorizontalLogo = '/assets/brand/connectbloom-logo-horizontal.png';
+export const officialHorizontalLogo = '/84D299F4-A688-480C-85F2-853E80F09F71.png';
 
 export type LogoAsset = {
   variant: LogoVariant;
   /**
-   * Ordered by preference. The horizontal PNG is the official ConnectBloom
-   * brand logo and should be used for primary brand placements.
+   * Ordered by preference. The horizontal PNG is the manually uploaded
+   * official ConnectBloom logo in public/ and should be used for primary brand placements.
    */
   sources: string[];
   alt: string;

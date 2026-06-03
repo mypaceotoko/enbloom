@@ -4,9 +4,9 @@ ConnectBloom now uses the uploaded official horizontal logo PNG for primary bran
 
 ## Header logo
 
-- Official horizontal logo: `assets/brand/connectbloom-logo-horizontal.png`
+- Official horizontal logo: `84D299F4-A688-480C-85F2-853E80F09F71.png`
 - The app references this file from `src/config/brandAssets.ts` and renders it through `src/components/BrandLogo.tsx`.
-- Replace this PNG at the same path to update the primary header/landing/login logo without changing application code.
+- Use the manually uploaded PNG at this public-root path for the primary header/landing/login logo without renaming, moving, or processing the image in application changes.
 - Keep the original image dimensions and avoid recompressing the PNG so the logo remains sharp on high-density displays.
 
 ## Legacy SVG assets
