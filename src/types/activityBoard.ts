@@ -21,6 +21,7 @@ export type ActivityPost = {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  room_id?: string | null;
 };
 
 export type ActivityPostStats = {
@@ -65,6 +66,7 @@ export type ActivityPostInput = {
   max_participants?: number | null;
   scheduled_at?: string | null;
   status?: ActivityPostStatus;
+  room_id?: string | null;
 };
 
 export type ActivityPostUpdateInput = {
@@ -79,6 +81,7 @@ export type ActivityPostUpdateInput = {
   scheduled_at?: string | null;
   mode?: ActivityPostMode;
   status?: ActivityPostStatus;
+  room_id?: string | null;
 };
 
 export type ActivityPostEditFormState = {

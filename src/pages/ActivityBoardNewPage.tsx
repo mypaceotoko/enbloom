@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ActivityPostForm } from '../components/ActivityPostForm';
 import { parseActivityPostTags } from '../lib/activityPostFormUtils';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { activityPostCategories } from '../data/mockActivityPosts';
+import { demoChatRooms } from '../data/mockChatRooms';
 import { useAuth } from '../hooks/useAuth';
 import { createActivityPost } from '../lib/activityBoardApi';
 import type { ActivityPostEditFormState } from '../types/activityBoard';
@@ -26,6 +27,9 @@ const initialForm: ActivityPostEditFormState = {
 export function ActivityBoardNewPage() {
   const { isAuthenticated, isSupabaseMode } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sourceRoomSlug = searchParams.get('roomId') ?? '';
+  const sourceRoom = demoChatRooms.find((room) => room.slug === sourceRoomSlug) ?? null;
   const [form, setForm] = useState<ActivityPostEditFormState>(initialForm);
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
@@ -51,6 +55,7 @@ export function ActivityBoardNewPage() {
         scheduled_at: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : null,
         mode: form.mode,
         status: 'open',
+        room_id: sourceRoomSlug || null,
       });
       navigate(`/board/${post.id}`);
     } catch (caughtError) {
@@ -69,6 +74,14 @@ export function ActivityBoardNewPage() {
           <Badge>ローカルデモ</Badge>
           <p className="text-sm font-bold text-theme-text">ログインすると募集を投稿できます。</p>
           <p className="text-sm leading-6 text-theme-muted">Supabase未接続・未ログイン時は、デモ募集の一覧と詳細を見られます。</p>
+        </Card>
+      ) : null}
+
+      {sourceRoom ? (
+        <Card className="space-y-2">
+          <Badge>ルームから作成</Badge>
+          <p className="text-sm font-bold text-theme-text">{sourceRoom.name}の会話から募集を作成しています。</p>
+          <p className="text-sm leading-6 text-theme-muted">作成後の募集には room_id={sourceRoom.slug} を保存し、詳細ページでルーム由来の案内を表示します。</p>
         </Card>
       ) : null}
 

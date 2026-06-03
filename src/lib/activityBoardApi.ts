@@ -43,6 +43,7 @@ const activityPostColumns = [
   'created_at',
   'updated_at',
   'closed_at',
+  'room_id',
 ].join(',');
 
 const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
@@ -88,7 +89,7 @@ function mapInterest(row: ActivityInterestRow): ActivityPostInterestWithProfile 
 
 
 function buildActivityPostUpdatePayload(input: ActivityPostUpdateInput) {
-  const payload: Partial<Pick<ActivityPost, 'title' | 'body' | 'category' | 'area' | 'tags' | 'max_participants' | 'scheduled_at' | 'mode' | 'status' | 'closed_at'>> = {};
+  const payload: Partial<Pick<ActivityPost, 'title' | 'body' | 'category' | 'area' | 'tags' | 'max_participants' | 'scheduled_at' | 'mode' | 'status' | 'closed_at' | 'room_id'>> = {};
 
   if (typeof input.title !== 'undefined') payload.title = input.title.trim();
   if (typeof input.body !== 'undefined') payload.body = input.body.trim();
@@ -113,6 +114,8 @@ function buildActivityPostUpdatePayload(input: ActivityPostUpdateInput) {
 
   if (typeof input.scheduled_at !== 'undefined') payload.scheduled_at = input.scheduled_at || null;
   if (typeof input.mode !== 'undefined') payload.mode = input.mode;
+  if (typeof input.room_id !== 'undefined') payload.room_id = input.room_id || null;
+
   if (typeof input.status !== 'undefined') {
     payload.status = input.status;
     if (input.status === 'open') payload.closed_at = null;
@@ -141,10 +144,31 @@ function mapPost(row: ActivityPostRow, stats: Partial<ActivityPostStats> = {}): 
     created_at: row.created_at,
     updated_at: row.updated_at,
     closed_at: row.closed_at,
+    room_id: row.room_id ?? null,
     author: author ? profileRowToUserProfile(author) : null,
     interest_count: stats.interest_count ?? 0,
     accepted_count: stats.accepted_count ?? 0,
   };
+}
+
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function resolveRoomId(roomIdOrSlug: string | null | undefined) {
+  const value = roomIdOrSlug?.trim();
+  if (!value) return null;
+  if (isUuid(value)) return value;
+
+  const { data, error } = await requireSupabaseClient()
+    .from('chat_rooms')
+    .select('id')
+    .eq('slug', value)
+    .maybeSingle<{ id: string }>();
+
+  if (error) throw error;
+  return data?.id ?? null;
 }
 
 async function getCurrentUserId() {
@@ -234,6 +258,7 @@ export async function getActivityPostById(postId: string): Promise<ActivityPostW
 
 export async function createActivityPost(input: ActivityPostInput): Promise<ActivityPostWithAuthor> {
   const userId = await getCurrentUserId();
+  const roomId = await resolveRoomId(input.room_id);
   const payload = {
     created_by: userId,
     title: input.title.trim(),
@@ -245,6 +270,7 @@ export async function createActivityPost(input: ActivityPostInput): Promise<Acti
     max_participants: input.max_participants ?? null,
     scheduled_at: input.scheduled_at || null,
     status: input.status ?? 'open',
+    room_id: roomId,
   };
 
   const { data, error } = await requireSupabaseClient()

@@ -20,6 +20,8 @@ import { MyProfilePage } from './pages/MyProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { ProfileDetailPage } from './pages/ProfileDetailPage';
+import { RoomDetailPage } from './pages/RoomDetailPage';
+import { RoomsPage } from './pages/RoomsPage';
 import { SafetyPage } from './pages/SafetyPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -34,6 +36,8 @@ export default function App() {
         <Route element={<HomePage />} path="home" />
         <Route element={<DiscoverPage />} path="discover" />
         <Route element={<ActivityBoardPage />} path="board" />
+        <Route element={<RoomsPage />} path="rooms" />
+        <Route element={<RoomDetailPage />} path="rooms/:roomId" />
         <Route element={<ActivityBoardNewPage />} path="board/new" />
         <Route element={<ActivityBoardEditPage />} path="board/:postId/edit" />
         <Route element={<ActivityBoardDetailPage />} path="board/:postId" />

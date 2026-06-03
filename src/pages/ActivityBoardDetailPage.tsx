@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { mockActivityPosts } from '../data/mockActivityPosts';
+import { demoChatRooms } from '../data/mockChatRooms';
 import { useAuth } from '../hooks/useAuth';
 import {
   acceptActivityPostInterest,
@@ -16,6 +17,7 @@ import {
   getActivityPostInterestsForOwner,
   getMyInterestedPostIds,
 } from '../lib/activityBoardApi';
+import { getChatRoomById } from '../lib/chatRoomApi';
 import type { ActivityInterestStatus, ActivityPostInterestWithProfile, ActivityPostMode, ActivityPostWithAuthor } from '../types/activityBoard';
 
 function formatDate(value: string | null) {
@@ -54,6 +56,7 @@ export function ActivityBoardDetailPage() {
   const location = useLocation();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [post, setPost] = useState<ActivityPostWithAuthor | null>(null);
+  const [sourceRoomName, setSourceRoomName] = useState('');
   const [interests, setInterests] = useState<ActivityPostInterestWithProfile[]>([]);
   const [interested, setInterested] = useState(false);
   const [notice, setNotice] = useState('');
@@ -71,11 +74,15 @@ export function ActivityBoardDetailPage() {
     async function loadPost() {
       if (!postId) return;
       setInterests([]);
+      setSourceRoomName('');
       setInterestError('');
       setNotice(typeof location.state?.message === 'string' ? location.state.message : '');
 
       if (!useSupabaseBoard) {
-        setPost(mockActivityPosts.find((item) => item.id === postId) ?? null);
+        const demoPost = mockActivityPosts.find((item) => item.id === postId) ?? null;
+        setPost(demoPost);
+        const demoRoom = demoPost?.room_id ? demoChatRooms.find((room) => room.slug === demoPost.room_id || room.id === demoPost.room_id) : null;
+        setSourceRoomName(demoRoom?.name ?? '');
         if (!location.state?.message) setNotice('Supabaseログイン時に参加希望者を管理できます。');
         return;
       }
@@ -96,6 +103,20 @@ export function ActivityBoardDetailPage() {
         if (!mounted) return;
         setPost(nextPost);
         setInterested(interestedIds.includes(postId));
+
+        if (nextPost?.room_id) {
+          const demoRoom = demoChatRooms.find((room) => room.slug === nextPost.room_id || room.id === nextPost.room_id);
+          if (demoRoom) {
+            setSourceRoomName(demoRoom.name);
+          } else {
+            try {
+              const sourceRoom = await getChatRoomById(nextPost.room_id);
+              if (mounted) setSourceRoomName(sourceRoom?.name ?? '');
+            } catch {
+              if (mounted) setSourceRoomName('ルーム');
+            }
+          }
+        }
 
         if (nextPost?.created_by === user.id) {
           setInterestsLoading(true);
@@ -198,6 +219,7 @@ export function ActivityBoardDetailPage() {
               </div>
               <Badge className="bg-theme-main text-white">{getStatusLabel(post.status)}</Badge>
             </div>
+            {sourceRoomName ? <div className="rounded-xl bg-theme-accent-soft/70 p-3 text-sm font-black text-theme-main-dark">この募集は{sourceRoomName}から生まれました。</div> : null}
             <p className="whitespace-pre-wrap text-sm leading-7 text-theme-text">{post.body}</p>
             <div className="grid gap-2 text-sm font-bold text-theme-muted sm:grid-cols-2">
               <span className="inline-flex items-center gap-1"><MapPin size={16} />活動エリア: {post.area || '未設定'}</span>
