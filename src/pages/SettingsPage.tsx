@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Bell, ChevronDown, ChevronUp, Languages, LogOut, Palette, ShieldCheck, UserRound, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Bell, ChevronDown, ChevronUp, Languages, LogOut, Palette, ShieldCheck, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -59,6 +59,20 @@ export function SettingsPage() {
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-black text-theme-text">マイプロフィール</span>
               <span className="mt-0.5 block text-xs leading-5 text-theme-muted">登録したプロフィールを確認・編集できます。</span>
+            </span>
+            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
+          </div>
+        </Card>
+      </button>
+
+      {/* TODO: 招待コード管理は将来的に /invite-codes へ分離し、一般ユーザー向けの紹介コード管理画面として整理する。 */}
+      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/admin')} type="button">
+        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/90 text-white"><Ticket size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-black text-theme-text">招待コード管理</span>
+              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">あなたのご縁から参加する人のために、招待コードを作成・確認できます。</span>
             </span>
             <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
           </div>
