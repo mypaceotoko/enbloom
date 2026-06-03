@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Bell, ChevronDown, ChevronUp, Languages, LogOut, Palette, ShieldCheck, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Bell, ChevronDown, ChevronUp, Languages, LogOut, Palette, ShieldCheck, ShieldMinus, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -97,6 +97,19 @@ export function SettingsPage() {
       <Placeholder icon={<Bell size={18} />} title="通知設定" body="マッチ・メッセージ通知の設定を次フェーズ以降に追加します。" />
       <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲をユーザー設定として保存できるようにします。" />
       <Placeholder icon={<ShieldCheck size={18} />} title="安全設定" body="本人確認・年齢確認は次フェーズ以降の検討項目です。今回はUIのみです。" />
+
+      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/blocked-users')} type="button">
+        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark"><ShieldMinus size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-black text-theme-text">ブロック中のユーザー</span>
+              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">ブロックした相手の確認・解除ができます。</span>
+            </span>
+            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
+          </div>
+        </Card>
+      </button>
 
       <Card className="space-y-3 border-white/40 bg-theme-card/72 py-3 shadow-sm">
         <div className="flex gap-2.5">
