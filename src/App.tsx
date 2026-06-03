@@ -1,6 +1,9 @@
 import { Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AdminPage } from './pages/AdminPage';
+import { ActivityBoardDetailPage } from './pages/ActivityBoardDetailPage';
+import { ActivityBoardNewPage } from './pages/ActivityBoardNewPage';
+import { ActivityBoardPage } from './pages/ActivityBoardPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { BlockedUsersPage } from './pages/BlockedUsersPage';
 import { DiscoverPage } from './pages/DiscoverPage';
@@ -27,6 +30,9 @@ export default function App() {
         <Route element={<OnboardingPage />} path="onboarding" />
         <Route element={<HomePage />} path="home" />
         <Route element={<DiscoverPage />} path="discover" />
+        <Route element={<ActivityBoardPage />} path="board" />
+        <Route element={<ActivityBoardNewPage />} path="board/new" />
+        <Route element={<ActivityBoardDetailPage />} path="board/:postId" />
         <Route element={<ProfileDetailPage />} path="profile/:id" />
         <Route element={<LikesPage />} path="likes" />
         <Route element={<MatchesPage />} path="matches" />

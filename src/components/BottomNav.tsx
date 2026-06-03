@@ -1,11 +1,11 @@
-import { Compass, Heart, Home, MessageCircle, Settings } from 'lucide-react';
+import { ClipboardList, Compass, Home, MessageCircle, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 const navItems = [
   { to: '/home', label: 'ホーム', icon: Home },
   { to: '/discover', label: '探す', icon: Compass },
-  { to: '/likes', label: '話したい', icon: Heart },
+  { to: '/board', label: '募集', icon: ClipboardList },
   { to: '/matches', label: 'コネクト', icon: MessageCircle },
   { to: '/settings', label: '設定', icon: Settings },
 ];
