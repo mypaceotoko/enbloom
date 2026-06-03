@@ -1,6 +1,6 @@
 import type { UserProfile } from './user';
 
-export type ActivityPostMode = 'online' | 'offline' | 'either';
+export type ActivityPostMode = 'online' | 'offline' | 'hybrid' | 'either';
 export type ActivityPostStatus = 'open' | 'closed' | 'archived';
 export type ActivityPostStatusLabel = '募集中' | '締切済み' | 'アーカイブ';
 export type ActivityInterestStatus = 'interested' | 'accepted' | 'declined' | 'cancelled';
@@ -65,6 +65,32 @@ export type ActivityPostInput = {
   max_participants?: number | null;
   scheduled_at?: string | null;
   status?: ActivityPostStatus;
+};
+
+export type ActivityPostUpdateInput = {
+  title?: string;
+  body?: string;
+  category?: string;
+  location?: string | null;
+  area?: string | null;
+  tags?: string[];
+  capacity?: number | null;
+  max_participants?: number | null;
+  scheduled_at?: string | null;
+  mode?: ActivityPostMode;
+  status?: ActivityPostStatus;
+};
+
+export type ActivityPostEditFormState = {
+  title: string;
+  body: string;
+  category: string;
+  location: string;
+  tags: string;
+  capacity: string;
+  scheduledAt: string;
+  mode: ActivityPostMode;
+  status: ActivityPostStatus;
 };
 
 export type ActivityPostFilters = {
