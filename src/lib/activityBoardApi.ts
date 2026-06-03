@@ -98,7 +98,7 @@ async function getInterestCounts(postIds: string[]) {
 
   const { data, error } = await requireSupabaseClient().rpc('get_activity_post_interest_counts', { post_ids: postIds });
   if (error) {
-    console.info('[EnBloom] activity post interest count fetch skipped', { success: false });
+    console.info('[ConnectBloom] activity post interest count fetch skipped', { success: false });
     return new Map<string, number>();
   }
 
@@ -120,7 +120,7 @@ export async function getActivityPosts(filters: ActivityPostFilters = {}): Promi
 
   const rows = (data ?? []) as unknown as ActivityPostRow[];
   const counts = await getInterestCounts(rows.map((row) => row.id));
-  console.info('[EnBloom] activity posts loaded', { count: rows.length });
+  console.info('[ConnectBloom] activity posts loaded', { count: rows.length });
   return rows.map((row) => mapPost(row, counts.get(row.id) ?? 0));
 }
 
@@ -160,7 +160,7 @@ export async function createActivityPost(input: ActivityPostInput): Promise<Acti
     .single<ActivityPostRow>();
 
   if (error) throw error;
-  console.info('[EnBloom] activity post created', { success: true });
+  console.info('[ConnectBloom] activity post created', { success: true });
   return mapPost(data, 0);
 }
 
@@ -193,7 +193,7 @@ export async function expressInterest(postId: string, message?: string): Promise
     .single<ActivityPostInterest>();
 
   if (error) throw error;
-  console.info('[EnBloom] activity post interest expressed', { success: true });
+  console.info('[ConnectBloom] activity post interest expressed', { success: true });
   return data;
 }
 
@@ -208,7 +208,7 @@ export async function cancelActivityPostInterest(postId: string): Promise<Activi
     .single<ActivityPostInterest>();
 
   if (error) throw error;
-  console.info('[EnBloom] activity post interest cancelled', { success: true });
+  console.info('[ConnectBloom] activity post interest cancelled', { success: true });
   return data;
 }
 
@@ -252,7 +252,7 @@ export async function updateActivityPostInterestStatus(interestId: string, statu
     .single<ActivityPostInterest>();
 
   if (error) throw error;
-  console.info('[EnBloom] activity post interest status updated', { success: true, status });
+  console.info('[ConnectBloom] activity post interest status updated', { success: true, status });
   return data;
 }
 

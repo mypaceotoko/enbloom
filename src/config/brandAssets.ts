@@ -14,22 +14,22 @@ export const logoAssets: Record<LogoVariant, LogoAsset> = {
   default: {
     variant: 'default',
     sources: ['/logo.svg', '/logo.png'],
-    alt: 'EnBloom',
+    alt: 'ConnectBloom',
   },
   light: {
     variant: 'light',
     sources: ['/logo-light.svg', '/logo-light.png', '/logo.svg', '/logo.png'],
-    alt: 'EnBloom',
+    alt: 'ConnectBloom',
   },
   dark: {
     variant: 'dark',
     sources: ['/logo-dark.svg', '/logo-dark.png', '/logo.svg', '/logo.png'],
-    alt: 'EnBloom',
+    alt: 'ConnectBloom',
   },
   icon: {
     variant: 'icon',
     sources: ['/logo-icon.svg', '/logo-icon.png', '/logo.svg', '/logo.png'],
-    alt: 'EnBloom',
+    alt: 'ConnectBloom',
   },
 };
 

@@ -105,7 +105,7 @@ export const supabaseConfigured = supabaseConfig.isConfigured;
 
 if (!supabaseConfig.isConfigured) {
   console.warn(
-    `[EnBloom] Supabase is not configured yet. Missing or invalid: ${supabaseConfig.missingKeys.join(
+    `[ConnectBloom] Supabase is not configured yet. Missing or invalid: ${supabaseConfig.missingKeys.join(
       ', ',
     )}. The localStorage demo experience will continue to run.`,
   );
@@ -145,7 +145,7 @@ export function assertSupabaseConfigured(): boolean {
   if (supabaseConfig.isConfigured) return true;
 
   console.warn(
-    `[EnBloom] Supabase environment variables are missing or invalid: ${supabaseConfig.missingKeys.join(
+    `[ConnectBloom] Supabase environment variables are missing or invalid: ${supabaseConfig.missingKeys.join(
       ', ',
     )}`,
   );

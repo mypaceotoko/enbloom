@@ -57,7 +57,7 @@ export function LandingPage() {
           {[
             { icon: UsersRound, title: '紹介・信頼ベース', body: '知っている人のつながりを起点に、活動・興味・紹介のご縁を安心して育てます。' },
             { icon: HeartHandshake, title: '今日のつながり', body: 'おすすめは少人数。活動ジャンルや話したいテーマを見ながら進めます。' },
-            { icon: LockKeyhole, title: '安心できる余白', body: 'EnBloomは、紹介制のコネクトSNSです。性別で相手を探す設計には寄せません。' },
+            { icon: LockKeyhole, title: '安心できる余白', body: 'ConnectBloomは、紹介制のコネクトSNSです。性別で相手を探す設計には寄せません。' },
           ].map((item) => {
             const Icon = item.icon;
             return (

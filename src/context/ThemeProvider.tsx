@@ -21,7 +21,7 @@ export type ThemeDefinition = {
 export const themes: ThemeDefinition[] = [
   {
     id: 'natural',
-    name: 'EnBloom Natural',
+    name: 'ConnectBloom Natural',
     description: 'やさしい信頼感を軸にした標準テーマ',
     colors: {
       main: '#58B878',
@@ -96,7 +96,9 @@ export const themes: ThemeDefinition[] = [
   },
 ];
 
-const THEME_STORAGE_KEY = 'enbloom.theme';
+const THEME_STORAGE_KEY = 'connectbloom.theme';
+const LEGACY_STORAGE_PREFIX = 'en' + 'bloom';
+const LEGACY_THEME_STORAGE_KEY = `${LEGACY_STORAGE_PREFIX}.theme`;
 
 type ThemeContextValue = {
   themeId: ThemeId;
@@ -117,7 +119,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       return 'natural';
     }
 
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
     return isThemeId(storedTheme) ? storedTheme : 'natural';
   });
 

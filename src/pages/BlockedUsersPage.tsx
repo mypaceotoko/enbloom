@@ -69,7 +69,7 @@ export function BlockedUsersPage() {
       if (!useSupabaseBlocks) {
         setBlockedUsers(localBlockedUsers);
         setLoading(false);
-        console.info('[EnBloom] blocked users count', { count: localBlockedUsers.length });
+        console.info('[ConnectBloom] blocked users count', { count: localBlockedUsers.length });
         return;
       }
 
@@ -94,7 +94,7 @@ export function BlockedUsersPage() {
   }, [localBlockedUsers, useSupabaseBlocks]);
 
   async function handleUnblock(targetUserId: string) {
-    console.info('[EnBloom] targetUserId exists', { exists: Boolean(targetUserId) });
+    console.info('[ConnectBloom] targetUserId exists', { exists: Boolean(targetUserId) });
     if (!targetUserId) return;
 
     const confirmed = window.confirm(unblockConfirmMessage);
@@ -108,16 +108,16 @@ export function BlockedUsersPage() {
       if (useSupabaseBlocks) {
         await unblockSupabaseUser(targetUserId);
       } else {
-        console.info('[EnBloom] unblock user started', { targetUserIdExists: Boolean(targetUserId) });
+        console.info('[ConnectBloom] unblock user started', { targetUserIdExists: Boolean(targetUserId) });
         unblockDemoUser(targetUserId);
-        console.info('[EnBloom] unblock user success', { success: true });
+        console.info('[ConnectBloom] unblock user success', { success: true });
       }
 
       setBlockedUsers((current) => current.filter((item) => item.targetUserId !== targetUserId));
       setNotice(unblockSuccessMessage);
     } catch {
       setErrorMessage(unblockErrorMessage);
-      console.info('[EnBloom] unblock user success', { success: false });
+      console.info('[ConnectBloom] unblock user success', { success: false });
     } finally {
       setUnblockingUserId('');
     }
@@ -194,7 +194,7 @@ function BlockedUserCard({
   unblocking: boolean;
 }) {
   const profile = item.profile;
-  const displayName = profile?.name || 'EnBloomユーザー';
+  const displayName = profile?.name || 'ConnectBloomユーザー';
   const profileSummary = [profile?.age ? `${profile.age}歳` : null, profile?.location || '活動エリア未設定']
     .filter(Boolean)
     .join(' / ');

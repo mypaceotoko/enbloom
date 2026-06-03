@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
       if (error) {
-        console.warn('[EnBloom] Failed to restore Supabase session.', error.message);
+        console.warn('[ConnectBloom] Failed to restore Supabase session.', error.message);
       }
       setSession(data.session ?? null);
       setLoading(false);

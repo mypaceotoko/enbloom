@@ -123,7 +123,7 @@ export async function getMyMatches(userId: string): Promise<MatchWithProfile[]> 
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  console.info('[EnBloom] my matches count', { count: data?.length ?? 0 });
+  console.info('[ConnectBloom] my matches count', { count: data?.length ?? 0 });
   const matches = (data ?? []).map((row) => mapMatchWithProfile(row as unknown as MatchRowWithProfiles, userId));
   const profiles = matches.map((match) => match.profile).filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
   const photosByUserId = await getPrimaryProfilePhotos(profiles.map((profile) => profile.id));
@@ -144,7 +144,7 @@ export async function hasMatched(userAId: string, userBId: string): Promise<bool
 
   if (error) throw error;
   const matched = Boolean(data);
-  console.info('[EnBloom] match already exists', { exists: matched });
+  console.info('[ConnectBloom] match already exists', { exists: matched });
   return matched;
 }
 
@@ -154,7 +154,7 @@ export async function createMatch(userAId: string, userBId: string): Promise<Mat
   }
 
   const mutualLikeExists = await hasReciprocalLikes(userAId, userBId);
-  console.info('[EnBloom] mutual like exists', { exists: mutualLikeExists });
+  console.info('[ConnectBloom] mutual like exists', { exists: mutualLikeExists });
   if (!mutualLikeExists) {
     return { success: true, matched: false, message: '相互の「話してみたい」はまだ成立していません。' };
   }
@@ -179,7 +179,7 @@ export async function createMatch(userAId: string, userBId: string): Promise<Mat
     .single<{ id: string }>();
 
   const success = !error;
-  console.info('[EnBloom] match create success', { success });
+  console.info('[ConnectBloom] match create success', { success });
   if (error) throw error;
 
   return { success: true, matched: true, matchId: data.id, alreadyExists: false, message: 'ご縁がつながりました。' };
@@ -187,14 +187,14 @@ export async function createMatch(userAId: string, userBId: string): Promise<Mat
 
 export async function createMatchIfMutualLike(targetUserId: string): Promise<MatchCreateResult> {
   const currentUserId = await getCurrentUserId();
-  console.info('[EnBloom] match check started', { targetUserIdExists: Boolean(targetUserId) });
+  console.info('[ConnectBloom] match check started', { targetUserIdExists: Boolean(targetUserId) });
 
   if (currentUserId === targetUserId) {
     return { success: false, matched: false, message: '自分自身とはコネクトできません。' };
   }
 
   const targetExists = await hasProfile(targetUserId);
-  console.info('[EnBloom] targetUserId exists', { exists: targetExists });
+  console.info('[ConnectBloom] targetUserId exists', { exists: targetExists });
   if (!targetExists) {
     return { success: false, matched: false, message: '相手のプロフィールを確認できませんでした。' };
   }
@@ -205,19 +205,19 @@ export async function createMatchIfMutualLike(targetUserId: string): Promise<Mat
   if (!error) {
     const rpcRow = Array.isArray(data) ? data[0] : data;
     const result = mapRpcResult(rpcRow as MatchRpcRow | null | undefined);
-    console.info('[EnBloom] mutual like exists', { exists: result.matched });
-    console.info('[EnBloom] match already exists', { exists: Boolean(result.alreadyExists) });
-    console.info('[EnBloom] match create success', { success: result.success });
+    console.info('[ConnectBloom] mutual like exists', { exists: result.matched });
+    console.info('[ConnectBloom] match already exists', { exists: Boolean(result.alreadyExists) });
+    console.info('[ConnectBloom] match create success', { success: result.success });
     return result;
   }
 
   if (!isMissingRpcError(error)) {
-    console.info('[EnBloom] match create success', { success: false });
+    console.info('[ConnectBloom] match create success', { success: false });
     throw error;
   }
 
   const mutualLikeExists = await hasReciprocalLikes(currentUserId, targetUserId);
-  console.info('[EnBloom] mutual like exists', { exists: mutualLikeExists });
+  console.info('[ConnectBloom] mutual like exists', { exists: mutualLikeExists });
 
   if (!mutualLikeExists) {
     return { success: true, matched: false, message: '相互の「話してみたい」はまだ成立していません。' };

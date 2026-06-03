@@ -22,7 +22,7 @@ export function SettingsPage() {
   const supabaseStatus = getSupabaseConnectionStatus();
 
   async function handleSignOut() {
-    const confirmed = window.confirm('EnBloomからログアウトしますか？');
+    const confirmed = window.confirm('ConnectBloomからログアウトしますか？');
     if (!confirmed) return;
 
     setSigningOut(true);

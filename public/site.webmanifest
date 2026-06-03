@@ -1,7 +1,7 @@
 {
-  "name": "EnBloom",
-  "short_name": "EnBloom",
-  "description": "縁が、恋に咲く。",
+  "name": "ConnectBloom",
+  "short_name": "ConnectBloom",
+  "description": "紹介から、共創がひらく。",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFDF8",

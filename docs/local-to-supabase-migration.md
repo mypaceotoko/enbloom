@@ -1,6 +1,6 @@
 # localStorageからSupabaseへの移行計画
 
-EnBloomは、localStorageのデモ体験を壊さず、機能単位でSupabaseへ段階移行します。Phase 3後半では、Supabase Auth / Googleログイン入口と `profiles` 接続を追加しました。
+ConnectBloomは、localStorageのデモ体験を壊さず、機能単位でSupabaseへ段階移行します。Phase 3後半では、Supabase Auth / Googleログイン入口と `profiles` 接続を追加しました。
 
 ## 現在のlocalStorage管理項目と対応先
 

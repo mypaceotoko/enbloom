@@ -65,7 +65,7 @@ async function getCurrentUserId() {
 
 export async function getMessageMatchById(matchId: string): Promise<MessageMatch | null> {
   const currentUserId = await getCurrentUserId();
-  console.info('[EnBloom] matchId exists', { exists: Boolean(matchId) });
+  console.info('[ConnectBloom] matchId exists', { exists: Boolean(matchId) });
 
   const { data, error } = await requireSupabaseClient()
     .from('matches')
@@ -77,7 +77,7 @@ export async function getMessageMatchById(matchId: string): Promise<MessageMatch
   if (error) throw error;
 
   const isParticipant = Boolean(data && (data.user1_id === currentUserId || data.user2_id === currentUserId));
-  console.info('[EnBloom] is match participant', { isParticipant });
+  console.info('[ConnectBloom] is match participant', { isParticipant });
   if (!data || !isParticipant) return null;
 
   const otherProfile = data.user1_id === currentUserId ? firstProfile(data.user2_profile) : firstProfile(data.user1_profile);
@@ -94,7 +94,7 @@ export async function getMessageMatchById(matchId: string): Promise<MessageMatch
 }
 
 export async function getMessagesByMatchId(matchId: string): Promise<Message[]> {
-  console.info('[EnBloom] messages fetch started', { matchIdExists: Boolean(matchId) });
+  console.info('[ConnectBloom] messages fetch started', { matchIdExists: Boolean(matchId) });
 
   const { data, error } = await requireSupabaseClient()
     .from('messages')
@@ -103,17 +103,17 @@ export async function getMessagesByMatchId(matchId: string): Promise<Message[]> 
     .order('created_at', { ascending: true });
 
   const success = !error;
-  console.info('[EnBloom] messages fetch success', { success });
+  console.info('[ConnectBloom] messages fetch success', { success });
   if (error) throw error;
 
   const messages = ((data ?? []) as MessageRow[]).map(mapMessageRow);
-  console.info('[EnBloom] messages count', { count: messages.length });
+  console.info('[ConnectBloom] messages count', { count: messages.length });
   return messages;
 }
 
 export async function sendMessage(matchId: string, body: string): Promise<SendMessageResult> {
   const trimmedBody = body.trim();
-  console.info('[EnBloom] send message started', { matchIdExists: Boolean(matchId), bodyExists: Boolean(trimmedBody) });
+  console.info('[ConnectBloom] send message started', { matchIdExists: Boolean(matchId), bodyExists: Boolean(trimmedBody) });
 
   if (!trimmedBody) {
     return { success: false, errorMessage: '会話内容を入力してください。' };
@@ -126,7 +126,7 @@ export async function sendMessage(matchId: string, body: string): Promise<SendMe
   if (!rpcError) {
     const rpcRow = (Array.isArray(rpcData) ? rpcData[0] : rpcData) as SendMatchMessageRpcRow | null | undefined;
     const success = Boolean(rpcRow?.success);
-    console.info('[EnBloom] send message success', { success });
+    console.info('[ConnectBloom] send message success', { success });
 
     if (!success) {
       return { success: false, errorMessage: rpcRow?.message ?? '会話の送信に失敗しました。' };
@@ -150,7 +150,7 @@ export async function sendMessage(matchId: string, body: string): Promise<SendMe
   }
 
   if (!isMissingRpcError(rpcError)) {
-    console.info('[EnBloom] send message success', { success: false });
+    console.info('[ConnectBloom] send message success', { success: false });
     throw rpcError;
   }
 
@@ -161,7 +161,7 @@ export async function sendMessage(matchId: string, body: string): Promise<SendMe
     .single<MessageRow>();
 
   const success = !error;
-  console.info('[EnBloom] send message success', { success });
+  console.info('[ConnectBloom] send message success', { success });
   if (error) throw error;
 
   return {

@@ -69,10 +69,10 @@ export function MyProfilePage() {
   }, [isAuthenticated, isSupabaseMode, themeId, user]);
 
   function validateSelectedPhoto(file: File | null) {
-    console.info('[EnBloom] file exists', { exists: Boolean(file) });
+    console.info('[ConnectBloom] file exists', { exists: Boolean(file) });
     if (!file) return '画像ファイルを選択してください';
-    console.info('[EnBloom] file size', { size: file.size });
-    console.info('[EnBloom] file type', { type: file.type });
+    console.info('[ConnectBloom] file size', { size: file.size });
+    console.info('[ConnectBloom] file type', { type: file.type });
     if (!file.type.startsWith('image/')) return '画像ファイルを選択してください';
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return 'JPG / PNG / WebP の画像を選択してください';
     if (file.size > 5 * 1024 * 1024) return '画像サイズは5MB以下にしてください';

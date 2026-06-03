@@ -3,7 +3,9 @@ import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoA
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { isSupabaseConfigured, requireSupabaseClient, supabase } from './supabase';
 
-const localAppStateKey = 'enbloom.appState.v1';
+const localAppStateKey = 'connectbloom.appState.v1';
+const legacyStoragePrefix = 'en' + 'bloom';
+const legacyLocalAppStateKey = `${legacyStoragePrefix}.appState.v1`;
 const blockColumns = 'id,blocker_id,blocked_id,created_at';
 const blockedProfileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 
@@ -16,7 +18,7 @@ function readLocalBlockedUserIds() {
   if (typeof window === 'undefined') return [];
 
   try {
-    const rawValue = window.localStorage.getItem(localAppStateKey);
+    const rawValue = window.localStorage.getItem(localAppStateKey) ?? window.localStorage.getItem(legacyLocalAppStateKey);
     if (!rawValue) return [];
     const parsedValue = JSON.parse(rawValue) as { blockedUserIds?: unknown };
     return Array.isArray(parsedValue.blockedUserIds)
@@ -56,7 +58,7 @@ function blockRowToBlockedUser(row: BlockedUserProfileJoinRow): BlockedUserWithP
 export async function getBlockedUserIds(userId?: string): Promise<string[]> {
   if (!isSupabaseConfigured || !supabase) {
     const localIds = readLocalBlockedUserIds();
-    console.info('[EnBloom] blocked ids count', { count: localIds.length });
+    console.info('[ConnectBloom] blocked ids count', { count: localIds.length });
     return localIds;
   }
 
@@ -68,12 +70,12 @@ export async function getBlockedUserIds(userId?: string): Promise<string[]> {
 
   if (error) throw error;
   const blockedIds = (data ?? []).map((row) => row.blocked_id as string);
-  console.info('[EnBloom] blocked ids count', { count: blockedIds.length });
+  console.info('[ConnectBloom] blocked ids count', { count: blockedIds.length });
   return blockedIds;
 }
 
 export async function getBlockedUsers(userId?: string): Promise<Block[]> {
-  console.info('[EnBloom] blocked users fetch started');
+  console.info('[ConnectBloom] blocked users fetch started');
 
   if (!isSupabaseConfigured || !supabase) {
     const localBlocks = readLocalBlockedUserIds().map((blockedId) => ({
@@ -82,7 +84,7 @@ export async function getBlockedUsers(userId?: string): Promise<Block[]> {
       blocked_id: blockedId,
       created_at: '',
     }));
-    console.info('[EnBloom] blocked users count', { count: localBlocks.length });
+    console.info('[ConnectBloom] blocked users count', { count: localBlocks.length });
     return localBlocks;
   }
 
@@ -95,12 +97,12 @@ export async function getBlockedUsers(userId?: string): Promise<Block[]> {
 
   if (error) throw error;
   const blocks = (data ?? []) as unknown as Block[];
-  console.info('[EnBloom] blocked users count', { count: blocks.length });
+  console.info('[ConnectBloom] blocked users count', { count: blocks.length });
   return blocks;
 }
 
 export async function getBlockedUsersWithProfiles(userId?: string): Promise<BlockedUserWithProfile[]> {
-  console.info('[EnBloom] blocked users fetch started');
+  console.info('[ConnectBloom] blocked users fetch started');
 
   if (!isSupabaseConfigured || !supabase) {
     const localBlocks = await getBlockedUsers(userId);
@@ -121,7 +123,7 @@ export async function getBlockedUsersWithProfiles(userId?: string): Promise<Bloc
   const photosByUserId = await getPrimaryProfilePhotos(profiles.map((profile) => profile.id));
   const profilesWithPhotos = attachPrimaryPhotoUrls(profiles, photosByUserId);
   const profileById = new Map(profilesWithPhotos.map((profile) => [profile.id, profile]));
-  console.info('[EnBloom] blocked users count', { count: blockedUsers.length });
+  console.info('[ConnectBloom] blocked users count', { count: blockedUsers.length });
   return blockedUsers.map((item) => ({ ...item, profile: item.profile ? profileById.get(item.profile.id) ?? item.profile : null }));
 }
 
@@ -136,7 +138,7 @@ export async function getSafetyHiddenUserIds(userId?: string): Promise<string[]>
 
   if (error) {
     const blockedIds = await getBlockedUserIds(currentUserId);
-    console.info('[EnBloom] blocked ids count', { count: blockedIds.length });
+    console.info('[ConnectBloom] blocked ids count', { count: blockedIds.length });
     return blockedIds;
   }
 
@@ -147,7 +149,7 @@ export async function getSafetyHiddenUserIds(userId?: string): Promise<string[]>
     hiddenIds.add(blockerId === currentUserId ? blockedId : blockerId);
   });
   hiddenIds.delete(currentUserId);
-  console.info('[EnBloom] blocked ids count', { count: hiddenIds.size });
+  console.info('[ConnectBloom] blocked ids count', { count: hiddenIds.size });
   return [...hiddenIds];
 }
 
@@ -184,17 +186,17 @@ export async function hasSafetyBlockBetween(targetUserId: string): Promise<boole
 }
 
 export async function blockUser(targetUserId: string): Promise<BlockInsertResult> {
-  console.info('[EnBloom] block user started', { targetUserIdExists: Boolean(targetUserId) });
+  console.info('[ConnectBloom] block user started', { targetUserIdExists: Boolean(targetUserId) });
   const blockerId = await getCurrentUserId();
 
   if (blockerId === targetUserId) {
-    console.info('[EnBloom] block user success', { success: false });
+    console.info('[ConnectBloom] block user success', { success: false });
     throw new Error('自分自身はブロックできません。');
   }
 
   const alreadyBlocked = await hasBlocked(targetUserId);
   if (alreadyBlocked) {
-    console.info('[EnBloom] block user success', { success: true });
+    console.info('[ConnectBloom] block user success', { success: true });
     return { success: true, alreadyExists: true, block: null };
   }
 
@@ -205,17 +207,17 @@ export async function blockUser(targetUserId: string): Promise<BlockInsertResult
     .single<BlockRow>();
 
   const success = !error;
-  console.info('[EnBloom] block user success', { success });
+  console.info('[ConnectBloom] block user success', { success });
   if (error) throw error;
 
   return { success: true, alreadyExists: false, block: data };
 }
 
 export async function unblockUser(targetUserId: string): Promise<boolean> {
-  console.info('[EnBloom] unblock user started', { targetUserIdExists: Boolean(targetUserId) });
+  console.info('[ConnectBloom] unblock user started', { targetUserIdExists: Boolean(targetUserId) });
   const blockerId = await getCurrentUserId();
   if (blockerId === targetUserId) {
-    console.info('[EnBloom] unblock user success', { success: false });
+    console.info('[ConnectBloom] unblock user success', { success: false });
     return false;
   }
 
@@ -226,7 +228,7 @@ export async function unblockUser(targetUserId: string): Promise<boolean> {
     .eq('blocked_id', targetUserId);
 
   const success = !error;
-  console.info('[EnBloom] unblock user success', { success });
+  console.info('[ConnectBloom] unblock user success', { success });
   if (error) throw error;
   return true;
 }

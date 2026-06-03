@@ -70,7 +70,7 @@ export async function getSentLikes(userId: string): Promise<LikeWithProfile[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  console.info('[EnBloom] sent likes count', { count: data?.length ?? 0 });
+  console.info('[ConnectBloom] sent likes count', { count: data?.length ?? 0 });
   return attachPhotosToLikes((data ?? []).map((row) => mapLikeWithProfile(row as unknown as LikeRowWithProfiles, 'sent')));
 }
 
@@ -82,7 +82,7 @@ export async function getReceivedLikes(userId: string): Promise<LikeWithProfile[
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  console.info('[EnBloom] received likes count', { count: data?.length ?? 0 });
+  console.info('[ConnectBloom] received likes count', { count: data?.length ?? 0 });
   return attachPhotosToLikes((data ?? []).map((row) => mapLikeWithProfile(row as unknown as LikeRowWithProfiles, 'received')));
 }
 
@@ -100,7 +100,7 @@ export async function hasLiked(senderId: string, receiverId: string): Promise<bo
 
 export async function createLike(receiverId: string): Promise<Like & { matched: boolean; matchId?: string; matchCheckError?: string }> {
   const senderId = await getCurrentUserId();
-  console.info('[EnBloom] like create started', { receiverIdExists: Boolean(receiverId) });
+  console.info('[ConnectBloom] like create started', { receiverIdExists: Boolean(receiverId) });
 
   if (senderId === receiverId) {
     throw new Error('自分自身には「話してみたい」を送れません。');
@@ -116,7 +116,7 @@ export async function createLike(receiverId: string): Promise<Like & { matched: 
       .single<LikeRow>();
 
     if (error) throw error;
-    console.info('[EnBloom] like create success', { success: true, alreadyLiked: true });
+    console.info('[ConnectBloom] like create success', { success: true, alreadyLiked: true });
     return { ...mapLikeRow(data), matched: false };
   }
 
@@ -127,11 +127,11 @@ export async function createLike(receiverId: string): Promise<Like & { matched: 
     .single<LikeRow>();
 
   if (error) {
-    console.info('[EnBloom] like create success', { success: false });
+    console.info('[ConnectBloom] like create success', { success: false });
     throw error;
   }
 
-  console.info('[EnBloom] like create success', { success: true });
+  console.info('[ConnectBloom] like create success', { success: true });
 
   try {
     const matchResult = await createMatchIfMutualLike(receiverId);
@@ -142,8 +142,8 @@ export async function createLike(receiverId: string): Promise<Like & { matched: 
     };
   } catch (caughtError) {
     const message = caughtError instanceof Error ? caughtError.message : 'コネクト確認に失敗しました。';
-    console.info('[EnBloom] match create success', { success: false });
-    console.warn('[EnBloom] Like was saved, but match check failed.', message);
+    console.info('[ConnectBloom] match create success', { success: false });
+    console.warn('[ConnectBloom] Like was saved, but match check failed.', message);
     return { ...mapLikeRow(data), matched: false, matchCheckError: '話してみたいは保存しましたが、コネクト確認に失敗しました。' };
   }
 }
@@ -157,7 +157,7 @@ export async function deleteLike(receiverId: string): Promise<boolean> {
     .eq('to_user_id', receiverId);
 
   const success = !error;
-  console.info('[EnBloom] like delete success', { success });
+  console.info('[ConnectBloom] like delete success', { success });
   if (error) throw error;
   return true;
 }
@@ -185,6 +185,6 @@ export async function getLikedUserIds(userId: string): Promise<string[]> {
     .eq('from_user_id', userId);
 
   if (error) throw error;
-  console.info('[EnBloom] sent likes count', { count: data?.length ?? 0 });
+  console.info('[ConnectBloom] sent likes count', { count: data?.length ?? 0 });
   return (data ?? []).map((row) => row.to_user_id as string);
 }

@@ -1,6 +1,6 @@
 # Brand assets
 
-Replace these files to update EnBloom branding without changing application code.
+Replace these files to update ConnectBloom branding without changing application code.
 
 ## Header logo
 

@@ -1,4 +1,4 @@
--- EnBloom activity board: posts and "参加したい" interests.
+-- ConnectBloom activity board: posts and "参加したい" interests.
 
 create table if not exists public.activity_posts (
   id uuid primary key default gen_random_uuid(),

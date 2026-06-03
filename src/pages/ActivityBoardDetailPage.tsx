@@ -103,7 +103,7 @@ export function ActivityBoardDetailPage() {
             setInterests(nextInterests);
           } catch (caughtError) {
             if (!mounted) return;
-            console.warn('[EnBloom] activity interest owner list failed', { success: false });
+            console.warn('[ConnectBloom] activity interest owner list failed', { success: false });
             setInterestError(caughtError instanceof Error ? `参加希望者一覧の取得に失敗しました: ${caughtError.message}` : '参加希望者一覧の取得に失敗しました');
           } finally {
             if (mounted) setInterestsLoading(false);
@@ -231,7 +231,7 @@ export function ActivityBoardDetailPage() {
                       <div className="flex items-start gap-3">
                         <div className={`size-12 shrink-0 rounded-2xl bg-gradient-to-br ${interest.profile?.gradient ?? 'from-emerald-100 to-pink-100'}`} />
                         <div className="space-y-1">
-                          <p className="font-black text-theme-text">{interest.profile?.name ?? 'EnBloomユーザー'}</p>
+                          <p className="font-black text-theme-text">{interest.profile?.name ?? 'ConnectBloomユーザー'}</p>
                           <p className="text-xs font-bold text-theme-muted">{interest.profile?.age ?? 18}歳 / {interest.profile?.location ?? '活動エリア未設定'}</p>
                           <p className="text-xs font-bold text-theme-muted">つながり方のスタンス: {interest.profile?.datingTemperature ?? 'プロフィール準備中'}</p>
                         </div>
@@ -261,7 +261,7 @@ export function ActivityBoardDetailPage() {
             <div className="flex items-start gap-3">
               <div className={`size-12 shrink-0 rounded-2xl bg-gradient-to-br ${post.author?.gradient ?? 'from-emerald-100 to-pink-100'}`} />
               <div className="space-y-1">
-                <p className="font-black text-theme-text">{post.author?.name ?? 'EnBloomユーザー'}</p>
+                <p className="font-black text-theme-text">{post.author?.name ?? 'ConnectBloomユーザー'}</p>
                 <p className="text-xs font-bold text-theme-muted">{post.author?.location ?? '活動エリア未設定'} / {post.author?.occupation ?? 'プロフィール準備中'}</p>
                 <p className="text-sm leading-6 text-theme-muted">{post.author?.bio ?? '紹介から広がるつながりを大切にしています。'}</p>
               </div>

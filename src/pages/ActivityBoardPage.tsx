@@ -140,7 +140,7 @@ export function ActivityBoardPage() {
             ) : null}
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             <div className="flex items-center justify-between gap-3 border-t border-white/60 pt-3">
-              <span className="text-xs font-bold text-theme-muted">投稿者: {post.author?.name ?? 'EnBloomユーザー'}</span>
+              <span className="text-xs font-bold text-theme-muted">投稿者: {post.author?.name ?? 'ConnectBloomユーザー'}</span>
               <Link className="text-sm font-black text-theme-main-dark" to={`/board/${post.id}`}>詳細を見る</Link>
             </div>
           </Card>

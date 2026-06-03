@@ -1,6 +1,6 @@
 # Supabaseセットアップ手順（Phase 3後半）
 
-このドキュメントは、EnBloomをlocalStorageデモからSupabase本接続へ段階移行するためのセットアップ手順です。Phase 3後半では、Supabase client、Supabase Auth / Googleログイン、`profiles` の作成・取得・更新入口を追加しました。
+このドキュメントは、ConnectBloomをlocalStorageデモからSupabase本接続へ段階移行するためのセットアップ手順です。Phase 3後半では、Supabase client、Supabase Auth / Googleログイン、`profiles` の作成・取得・更新入口を追加しました。
 
 > 重要: Supabase環境変数が未設定の場合、アプリは従来通りlocalStorageデモとして動作します。今回も `likes` / `matches` / `messages` / `blocks` / `reports` はまだlocalStorageベースです。
 

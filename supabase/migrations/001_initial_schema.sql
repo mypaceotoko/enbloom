@@ -1,4 +1,4 @@
--- EnBloom Phase 3 前半: Supabase initial schema proposal
+-- ConnectBloom Phase 3 前半: Supabase initial schema proposal
 -- This migration prepares the relational foundation for moving the current
 -- localStorage demo experience to Supabase. It intentionally does not implement
 -- Google login, production auth flows, billing, or verification workflows.

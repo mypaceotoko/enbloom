@@ -29,7 +29,7 @@ const defaultInviteCodeForm: InviteCodeForm = {
   isActive: true,
 };
 
-const inviteCodePrefixes = ['GOEN', 'BLOOM', 'ENBLOOM', 'MYPACE', 'SAKURA'];
+const inviteCodePrefixes = ['GOEN', 'BLOOM', 'CONNECTBLOOM', 'MYPACE', 'SAKURA'];
 const reportStatusOptions: Array<{ value: ReportStatus; label: string }> = [
   { value: 'open', label: '未対応' },
   { value: 'reviewing', label: '確認中' },

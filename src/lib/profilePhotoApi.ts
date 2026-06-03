@@ -124,11 +124,11 @@ function sanitizeFileName(fileName: string) {
 }
 
 function validateProfilePhotoFile(file: File | null | undefined) {
-  console.info('[EnBloom] file exists', { exists: Boolean(file) });
+  console.info('[ConnectBloom] file exists', { exists: Boolean(file) });
   if (!file) throw new Error('画像ファイルを選択してください');
 
-  console.info('[EnBloom] file size', { size: file.size });
-  console.info('[EnBloom] file type', { type: file.type });
+  console.info('[ConnectBloom] file size', { size: file.size });
+  console.info('[ConnectBloom] file type', { type: file.type });
 
   if (!file.type.startsWith('image/')) {
     throw new Error('画像ファイルを選択してください');
@@ -151,7 +151,7 @@ async function getCurrentUserId() {
 }
 
 export async function uploadProfilePhoto(file: File): Promise<ProfilePhotoUploadResult> {
-  console.info('[EnBloom] profile photo upload started');
+  console.info('[ConnectBloom] profile photo upload started');
   validateProfilePhotoFile(file);
 
   const userId = await getCurrentUserId();
@@ -167,15 +167,15 @@ export async function uploadProfilePhoto(file: File): Promise<ProfilePhotoUpload
       upsert: false,
     });
 
-  console.info('[EnBloom] upload success', { success: !uploadError, stage: 'storage-upload' });
+  console.info('[ConnectBloom] upload success', { success: !uploadError, stage: 'storage-upload' });
   if (uploadError) throw createUploadError('storage-upload', 'Storageへの保存に失敗しました', uploadError);
 
   let publicUrl = '';
   try {
     publicUrl = getPublicUrl(storagePath);
-    console.info('[EnBloom] public URL fetch success', { success: true, stage: 'public-url' });
+    console.info('[ConnectBloom] public URL fetch success', { success: true, stage: 'public-url' });
   } catch (publicUrlError) {
-    console.info('[EnBloom] public URL fetch success', { success: false, stage: 'public-url' });
+    console.info('[ConnectBloom] public URL fetch success', { success: false, stage: 'public-url' });
     if (publicUrlError instanceof ProfilePhotoUploadError) {
       await rollbackUploadedPhoto(storagePath, publicUrlError);
     }
@@ -191,7 +191,7 @@ export async function uploadProfilePhoto(file: File): Promise<ProfilePhotoUpload
     .eq('user_id', userId)
     .order('position', { ascending: false });
 
-  console.info('[EnBloom] existing profile photos fetch success', { success: !existingPhotosError, stage: 'existing-photos-fetch' });
+  console.info('[ConnectBloom] existing profile photos fetch success', { success: !existingPhotosError, stage: 'existing-photos-fetch' });
   if (existingPhotosError) {
     await rollbackUploadedPhoto(
       storagePath,
@@ -208,7 +208,7 @@ export async function uploadProfilePhoto(file: File): Promise<ProfilePhotoUpload
     .eq('user_id', userId)
     .eq('is_primary', true);
 
-  console.info('[EnBloom] existing primary photo update success', { success: !primaryUpdateError, stage: 'primary-update' });
+  console.info('[ConnectBloom] existing primary photo update success', { success: !primaryUpdateError, stage: 'primary-update' });
   if (primaryUpdateError) {
     await rollbackUploadedPhoto(
       storagePath,
@@ -227,7 +227,7 @@ export async function uploadProfilePhoto(file: File): Promise<ProfilePhotoUpload
     .select(profilePhotoColumns)
     .single<ProfilePhoto>();
 
-  console.info('[EnBloom] profile photo row insert success', { success: !insertError, stage: 'profile-photos-insert' });
+  console.info('[ConnectBloom] profile photo row insert success', { success: !insertError, stage: 'profile-photos-insert' });
   if (insertError || !insertedPhoto) {
     if (previousPrimaryPhoto) {
       await requireSupabaseClient().from('profile_photos').update({ is_primary: true }).eq('id', previousPrimaryPhoto.id);
@@ -251,7 +251,7 @@ export async function uploadProfilePhoto(file: File): Promise<ProfilePhotoUpload
     .eq('id', insertedProfilePhoto.id)
     .maybeSingle<ProfilePhoto>();
 
-  console.info('[EnBloom] saved profile photo fetch success', { success: !savedPhotoError && Boolean(savedPhoto), stage: 'saved-photo-fetch' });
+  console.info('[ConnectBloom] saved profile photo fetch success', { success: !savedPhotoError && Boolean(savedPhoto), stage: 'saved-photo-fetch' });
   if (savedPhotoError || !savedPhoto) {
     throw createUploadError(
       'saved-photo-fetch',
@@ -282,7 +282,7 @@ export async function getPrimaryProfilePhoto(userId: string): Promise<ProfilePho
     .maybeSingle<ProfilePhoto>();
 
   const success = !error;
-  console.info('[EnBloom] primary photo fetch success', { success, stage: 'saved-photo-fetch' });
+  console.info('[ConnectBloom] primary photo fetch success', { success, stage: 'saved-photo-fetch' });
   if (error) throw createUploadError('saved-photo-fetch', 'primary画像取得に失敗しました', error);
 
   return data ? withPublicUrl(data) : null;
@@ -300,7 +300,7 @@ export async function getPrimaryProfilePhotos(userIds: string[]): Promise<Record
     .order('created_at', { ascending: false });
 
   const success = !error;
-  console.info('[EnBloom] primary photo fetch success', { success, stage: 'saved-photo-fetch' });
+  console.info('[ConnectBloom] primary photo fetch success', { success, stage: 'saved-photo-fetch' });
   if (error) throw createUploadError('saved-photo-fetch', 'primary画像取得に失敗しました', error);
 
   return (data ?? []).reduce<Record<string, ProfilePhotoWithUrl>>((photosByUserId, photo) => {

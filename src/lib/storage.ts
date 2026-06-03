@@ -1,12 +1,16 @@
-export function loadFromStorage<T>(key: string, fallback: T): T {
+export function loadFromStorage<T>(key: string, fallback: T, legacyKeys: string[] = []): T {
   if (typeof window === 'undefined') return fallback;
 
-  try {
-    const storedValue = window.localStorage.getItem(key);
-    return storedValue ? (JSON.parse(storedValue) as T) : fallback;
-  } catch {
-    return fallback;
+  for (const storageKey of [key, ...legacyKeys]) {
+    try {
+      const storedValue = window.localStorage.getItem(storageKey);
+      if (storedValue) return JSON.parse(storedValue) as T;
+    } catch {
+      continue;
+    }
   }
+
+  return fallback;
 }
 
 export function saveToStorage<T>(key: string, value: T) {

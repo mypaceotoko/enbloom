@@ -167,7 +167,7 @@ export async function getPublicProfileById(profileId: string): Promise<ProfileRo
 export function profileRowToUserProfile(profile: ProfileRow, primaryPhotoUrl?: string): UserProfile {
   return {
     id: profile.id,
-    name: profile.display_name || 'EnBloomユーザー',
+    name: profile.display_name || 'ConnectBloomユーザー',
     age: profile.age ?? 18,
     location: profile.location || '活動エリア未設定',
     occupation: profile.occupation || '自然体のプロフィール',
@@ -175,7 +175,7 @@ export function profileRowToUserProfile(profile: ProfileRow, primaryPhotoUrl?: s
     interests: profile.interests?.length ? profile.interests : ['紹介経由'],
     datingTemperature: profile.dating_temperature || DEFAULT_DATING_TEMPERATURE,
     relationshipGoal: profile.relationship_goal || '自然体で長く付き合える関係',
-    introducedBy: profile.invited_by ? '紹介者' : 'EnBloom',
+    introducedBy: profile.invited_by ? '紹介者' : 'ConnectBloom',
     photoUrl: primaryPhotoUrl,
     avatarUrl: primaryPhotoUrl,
     primaryPhotoUrl,

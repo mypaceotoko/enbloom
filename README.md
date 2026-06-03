@@ -1,10 +1,12 @@
-# EnBloom
+# ConnectBloom
 
 **紹介から、共創がひらく。**
 
-EnBloom（エンブルーム）は、紹介や共通の興味をきっかけに、一緒に何かを楽しむ人・作る人・話せる人とつながる、招待制コネクトSNSです。
+ConnectBloom（コネクトブルーム）は、信頼できる紹介や共通の興味をきっかけに、一緒に作る・話す・出かける・学ぶ人とつながる、招待制コネクトSNSです。
 
-EnBloomは、招待制・紹介制のコネクト体験に加えて、将来的には紹介者がひらく少人数の活動交流会「ご縁会 / EnBloom Circle」も視野に入れています。
+ConnectBloomは、招待制・紹介制のコネクト体験に加えて、将来的には紹介者がひらく少人数の活動交流会「ご縁会 / ConnectBloom Circle」も視野に入れています。
+
+> 旧称: EnBloom。サービス名のみConnectBloomへ変更し、既存機能やSupabaseのテーブル名は維持しています。
 
 ## 技術スタック予定
 
@@ -61,11 +63,11 @@ npm run preview  # ビルド結果のプレビュー
 
 ## テーマ切り替えについて
 
-テーマはCSS変数と `data-theme` 属性で管理しています。初期テーマは `EnBloom Natural` です。
+テーマはCSS変数と `data-theme` 属性で管理しています。初期テーマは `ConnectBloom Natural` です。
 
 現在選択できるテーマは以下の5種類です。
 
-1. EnBloom Natural
+1. ConnectBloom Natural
 2. Sakura Bloom
 3. Mint Bloom
 4. Lavender Bloom
@@ -107,4 +109,4 @@ Vercelへデプロイする場合は、Vercel側にも `VITE_SUPABASE_URL` と `
 関連する思想ドキュメント:
 
 - [招待コード思想](docs/invite-code-concept.md)
-- [ご縁会 / EnBloom Circle 構想](docs/event-matching-concept.md)
+- [ご縁会 / ConnectBloom Circle 構想](docs/event-matching-concept.md)

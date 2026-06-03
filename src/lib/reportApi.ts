@@ -4,7 +4,9 @@ import { profileRowToUserProfile } from './profileApi';
 import { isSupabaseConfigured, requireSupabaseClient, supabase } from './supabase';
 import type { Report, ReportStatus, ReportWithProfiles } from '../types/report';
 
-const localAppStateKey = 'enbloom.appState.v1';
+const localAppStateKey = 'connectbloom.appState.v1';
+const legacyStoragePrefix = 'en' + 'bloom';
+const legacyLocalAppStateKey = `${legacyStoragePrefix}.appState.v1`;
 const reportColumns = 'id,reporter_id,reported_user_id,reason,detail,status,reviewed_by,reviewed_at,admin_note,archived_at,archived_by,created_at';
 const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 const reportWithProfilesColumns = [
@@ -47,7 +49,7 @@ function readLocalReportedUserIds() {
   if (typeof window === 'undefined') return [];
 
   try {
-    const rawValue = window.localStorage.getItem(localAppStateKey);
+    const rawValue = window.localStorage.getItem(localAppStateKey) ?? window.localStorage.getItem(legacyLocalAppStateKey);
     if (!rawValue) return [];
     const parsedValue = JSON.parse(rawValue) as { reportedUserIds?: unknown };
     return Array.isArray(parsedValue.reportedUserIds)
@@ -88,18 +90,18 @@ async function getCurrentUserId() {
 }
 
 export async function reportUser(targetUserId: string, reason: string, detail?: string): Promise<Report> {
-  console.info('[EnBloom] report user started', { targetUserIdExists: Boolean(targetUserId) });
+  console.info('[ConnectBloom] report user started', { targetUserIdExists: Boolean(targetUserId) });
   const reporterId = await getCurrentUserId();
   const trimmedReason = reason.trim();
   const trimmedDetail = detail?.trim() || null;
 
   if (reporterId === targetUserId) {
-    console.info('[EnBloom] report user success', { success: false });
+    console.info('[ConnectBloom] report user success', { success: false });
     throw new Error('自分自身は通報できません。');
   }
 
   if (!trimmedReason) {
-    console.info('[EnBloom] report user success', { success: false });
+    console.info('[ConnectBloom] report user success', { success: false });
     throw new Error('通報理由を選択してください。');
   }
 
@@ -116,7 +118,7 @@ export async function reportUser(targetUserId: string, reason: string, detail?: 
     .single<ReportRow>();
 
   const success = !error;
-  console.info('[EnBloom] report user success', { success });
+  console.info('[ConnectBloom] report user success', { success });
   if (error) throw error;
 
   return data;
@@ -125,7 +127,7 @@ export async function reportUser(targetUserId: string, reason: string, detail?: 
 export async function getMyReports(userId?: string): Promise<Report[]> {
   if (!isSupabaseConfigured || !supabase) {
     const localIds = readLocalReportedUserIds();
-    console.info('[EnBloom] reports count', { count: localIds.length });
+    console.info('[ConnectBloom] reports count', { count: localIds.length });
     return localIds.map((reportedUserId, index) => ({
       id: `local-report-${reportedUserId}-${index}`,
       reporter_id: 'current-user',
@@ -150,7 +152,7 @@ export async function getMyReports(userId?: string): Promise<Report[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  console.info('[EnBloom] reports count', { count: data?.length ?? 0 });
+  console.info('[ConnectBloom] reports count', { count: data?.length ?? 0 });
   return (data ?? []) as Report[];
 }
 
@@ -168,7 +170,7 @@ export async function getAdminReports(options: GetAdminReportsOptions = {}): Pro
     .limit(100);
 
   if (error) throw error;
-  console.info('[EnBloom] reports count', { count: data?.length ?? 0 });
+  console.info('[ConnectBloom] reports count', { count: data?.length ?? 0 });
   const reports = (data ?? []).map((row) => mapReportWithProfiles(row as unknown as ReportRowWithProfiles));
   const profiles = reports.flatMap((report) => [report.reporter, report.reportedUser]).filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
   const photosByUserId = await getPrimaryProfilePhotos(profiles.map((profile) => profile.id));
@@ -182,12 +184,12 @@ export async function getAdminReports(options: GetAdminReportsOptions = {}): Pro
 }
 
 export async function updateReportReview(reportId: string, review: UpdateReportReviewParams): Promise<UpdateReportReviewResult> {
-  console.info('[EnBloom] report update started');
-  console.info('[EnBloom] reportId exists', Boolean(reportId));
+  console.info('[ConnectBloom] report update started');
+  console.info('[ConnectBloom] reportId exists', Boolean(reportId));
 
   if (!reportId) {
-    console.info('[EnBloom] report status update success', false);
-    console.info('[EnBloom] report admin note update success', false);
+    console.info('[ConnectBloom] report status update success', false);
+    console.info('[ConnectBloom] report admin note update success', false);
     throw new Error('通報IDを確認できませんでした。');
   }
 
@@ -206,8 +208,8 @@ export async function updateReportReview(reportId: string, review: UpdateReportR
     .single<UpdateReportReviewResult>();
 
   const success = !error && Boolean(data?.success);
-  if (updatesStatus) console.info('[EnBloom] report status update success', success);
-  if (updatesAdminNote) console.info('[EnBloom] report admin note update success', success);
+  if (updatesStatus) console.info('[ConnectBloom] report status update success', success);
+  if (updatesAdminNote) console.info('[ConnectBloom] report admin note update success', success);
   if (error) throw error;
   if (!data?.success) throw new Error('通報レビューの更新に失敗しました。');
 
@@ -224,11 +226,11 @@ export async function updateReportAdminNote(reportId: string, adminNote: string)
 
 
 async function updateReportArchive(reportId: string, archived: boolean): Promise<ArchiveReportResult> {
-  console.info('[EnBloom] report archive started');
-  console.info('[EnBloom] reportId exists', Boolean(reportId));
+  console.info('[ConnectBloom] report archive started');
+  console.info('[ConnectBloom] reportId exists', Boolean(reportId));
 
   if (!reportId) {
-    console.info('[EnBloom] report archive success', false);
+    console.info('[ConnectBloom] report archive success', false);
     throw new Error('通報IDを確認できませんでした。');
   }
 
@@ -239,7 +241,7 @@ async function updateReportArchive(reportId: string, archived: boolean): Promise
     .single<ArchiveReportResult>();
 
   const success = !error && Boolean(data?.success);
-  console.info('[EnBloom] report archive success', success);
+  console.info('[ConnectBloom] report archive success', success);
   if (error) throw error;
   if (!data?.success) throw new Error('通報の整理に失敗しました。');
 

@@ -1,4 +1,4 @@
--- EnBloom invite-code RPC diagnostics and user-facing messages
+-- ConnectBloom invite-code RPC diagnostics and user-facing messages
 -- 招待コード = ただの入場券ではなく、誰のご縁から来たかを記録する参加ルート
 -- 002適用済み環境向けに、RPCの戻り値へ reason / message を追加し、
 -- プロフィール更新・introductions作成の失敗理由をフロントへ返しやすくします。

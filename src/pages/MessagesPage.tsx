@@ -79,7 +79,7 @@ export function MessagesPage() {
         setSupabaseMessages(nextMessages);
       } catch (caughtError) {
         if (!mounted) return;
-        console.info('[EnBloom] messages fetch success', { success: false });
+        console.info('[ConnectBloom] messages fetch success', { success: false });
         setMessageMatch(null);
         setBlockedConversation(false);
         setSupabaseMessages([]);

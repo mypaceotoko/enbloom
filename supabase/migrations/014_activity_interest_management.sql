@@ -1,4 +1,4 @@
--- EnBloom activity board Phase 2: stricter participant interest management.
+-- ConnectBloom activity board Phase 2: stricter participant interest management.
 -- Owners manage incoming "参加したい" requests; participants can cancel their own request.
 
 create or replace function public.enforce_activity_interest_status_transition()

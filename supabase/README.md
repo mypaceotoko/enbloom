@@ -1,6 +1,6 @@
-# EnBloom Supabase
+# ConnectBloom Supabase
 
-This directory contains Supabase preparation assets for EnBloom Phase 3 前半.
+This directory contains Supabase preparation assets for ConnectBloom Phase 3 前半.
 
 ## Files
 

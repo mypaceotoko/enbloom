@@ -35,7 +35,7 @@ export function LoginPage() {
       <div className="mx-auto w-full max-w-md space-y-4">
         <Link className="inline-flex items-center gap-2 text-theme-main-dark" to="/">
           <Flower2 size={24} />
-          <span className="font-black">EnBloom</span>
+          <span className="font-black">ConnectBloom</span>
         </Link>
         <Card className="space-y-4">
           <div className="space-y-2">
@@ -46,7 +46,7 @@ export function LoginPage() {
             <h1 className="text-xl font-black">招待されたご縁から始める</h1>
             <p className="text-[13px] leading-5 text-theme-muted">
               {isSupabaseMode
-                ? 'GoogleログインでEnBloomを始めます。招待コードは次フェーズで本検証します。'
+                ? 'GoogleログインでConnectBloomを始めます。招待コードは次フェーズで本検証します。'
                 : 'Supabase未接続のため、今まで通りlocalStorageのデモ体験で始められます。'}
             </p>
           </div>
@@ -55,7 +55,7 @@ export function LoginPage() {
             <span className="flex size-5 items-center justify-center rounded-full bg-theme-accent text-white text-xs font-black">G</span>
             {submitting ? 'Googleログインへ移動中...' : isSupabaseMode ? 'Googleでログイン' : 'Googleでログイン（デモ）'}
           </Button>
-          <Input label="招待コード" name="inviteCode" onChange={(event) => setInviteCode(event.target.value)} placeholder="ENBLOOM-XXXX" value={inviteCode} />
+          <Input label="招待コード" name="inviteCode" onChange={(event) => setInviteCode(event.target.value)} placeholder="CONNECTBLOOM-XXXX" value={inviteCode} />
           <Button className="w-full" onClick={() => navigate('/onboarding')}>
             デモで始める
           </Button>

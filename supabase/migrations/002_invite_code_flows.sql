@@ -1,4 +1,4 @@
--- EnBloom invite-code flows
+-- ConnectBloom invite-code flows
 -- 招待コード = ただの入場券ではなく、誰のご縁から来たかを記録する参加ルート
 -- 招待コードは「1回限りのチケット」ではなく、紹介者に紐づいた参加ルートとして扱います。
 -- max_uses が null の場合は無制限、数値の場合のみ利用上限を適用します。

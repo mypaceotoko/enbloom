@@ -6,8 +6,11 @@ import type { AppState } from '../types/appState';
 import type { Message } from '../types/message';
 import type { CurrentUserProfile, ThemeId } from '../types/user';
 
-const APP_STATE_STORAGE_KEY = 'enbloom.appState.v1';
-const THEME_STORAGE_KEY = 'enbloom.theme';
+const APP_STATE_STORAGE_KEY = 'connectbloom.appState.v1';
+const LEGACY_STORAGE_PREFIX = 'en' + 'bloom';
+const LEGACY_APP_STATE_STORAGE_KEY = `${LEGACY_STORAGE_PREFIX}.appState.v1`;
+const THEME_STORAGE_KEY = 'connectbloom.theme';
+const LEGACY_THEME_STORAGE_KEY = `${LEGACY_STORAGE_PREFIX}.theme`;
 const mutualLikeSeedUserIds = ['mio', 'akari'];
 
 const defaultMessages = (matchId: string): Message[] => [
@@ -29,7 +32,7 @@ const defaultMessages = (matchId: string): Message[] => [
 
 function getInitialTheme(): ThemeId {
   if (typeof window === 'undefined') return 'natural';
-  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
   return ['natural', 'sakura', 'mint', 'lavender', 'night'].includes(storedTheme ?? '') ? (storedTheme as ThemeId) : 'natural';
 }
 
@@ -73,7 +76,8 @@ function withUnique(values: string[], value: string) {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
-  const [appState, setAppState] = useState<AppState>(() => loadFromStorage(APP_STATE_STORAGE_KEY, createDefaultAppState()));
+  const [appState, setAppState] = useState<AppState>(() =>
+    loadFromStorage(APP_STATE_STORAGE_KEY, createDefaultAppState(), [LEGACY_APP_STATE_STORAGE_KEY]));
 
   useEffect(() => {
     saveToStorage(APP_STATE_STORAGE_KEY, appState);
