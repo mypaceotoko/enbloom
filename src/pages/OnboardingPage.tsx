@@ -376,7 +376,7 @@ export function OnboardingPage() {
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => {
                 const selected = form.interests.includes(tag);
-                return <button className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected ? 'bg-theme-accent text-white' : 'bg-theme-background/80 text-theme-text'}`} key={tag} onClick={() => toggleTag(tag)} type="button">{tag}</button>;
+                return <button className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected ? 'bg-theme-main text-white' : 'bg-theme-background/80 text-theme-text'}`} key={tag} onClick={() => toggleTag(tag)} type="button">{tag}</button>;
               })}
             </div>
             {validationErrors.interests ? <FieldError message={validationErrors.interests} /> : null}

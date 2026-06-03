@@ -16,7 +16,7 @@ export const mockUsers: UserProfile[] = [
     datingTemperature: 'まずはゆっくり話したい',
     relationshipGoal: '興味関心で話せる人',
     introducedBy: '読書会コミュニティ・遥さん',
-    gradient: 'from-emerald-100 via-lime-50 to-rose-100',
+    gradient: 'from-sky-100 via-cyan-50 to-yellow-100',
   },
   {
     id: 'ren',
@@ -29,7 +29,7 @@ export const mockUsers: UserProfile[] = [
     datingTemperature: '一緒に企画・制作したい',
     relationshipGoal: '企画や制作を共創できる人',
     introducedBy: '制作コミュニティ・佐藤さん',
-    gradient: 'from-emerald-100 via-lime-50 to-pink-100',
+    gradient: 'from-cyan-100 via-sky-50 to-blue-100',
   },
   {
     id: 'akari',
@@ -42,7 +42,7 @@ export const mockUsers: UserProfile[] = [
     datingTemperature: '相談・情報交換から始めたい',
     relationshipGoal: '相談・情報交換できる人',
     introducedBy: 'ラジオ配信仲間・真央さん',
-    gradient: 'from-emerald-100 via-orange-50 to-teal-100',
+    gradient: 'from-yellow-100 via-sky-50 to-cyan-100',
   },
   {
     id: 'sora',
@@ -55,7 +55,7 @@ export const mockUsers: UserProfile[] = [
     datingTemperature: 'イベントや活動で会って話したい',
     relationshipGoal: '一緒に楽しめる活動仲間',
     introducedBy: 'ゲーム制作サークル',
-    gradient: 'from-sky-100 via-emerald-50 to-purple-100',
+    gradient: 'from-sky-100 via-cyan-50 to-blue-100',
   },
   {
     id: 'hana',
@@ -68,7 +68,7 @@ export const mockUsers: UserProfile[] = [
     datingTemperature: '共通の趣味でつながりたい',
     relationshipGoal: '地域やイベントでつながれる人',
     introducedBy: '地域交流会・菜々さん',
-    gradient: 'from-green-100 via-pink-50 to-emerald-100',
+    gradient: 'from-yellow-100 via-cyan-50 to-sky-100',
   },
 ];
 

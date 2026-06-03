@@ -22,7 +22,7 @@ function getInterestStatusLabel(status: ActivityInterestStatus) {
 }
 
 function getInterestStatusClass(status: ActivityInterestStatus) {
-  if (status === 'accepted') return 'bg-emerald-50 text-emerald-700';
+  if (status === 'accepted') return 'bg-cyan-50 text-cyan-700';
   if (status === 'declined') return 'bg-slate-100 text-slate-600';
   if (status === 'cancelled') return 'bg-orange-50 text-orange-700';
   return 'bg-theme-main text-white';

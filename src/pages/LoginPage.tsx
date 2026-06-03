@@ -1,6 +1,6 @@
-import { Flower2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { BrandLogo } from '../components/BrandLogo';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
@@ -33,9 +33,8 @@ export function LoginPage() {
   return (
     <section className="flex min-h-screen items-center px-4 py-8">
       <div className="mx-auto w-full max-w-md space-y-4">
-        <Link className="inline-flex items-center gap-2 text-theme-main-dark" to="/">
-          <Flower2 size={24} />
-          <span className="font-black">ConnectBloom</span>
+        <Link className="inline-flex" to="/">
+          <BrandLogo />
         </Link>
         <Card className="space-y-4">
           <div className="space-y-2">
@@ -52,7 +51,7 @@ export function LoginPage() {
           </div>
           {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{error}</div> : null}
           <Button className="w-full bg-white text-theme-text ring-1 ring-theme-main/15" disabled={submitting} onClick={handleGoogleLogin} variant="ghost">
-            <span className="flex size-5 items-center justify-center rounded-full bg-theme-accent text-white text-xs font-black">G</span>
+            <span className="flex size-5 items-center justify-center rounded-full bg-theme-main text-white text-xs font-black">G</span>
             {submitting ? 'Googleログインへ移動中...' : isSupabaseMode ? 'Googleでログイン' : 'Googleでログイン（デモ）'}
           </Button>
           <Input label="招待コード" name="inviteCode" onChange={(event) => setInviteCode(event.target.value)} placeholder="CONNECTBLOOM-XXXX" value={inviteCode} />

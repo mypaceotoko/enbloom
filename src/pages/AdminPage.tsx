@@ -236,7 +236,7 @@ export function AdminPage() {
     const classes: Record<ReportStatus, string> = {
       open: 'bg-theme-accent-soft text-theme-main-dark ring-1 ring-theme-accent/25',
       reviewing: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/80',
-      resolved: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80',
+      resolved: 'bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200/80',
       dismissed: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',
     };
 

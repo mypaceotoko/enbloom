@@ -25,11 +25,11 @@ export type ProfileUpsert = Partial<Omit<ProfileRow, 'id'>> & {
 
 
 const profileGradients = [
-  'from-pink-100 via-rose-50 to-emerald-100',
-  'from-emerald-100 via-lime-50 to-pink-100',
-  'from-rose-100 via-orange-50 to-teal-100',
-  'from-sky-100 via-emerald-50 to-purple-100',
-  'from-fuchsia-100 via-pink-50 to-green-100',
+  'from-sky-100 via-cyan-50 to-yellow-100',
+  'from-cyan-100 via-sky-50 to-blue-100',
+  'from-yellow-100 via-sky-50 to-cyan-100',
+  'from-sky-100 via-cyan-50 to-blue-100',
+  'from-blue-100 via-cyan-50 to-yellow-100',
 ];
 
 function getProfileGradient(profileId: string) {

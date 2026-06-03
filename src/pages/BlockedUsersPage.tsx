@@ -151,7 +151,7 @@ export function BlockedUsersPage() {
         </div>
       ) : null}
 
-      {notice ? <div className="rounded-[1.15rem] bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div> : null}
+      {notice ? <div className="rounded-[1.15rem] bg-cyan-50 p-3 text-sm font-bold text-cyan-700">{notice}</div> : null}
       {errorMessage ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{errorMessage}</div> : null}
 
       {loading ? (
@@ -203,7 +203,7 @@ function BlockedUserCard({
     <Card className="space-y-3 border-white/40 bg-theme-card/88 py-3 shadow-sm">
       <div className="flex items-start gap-3">
         {profile ? <ProfileAvatar className="size-14 shrink-0 rounded-2xl shadow-inner" fallbackClassName="text-xl font-black" user={profile} /> : (
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-100 via-rose-50 to-emerald-100 text-theme-main-dark shadow-inner">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 via-cyan-50 to-yellow-100 text-theme-main-dark shadow-inner">
             <UserRoundX size={24} />
           </div>
         )}

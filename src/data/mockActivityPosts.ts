@@ -54,7 +54,7 @@ export const mockActivityPosts: ActivityPostWithAuthor[] = [
       datingTemperature: 'ゆっくり',
       relationshipGoal: '活動仲間を広げたい',
       introducedBy: 'ConnectBloom',
-      gradient: 'from-emerald-100 via-lime-50 to-pink-100',
+      gradient: 'from-cyan-100 via-sky-50 to-blue-100',
     },
   },
   {
@@ -85,7 +85,7 @@ export const mockActivityPosts: ActivityPostWithAuthor[] = [
       datingTemperature: '自然体',
       relationshipGoal: '興味でつながる',
       introducedBy: 'ConnectBloom',
-      gradient: 'from-sky-100 via-emerald-50 to-purple-100',
+      gradient: 'from-sky-100 via-cyan-50 to-blue-100',
     },
   },
   {
@@ -116,7 +116,7 @@ export const mockActivityPosts: ActivityPostWithAuthor[] = [
       datingTemperature: 'ゆっくり',
       relationshipGoal: '趣味仲間を探したい',
       introducedBy: 'ConnectBloom',
-      gradient: 'from-rose-100 via-orange-50 to-teal-100',
+      gradient: 'from-yellow-100 via-sky-50 to-cyan-100',
     },
   },
 ];
