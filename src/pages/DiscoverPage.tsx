@@ -9,6 +9,7 @@ import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
+import { getMatchedUserIds } from '../lib/matchApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
 import type { UserProfile } from '../types/user';
 
@@ -19,6 +20,7 @@ export function DiscoverPage() {
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [supabaseUsers, setSupabaseUsers] = useState<UserProfile[]>([]);
   const [likedUserIds, setLikedUserIds] = useState<string[]>([]);
+  const [matchedUserIds, setMatchedUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
   const sourceUsers = useSupabaseLikes ? supabaseUsers : mockUsers;
@@ -31,6 +33,7 @@ export function DiscoverPage() {
       if (!useSupabaseLikes || !user) {
         setSupabaseUsers([]);
         setLikedUserIds([]);
+        setMatchedUserIds([]);
         setNotice('');
         return;
       }
@@ -38,18 +41,21 @@ export function DiscoverPage() {
       setNotice('');
 
       try {
-        const [profiles, likedIds] = await Promise.all([
+        const [profiles, likedIds, matchedIds] = await Promise.all([
           getPublicProfiles(user.id),
           getLikedUserIds(user.id),
+          getMatchedUserIds(user.id),
         ]);
 
         if (!mounted) return;
         setSupabaseUsers(profiles.map(profileRowToUserProfile));
         setLikedUserIds(likedIds);
+        setMatchedUserIds(matchedIds);
       } catch (caughtError) {
         if (!mounted) return;
         setSupabaseUsers([]);
         setLikedUserIds([]);
+        setMatchedUserIds([]);
         setNotice(caughtError instanceof Error ? `いいね状態の取得に失敗しました: ${caughtError.message}` : 'いいね状態の取得に失敗しました。');
       }
     }
@@ -66,12 +72,19 @@ export function DiscoverPage() {
 
     try {
       if (nextLiked) {
-        await createLike(profileId);
+        const likeResult = await createLike(profileId);
         setLikedUserIds((current) => current.includes(profileId) ? current : [...current, profileId]);
-      } else {
-        await deleteLike(profileId);
-        setLikedUserIds((current) => current.filter((id) => id !== profileId));
+        if (likeResult.matched) {
+          setMatchedUserIds((current) => current.includes(profileId) ? current : [...current, profileId]);
+        }
+        if (likeResult.matchCheckError) {
+          setNotice(likeResult.matchCheckError);
+        }
+        return likeResult.matched;
       }
+
+      await deleteLike(profileId);
+      setLikedUserIds((current) => current.filter((id) => id !== profileId));
       return false;
     } catch (caughtError) {
       throw new Error(nextLiked ? 'いいねの保存に失敗しました。' : 'いいねの取り消しに失敗しました。', { cause: caughtError });
@@ -93,7 +106,7 @@ export function DiscoverPage() {
       </Card>
       <div className="space-y-4">
         {visibleUsers.map((profile) => (
-          <ProfileCard compact isCurrentUser={profile.id === user?.id} key={profile.id} liked={useSupabaseLikes ? likedUserIds.includes(profile.id) : undefined} onToggleLike={useSupabaseLikes ? handleSupabaseLike : undefined} user={profile} />
+          <ProfileCard compact isCurrentUser={profile.id === user?.id} key={profile.id} liked={useSupabaseLikes ? likedUserIds.includes(profile.id) : undefined} matched={useSupabaseLikes ? matchedUserIds.includes(profile.id) : undefined} onToggleLike={useSupabaseLikes ? handleSupabaseLike : undefined} user={profile} />
         ))}
       </div>
     </PageShell>

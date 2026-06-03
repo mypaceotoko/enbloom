@@ -1,4 +1,5 @@
 import type { Like, LikeWithProfile } from '../types/like';
+import { createMatchIfMutualLike } from './matchApi';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { requireSupabaseClient } from './supabase';
 
@@ -88,7 +89,7 @@ export async function hasLiked(senderId: string, receiverId: string): Promise<bo
   return Boolean(data);
 }
 
-export async function createLike(receiverId: string): Promise<Like> {
+export async function createLike(receiverId: string): Promise<Like & { matched: boolean; matchId?: string; matchCheckError?: string }> {
   const senderId = await getCurrentUserId();
   console.info('[EnBloom] like create started', { receiverIdExists: Boolean(receiverId) });
 
@@ -107,7 +108,7 @@ export async function createLike(receiverId: string): Promise<Like> {
 
     if (error) throw error;
     console.info('[EnBloom] like create success', { success: true, alreadyLiked: true });
-    return mapLikeRow(data);
+    return { ...mapLikeRow(data), matched: false };
   }
 
   const { data, error } = await requireSupabaseClient()
@@ -122,8 +123,20 @@ export async function createLike(receiverId: string): Promise<Like> {
   }
 
   console.info('[EnBloom] like create success', { success: true });
-  // TODO: 次フェーズで、逆方向のいいねを検知したら Supabase matches 作成へ進める。
-  return mapLikeRow(data);
+
+  try {
+    const matchResult = await createMatchIfMutualLike(receiverId);
+    return {
+      ...mapLikeRow(data),
+      matched: matchResult.matched,
+      matchId: matchResult.matchId,
+    };
+  } catch (caughtError) {
+    const message = caughtError instanceof Error ? caughtError.message : 'マッチ確認に失敗しました。';
+    console.info('[EnBloom] match create success', { success: false });
+    console.warn('[EnBloom] Like was saved, but match check failed.', message);
+    return { ...mapLikeRow(data), matched: false, matchCheckError: 'いいねは保存しましたが、マッチ確認に失敗しました。' };
+  }
 }
 
 export async function deleteLike(receiverId: string): Promise<boolean> {
@@ -140,7 +153,7 @@ export async function deleteLike(receiverId: string): Promise<boolean> {
   return true;
 }
 
-export async function toggleLike(receiverId: string): Promise<{ liked: boolean; like: Like | null }> {
+export async function toggleLike(receiverId: string): Promise<{ liked: boolean; matched: boolean; matchId?: string; matchCheckError?: string; like: Like | null }> {
   const senderId = await getCurrentUserId();
   if (senderId === receiverId) {
     throw new Error('自分自身にはいいねできません。');
@@ -149,11 +162,11 @@ export async function toggleLike(receiverId: string): Promise<{ liked: boolean; 
   const alreadyLiked = await hasLiked(senderId, receiverId);
   if (alreadyLiked) {
     await deleteLike(receiverId);
-    return { liked: false, like: null };
+    return { liked: false, matched: false, like: null };
   }
 
   const like = await createLike(receiverId);
-  return { liked: true, like };
+  return { liked: true, matched: like.matched, matchId: like.matchId, matchCheckError: like.matchCheckError, like };
 }
 
 export async function getLikedUserIds(userId: string): Promise<string[]> {

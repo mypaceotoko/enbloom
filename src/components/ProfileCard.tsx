@@ -11,18 +11,19 @@ export type ProfileCardProps = {
   user: UserProfile;
   compact?: boolean;
   liked?: boolean;
+  matched?: boolean;
   isCurrentUser?: boolean;
   onToggleLike?: (userId: string, nextLiked: boolean) => Promise<boolean | void> | boolean | void;
 };
 
-export function ProfileCard({ user, compact = false, liked: likedOverride, isCurrentUser = false, onToggleLike }: ProfileCardProps) {
+export function ProfileCard({ user, compact = false, liked: likedOverride, matched: matchedOverride, isCurrentUser = false, onToggleLike }: ProfileCardProps) {
   const { isLiked, isMatched, toggleLike } = useAppState();
   const [showMatch, setShowMatch] = useState(false);
   const [likeError, setLikeError] = useState('');
   const [likeSaving, setLikeSaving] = useState(false);
   const previewBio = compact && user.bio.length > 58 ? `${user.bio.slice(0, 58)}...` : user.bio;
   const liked = likedOverride ?? isLiked(user.id);
-  const matched = isMatched(user.id);
+  const matched = matchedOverride ?? isMatched(user.id);
 
   async function handleLike() {
     if (isCurrentUser || likeSaving) return;
