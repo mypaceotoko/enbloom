@@ -555,7 +555,7 @@ export function AdminPage() {
                       <label className="grid gap-1.5 text-sm font-black text-theme-text">
                         ステータス変更
                         <select
-                          className="min-h-11 w-full rounded-[1rem] border border-theme-main/15 bg-white px-3 text-sm font-bold text-theme-text outline-none transition focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
+                          className="min-h-11 w-full rounded-[1rem] border border-theme-sky/25 bg-white px-3 text-sm font-bold text-theme-text outline-none transition focus:border-theme-cyan focus:ring-2 focus:ring-theme-cyan/20 disabled:opacity-60"
                           disabled={isUpdatingStatus || isSavingNote || isArchiving}
                           onChange={(event) => handleUpdateReportStatus(report, event.target.value as ReportStatus)}
                           value={report.status}
@@ -568,7 +568,7 @@ export function AdminPage() {
                         <label className="grid gap-1.5 text-sm font-black text-theme-text">
                           管理メモ
                           <textarea
-                            className="min-h-24 w-full resize-y rounded-[1rem] border border-theme-main/15 bg-white px-3 py-2 text-sm font-bold leading-6 text-theme-text outline-none transition placeholder:text-theme-muted/70 focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
+                            className="min-h-24 w-full resize-y rounded-[1rem] border border-theme-sky/25 bg-white px-3 py-2 text-sm font-bold leading-6 text-theme-text outline-none transition placeholder:text-theme-muted/70 focus:border-theme-cyan focus:ring-2 focus:ring-theme-cyan/20 disabled:opacity-60"
                             disabled={isUpdatingStatus || isSavingNote || isArchiving}
                             onChange={(event) => updateReportNoteDraft(report.id, event.target.value)}
                             placeholder="対応方針や確認メモを、必要な範囲だけ残します。"

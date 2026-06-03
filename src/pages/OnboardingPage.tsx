@@ -340,7 +340,7 @@ export function OnboardingPage() {
           <Input helperText="未入力でも大丈夫です。できること・活動ジャンルの補足としてあとから編集できます。" label="できること" name="occupation" onChange={(event) => updateField('occupation', event.target.value)} placeholder="例：AIアプリ制作 / ブログ作業 / イベント企画" value={form.occupation} />
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
             <span>自己紹介</span>
-            <textarea className="min-h-24 w-full rounded-xl border border-theme-main/20 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-main focus:ring-4 focus:ring-theme-main/15" onChange={(event) => updateField('bio', event.target.value)} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
+            <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('bio', event.target.value)} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
             <span className="block text-xs font-medium leading-5 text-theme-muted">自己紹介には「興味のあること」「一緒にやりたいこと」「話したいテーマ」を書けます。</span>
           </label>
         </Card>
@@ -354,7 +354,7 @@ export function OnboardingPage() {
             <span>今の気持ちに近いもの</span>
             <p className="text-xs font-medium leading-5 text-theme-muted">どんなきっかけでつながりたいかに近いものを1つ選んでください。</p>
             <p className="text-xs font-bold leading-5 text-theme-main-dark">迷ったら“まずはゆっくり話したい”のままで大丈夫です。あとからマイプロフィールで変更できます。</p>
-            <select className="min-h-11 w-full rounded-xl border border-theme-main/20 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-main focus:ring-4 focus:ring-theme-main/15" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
+            <select className="min-h-11 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
               <option value={DEFAULT_DATING_TEMPERATURE}>{DEFAULT_DATING_TEMPERATURE}</option>
               <option>共通の趣味でつながりたい</option>
               <option>一緒に企画・制作したい</option>
@@ -376,7 +376,7 @@ export function OnboardingPage() {
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => {
                 const selected = form.interests.includes(tag);
-                return <button className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected ? 'bg-theme-main text-white' : 'bg-theme-background/80 text-theme-text'}`} key={tag} onClick={() => toggleTag(tag)} type="button">{tag}</button>;
+                return <button className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected ? 'bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark ring-1 ring-theme-sky/30' : 'bg-theme-background/80 text-theme-text ring-1 ring-theme-sky/15'}`} key={tag} onClick={() => toggleTag(tag)} type="button">{tag}</button>;
               })}
             </div>
             {validationErrors.interests ? <FieldError message={validationErrors.interests} /> : null}

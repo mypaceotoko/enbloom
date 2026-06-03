@@ -12,7 +12,7 @@ export function LandingPage() {
       <div className="pointer-events-none absolute bottom-12 left-1/2 size-72 -translate-x-1/2 rounded-full bg-theme-cyan/10 blur-3xl" />
 
       <div className="relative mx-auto flex max-w-md flex-col gap-4">
-        <header className="flex items-center justify-between rounded-full border border-white/60 bg-theme-card/72 px-3.5 py-2.5 shadow-lg shadow-theme-main/10 backdrop-blur">
+        <header className="flex items-center justify-between rounded-full border border-white/60 bg-theme-card/72 px-3.5 py-2.5 shadow-lg shadow-theme-sky/10 backdrop-blur">
           <BrandLogo className="max-w-[210px]" imageClassName="max-h-12" variant="default" />
           <span className="rounded-full bg-theme-accent-soft px-3 py-1 text-[11px] font-black text-theme-main-dark">招待制</span>
         </header>
@@ -45,7 +45,7 @@ export function LandingPage() {
                 </Button>
               </Link>
               <Link to="/login">
-                <Button className="w-full bg-gradient-to-r from-theme-yellow/95 via-theme-cyan/85 to-theme-sky/90 text-theme-main-dark shadow-theme-main/20 hover:saturate-110" variant="secondary">
+                <Button className="w-full bg-gradient-to-r from-theme-yellow/90 via-theme-cyan/55 to-theme-sky/70 text-theme-main-dark shadow-theme-sky/20 hover:saturate-110" variant="secondary">
                   招待コードで始める
                 </Button>
               </Link>

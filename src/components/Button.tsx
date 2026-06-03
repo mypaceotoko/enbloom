@@ -9,9 +9,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'border border-theme-yellow/40 bg-gradient-to-r from-theme-yellow/95 via-theme-cyan/85 to-theme-sky/90 text-theme-main-dark shadow-lg shadow-theme-main/20 hover:shadow-theme-cyan/20 hover:saturate-110',
-  secondary: 'border border-theme-sky/40 bg-theme-card/92 text-theme-main-dark shadow-sm shadow-theme-main/5 hover:bg-theme-accent-soft',
-  ghost: 'bg-transparent text-theme-main-dark hover:bg-theme-accent-soft',
+  primary: 'border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/90 via-theme-cyan/55 to-theme-sky/70 text-theme-main-dark shadow-lg shadow-theme-sky/20 hover:shadow-theme-cyan/20 hover:saturate-110',
+  secondary: 'border border-theme-sky/30 bg-theme-card/95 text-theme-main-dark shadow-sm shadow-theme-sky/10 hover:bg-theme-accent-soft',
+  ghost: 'bg-transparent text-theme-main-dark hover:bg-theme-accent-soft/80',
   danger: 'bg-red-50 text-red-600 hover:bg-red-100',
 };
 

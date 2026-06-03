@@ -44,7 +44,7 @@ export function BrandLogo({ variant = 'default', showText = true, className = ''
       <img
         alt={asset.alt}
         className={cn(
-          'brand-logo-image block h-auto w-auto max-w-full select-none object-contain drop-shadow-[0_10px_24px_rgba(64,181,255,0.14)]',
+          'brand-logo-image block h-auto w-auto max-w-full select-none object-contain drop-shadow-[0_8px_20px_rgba(64,181,255,0.10)]',
           imageClassName,
         )}
         decoding="async"

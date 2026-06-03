@@ -3,10 +3,10 @@
 @theme {
   --font-sans: "Inter", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
   --color-blue-bloom: #40b5ff;
-  --color-yellow-bloom: #ffd600;
+  --color-yellow-bloom: #ffe45c;
   --color-aqua-bloom: #00d4ce;
-  --color-sky-bloom: #6ec5ff;
-  --color-mist-bloom: #e6f6ff;
+  --color-sky-bloom: #74d4ff;
+  --color-mist-bloom: #eaf9ff;
   --color-theme-main: var(--color-main);
   --color-theme-main-dark: var(--color-main-dark);
   --color-theme-accent: var(--color-accent);
@@ -24,10 +24,10 @@
 :root,
 [data-theme='natural'] {
   --color-blue-bloom: #40b5ff;
-  --color-yellow-bloom: #ffd600;
+  --color-yellow-bloom: #ffe45c;
   --color-aqua-bloom: #00d4ce;
-  --color-sky-bloom: #6ec5ff;
-  --color-mist-bloom: #e6f6ff;
+  --color-sky-bloom: #74d4ff;
+  --color-mist-bloom: #eaf9ff;
   --color-main: var(--color-blue-bloom);
   --color-main-dark: #102a43;
   --color-accent: var(--color-aqua-bloom);
@@ -35,11 +35,11 @@
   --color-highlight: var(--color-yellow-bloom);
   --color-cyan: var(--color-aqua-bloom);
   --color-sky: var(--color-sky-bloom);
-  --color-bg: #f7fcff;
+  --color-bg: #f8fdff;
   --color-card: #ffffff;
   --color-text: #102a43;
   --color-muted: #52677a;
-  --color-border: #d8ecf7;
+  --color-border: #d9f0fb;
   --color-input-bg: rgb(255 255 255 / 0.88);
   --color-input-text: var(--color-text);
   --color-input-placeholder: color-mix(in srgb, var(--color-muted) 82%, white);
@@ -51,12 +51,12 @@
 [data-theme='sakura'] {
   --color-main: #40b5ff;
   --color-main-dark: #102a43;
-  --color-accent: #ffd600;
-  --color-accent-soft: #fff7c2;
-  --color-highlight: #ffd600;
+  --color-accent: #ffe45c;
+  --color-accent-soft: #fff9c9;
+  --color-highlight: #ffe45c;
   --color-cyan: #00d4ce;
-  --color-sky: #6ec5ff;
-  --color-bg: #f9fdff;
+  --color-sky: #74d4ff;
+  --color-bg: #fbfeff;
   --color-card: #ffffff;
   --color-text: #102a43;
   --color-muted: #52677a;
@@ -72,11 +72,11 @@
 [data-theme='mint'] {
   --color-main: #00d4ce;
   --color-main-dark: #102a43;
-  --color-accent: #6ec5ff;
-  --color-accent-soft: #ddfbfa;
-  --color-highlight: #ffd600;
+  --color-accent: #74d4ff;
+  --color-accent-soft: #e1fbfa;
+  --color-highlight: #ffe45c;
   --color-cyan: #00d4ce;
-  --color-sky: #6ec5ff;
+  --color-sky: #74d4ff;
   --color-bg: #f4feff;
   --color-card: #ffffff;
   --color-text: #102a43;
@@ -91,14 +91,14 @@
 }
 
 [data-theme='lavender'] {
-  --color-main: #6ec5ff;
+  --color-main: #74d4ff;
   --color-main-dark: #102a43;
   --color-accent: #40b5ff;
-  --color-accent-soft: #eaf7ff;
-  --color-highlight: #ffd600;
+  --color-accent-soft: #eaf9ff;
+  --color-highlight: #ffe45c;
   --color-cyan: #00d4ce;
-  --color-sky: #6ec5ff;
-  --color-bg: #f5fbff;
+  --color-sky: #74d4ff;
+  --color-bg: #f7fcff;
   --color-card: #ffffff;
   --color-text: #102a43;
   --color-muted: #52677a;
@@ -112,13 +112,13 @@
 }
 
 [data-theme='night'] {
-  --color-main: #6ec5ff;
+  --color-main: #74d4ff;
   --color-main-dark: #d9f2ff;
-  --color-accent: #ffd600;
-  --color-accent-soft: #123158;
-  --color-highlight: #ffd600;
+  --color-accent: #ffe45c;
+  --color-accent-soft: #11304f;
+  --color-highlight: #ffe45c;
   --color-cyan: #00d4ce;
-  --color-sky: #6ec5ff;
+  --color-sky: #74d4ff;
   --color-bg: #07162d;
   --color-card: #0d2442;
   --color-text: #f4fbff;
@@ -145,10 +145,10 @@ body {
   margin: 0;
   color: var(--color-text);
   background:
-    radial-gradient(circle at 12% 4%, color-mix(in srgb, var(--color-highlight) 18%, transparent), transparent 20rem),
-    radial-gradient(circle at 85% 8%, color-mix(in srgb, var(--color-sky) 22%, transparent), transparent 24rem),
-    radial-gradient(circle at 72% 62%, color-mix(in srgb, var(--color-cyan) 12%, transparent), transparent 28rem),
-    linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-accent-soft) 72%, var(--color-bg) 28%));
+    radial-gradient(circle at 12% 4%, color-mix(in srgb, var(--color-highlight) 14%, transparent), transparent 20rem),
+    radial-gradient(circle at 85% 8%, color-mix(in srgb, var(--color-sky) 18%, transparent), transparent 24rem),
+    radial-gradient(circle at 72% 62%, color-mix(in srgb, var(--color-cyan) 10%, transparent), transparent 28rem),
+    linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-accent-soft) 64%, var(--color-bg) 36%));
   font-family: var(--font-sans);
 }
 
@@ -186,8 +186,8 @@ a {
 
 .flower-gradient {
   background:
-    radial-gradient(circle at 24% 18%, color-mix(in srgb, var(--color-highlight) 52%, transparent), transparent 24%),
+    radial-gradient(circle at 24% 18%, color-mix(in srgb, var(--color-highlight) 44%, transparent), transparent 24%),
     radial-gradient(circle at 75% 18%, color-mix(in srgb, var(--color-cyan) 42%, transparent), transparent 28%),
     radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--color-sky) 40%, transparent), transparent 30%),
-    linear-gradient(135deg, color-mix(in srgb, var(--color-highlight) 78%, var(--color-card)), color-mix(in srgb, var(--color-cyan) 88%, var(--color-card)) 48%, var(--color-main));
+    linear-gradient(135deg, color-mix(in srgb, var(--color-highlight) 64%, var(--color-card)), color-mix(in srgb, var(--color-cyan) 78%, var(--color-card)) 48%, var(--color-main));
 }

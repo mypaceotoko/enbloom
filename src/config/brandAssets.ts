@@ -16,21 +16,21 @@ export const logoAssets: Record<LogoVariant, LogoAsset> = {
   default: {
     variant: 'default',
     sources: [officialHorizontalLogo],
-    alt: 'ConnectBloom | 紹介から、共創がひらく。',
+    alt: 'ConnectBloom',
   },
   light: {
     variant: 'light',
     sources: [officialHorizontalLogo],
-    alt: 'ConnectBloom | 紹介から、共創がひらく。',
+    alt: 'ConnectBloom',
   },
   dark: {
     variant: 'dark',
     sources: [officialHorizontalLogo],
-    alt: 'ConnectBloom | 紹介から、共創がひらく。',
+    alt: 'ConnectBloom',
   },
   icon: {
     variant: 'icon',
-    sources: ['/logo-icon.svg', '/icon.svg'],
+    sources: [officialHorizontalLogo],
     alt: 'ConnectBloom',
   },
 };

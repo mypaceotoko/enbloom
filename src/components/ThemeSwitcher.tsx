@@ -16,7 +16,7 @@ export function ThemeSwitcher() {
     <div className="space-y-2.5">
       <button
         aria-expanded={expanded}
-        className="w-full rounded-[1.15rem] border border-theme-main/15 bg-theme-card p-3.5 text-left shadow-sm shadow-theme-main/5 transition active:scale-[0.99]"
+        className="w-full rounded-[1.15rem] border border-theme-sky/25 bg-theme-card p-3.5 text-left shadow-sm shadow-theme-sky/10 transition active:scale-[0.99]"
         onClick={() => setExpanded((isExpanded) => !isExpanded)}
         type="button"
       >
@@ -24,7 +24,7 @@ export function ThemeSwitcher() {
           selected
           theme={currentTheme}
           trailing={(
-            <span className="flex shrink-0 items-center gap-2 rounded-full border border-theme-main/20 bg-theme-background/70 px-2.5 py-1.5 text-[11px] font-black text-theme-main-dark">
+            <span className="flex shrink-0 items-center gap-2 rounded-full border border-theme-sky/25 bg-theme-background/70 px-2.5 py-1.5 text-[11px] font-black text-theme-main-dark">
               変更
               <ChevronDown className={cn('transition', expanded ? 'rotate-180' : '')} size={14} />
             </span>
@@ -41,7 +41,7 @@ export function ThemeSwitcher() {
               <button
                 className={cn(
                   'w-full rounded-[1.15rem] border bg-theme-card p-3.5 text-left transition active:scale-[0.99]',
-                  selected ? 'border-theme-main shadow-lg shadow-theme-main/10 ring-2 ring-theme-main/10' : 'border-theme-main/15 hover:border-theme-main/35',
+                  selected ? 'border-theme-sky shadow-lg shadow-theme-sky/15 ring-2 ring-theme-sky/15' : 'border-theme-sky/25 hover:border-theme-sky/45',
                 )}
                 key={theme.id}
                 onClick={() => chooseTheme(theme.id)}
@@ -66,7 +66,7 @@ type ThemeCardContentProps = {
 function ThemeCardContent({ selected, theme, trailing }: ThemeCardContentProps) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-theme-main/10" style={{ backgroundColor: theme.colors.background }}>
+      <span className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-theme-sky/20" style={{ backgroundColor: theme.colors.background }}>
         <span className="absolute -left-2 top-1 size-7 rounded-full" style={{ backgroundColor: theme.colors.accentSoft }} />
         <span className="absolute right-1 top-2 size-6 rounded-full" style={{ backgroundColor: theme.colors.main }} />
         <span className="absolute bottom-1 left-3.5 size-4 rounded-full" style={{ backgroundColor: theme.colors.accent }} />
@@ -75,17 +75,17 @@ function ThemeCardContent({ selected, theme, trailing }: ThemeCardContentProps) 
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
           <span className="block text-[13px] font-black text-theme-text">{theme.name}</span>
-          {selected ? <span className="rounded-full bg-theme-main px-2 py-0.5 text-[9.5px] font-black text-white">選択中</span> : null}
+          {selected ? <span className="rounded-full bg-theme-yellow/80 px-2 py-0.5 text-[9.5px] font-black text-theme-main-dark">選択中</span> : null}
         </span>
         <span className="mt-0.5 block text-xs leading-5 text-theme-muted">{theme.description}</span>
         <span className="mt-2 flex gap-1.5">
           {[theme.colors.main, theme.colors.mainDark, theme.colors.accent, theme.colors.accentSoft, theme.colors.background].map((color) => (
-            <span className="size-4 rounded-full border border-theme-main/10" key={color} style={{ backgroundColor: color }} />
+            <span className="size-4 rounded-full border border-theme-sky/20" key={color} style={{ backgroundColor: color }} />
           ))}
         </span>
       </span>
       {trailing ?? (
-        <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border', selected ? 'border-theme-main bg-theme-main text-white' : 'border-theme-main/20 text-transparent')}>
+        <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full border', selected ? 'border-theme-sky bg-theme-yellow/80 text-theme-main-dark' : 'border-theme-sky/25 text-transparent')}>
           <Check size={16} />
         </span>
       )}

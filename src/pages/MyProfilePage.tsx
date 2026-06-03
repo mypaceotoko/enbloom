@@ -189,7 +189,7 @@ export function MyProfilePage() {
                 {!isSupabaseMode || !isAuthenticated ? <Badge className="w-fit">Supabase接続時に利用できます</Badge> : null}
                 {photoNotice ? <p className="rounded-xl bg-theme-accent-soft/70 px-3 py-2 text-xs font-bold text-theme-text">{photoNotice}</p> : null}
                 <div className="flex flex-col gap-2 sm:flex-row">
-                  <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-theme-main/20 bg-theme-card px-4 py-2 text-sm font-black text-theme-main-dark shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                  <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-theme-sky/30 bg-theme-card px-4 py-2 text-sm font-black text-theme-main-dark shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     画像を選ぶ
                     <input accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={!isSupabaseMode || !isAuthenticated || uploadingPhoto} onChange={(event) => handlePhotoSelect(event.target.files?.[0] ?? null)} type="file" />
                   </label>
@@ -204,7 +204,7 @@ export function MyProfilePage() {
         <Input helperText="未入力でも保存できます。あなたらしい一言として編集できます。" label="できること" name="myOccupation" onChange={(event) => setForm((current) => ({ ...current, occupation: event.target.value }))} placeholder="例：AIアプリ制作 / ブログ作業 / 音声配信" value={form.occupation} />
         <label className="block space-y-2 text-sm font-semibold text-theme-text">
           <span>自己紹介</span>
-          <textarea className="min-h-24 w-full rounded-xl border border-theme-main/20 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-main focus:ring-4 focus:ring-theme-main/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、話したいテーマ、探している活動仲間を書いてください。" value={form.bio} />
+          <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、話したいテーマ、探している活動仲間を書いてください。" value={form.bio} />
           <span className="block text-xs font-medium leading-5 text-theme-muted">自己紹介には「一緒にやりたいこと」「話したいテーマ」「探している仲間」を書けます。</span>
         </label>
         <Input helperText="つながり方のスタンスです。例：まずはゆっくり話したい / 一緒に企画・制作したい" label="つながり方のスタンス" name="myDatingTemperature" onChange={(event) => setForm((current) => ({ ...current, datingTemperature: event.target.value }))} placeholder="まずはゆっくり話したい" value={form.datingTemperature} />
