@@ -12,6 +12,7 @@ import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { getActivityPostById } from '../lib/activityBoardApi';
 import { blockUser as blockSupabaseUser, hasSafetyBlockBetween } from '../lib/blockApi';
+import { formatConversationFailureMessage } from '../lib/matchApi';
 import { getMessageMatchById, getMessagesByMatchId, sendMessage as sendSupabaseMessage } from '../lib/messageApi';
 import { reportUser as reportSupabaseUser } from '../lib/reportApi';
 import type { Message, MessageMatch } from '../types/message';
@@ -83,11 +84,13 @@ export function MessagesPage() {
         setSupabaseMessages(nextMessages);
       } catch (caughtError) {
         if (!mounted) return;
+        const message = caughtError instanceof Error ? caughtError.message : 'unknown';
+        console.error('[ConnectBloom] messages fetch failed', { phase: 'messages_load_failed', error: caughtError });
         console.info('[ConnectBloom] messages fetch success', { success: false });
         setMessageMatch(null);
         setBlockedConversation(false);
         setSupabaseMessages([]);
-        setFetchError(caughtError instanceof Error ? `会話の取得に失敗しました: ${caughtError.message}` : '会話の取得に失敗しました。');
+        setFetchError(formatConversationFailureMessage('messages_load_failed', message));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -118,7 +121,8 @@ export function MessagesPage() {
       try {
         const activityPost = await getActivityPostById(activityPostId);
         if (mounted) setActivityContextTitle(activityPost?.title ?? '');
-      } catch {
+      } catch (caughtError) {
+        console.warn('[ConnectBloom] activity context load failed', { phase: 'messages_load_failed', error: caughtError });
         if (mounted) setActivityContextTitle('');
       }
     }

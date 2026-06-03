@@ -160,14 +160,21 @@ function getSupabaseErrorDetails(error: unknown): SupabaseErrorDetails {
   };
 }
 
-function formatSupabaseDebugError(error: unknown) {
+export function formatSupabaseDebugError(error: unknown) {
   const details = getSupabaseErrorDetails(error);
   return [
-    details.message ? `message: ${details.message}` : null,
-    details.details ? `details: ${details.details}` : null,
-    details.hint ? `hint: ${details.hint}` : null,
-    details.code ? `code: ${details.code}` : null,
-  ].filter(Boolean).join(' / ');
+    `message: ${details.message ?? 'unknown'}`,
+    `details: ${details.details ?? 'none'}`,
+    `hint: ${details.hint ?? 'none'}`,
+    `code: ${details.code ?? 'none'}`,
+  ].join(' / ');
+}
+
+export function formatConversationFailureMessage(phase: string, message: string, debugError?: string) {
+  const safeMessage = message || 'unknown';
+  const suffix = [`phase=${phase}`, `message=${safeMessage}`];
+  if (debugError) suffix.push(debugError);
+  return `会話の作成に失敗しました。${suffix.join(' / ')}`;
 }
 
 function logDmSupabaseError(phase: string, error: unknown) {
@@ -190,10 +197,8 @@ function mapDirectConversationError(error: unknown, fallback: string) {
     return message ? `${fallback}: ${message}` : fallback;
   })();
 
-  if (!import.meta.env.DEV) return friendlyMessage;
-
   const debugError = formatSupabaseDebugError(error);
-  return debugError ? `${friendlyMessage}（開発用詳細: ${debugError}）` : friendlyMessage;
+  return debugError ? `${friendlyMessage}（詳細: ${debugError}）` : friendlyMessage;
 }
 
 function isMissingRpcError(error: { code?: string; message?: string }) {
@@ -339,15 +344,16 @@ export async function getOrCreateMatchForUsers(userAId: string, userBId: string)
     console.info('[ConnectBloom] direct conversation ensure success', { success: false });
     return {
       success: false,
-      phase: 'ensure_direct_conversation',
+      phase: 'rpc_failed',
       message: mapDirectConversationError(error, '会話の作成に失敗しました'),
-      debugError: import.meta.env.DEV ? formatSupabaseDebugError(error) : undefined,
+      debugError: formatSupabaseDebugError(error),
+      errorDetails: getSupabaseErrorDetails(error),
     };
   }
 
   const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
   console.info('[ConnectBloom] direct conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
-  return { ...result, phase: 'ensure_direct_conversation' };
+  return { ...result, phase: result.success && result.matchId ? 'ensure_direct_conversation' : 'match_id_missing' };
 }
 
 export async function ensureDirectConversation(userAId: string, userBId: string): Promise<DirectConversationResult> {
@@ -366,33 +372,41 @@ export async function ensureConversationForActivityInterest(postId: string, inte
     console.info('[ConnectBloom] activity conversation ensure success', { success: false });
     return {
       success: false,
-      phase: 'ensure_activity_interest_match',
+      phase: 'rpc_failed',
       message: mapDirectConversationError(error, '会話の作成に失敗しました'),
-      debugError: import.meta.env.DEV ? formatSupabaseDebugError(error) : undefined,
+      debugError: formatSupabaseDebugError(error),
+      errorDetails: getSupabaseErrorDetails(error),
     };
   }
 
   const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
+  console.info('[ConnectBloom] ensure_activity_interest_match matchId', { matchId: result.matchId ?? null, hasMatchId: Boolean(result.matchId) });
   console.info('[ConnectBloom] activity conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
-  return { ...result, phase: 'ensure_activity_interest_match' };
+  return { ...result, phase: result.success && result.matchId ? 'ensure_activity_interest_match' : 'match_id_missing' };
 }
 
 export async function getActivityInterestConversationPath({ postId, interestId, targetUserId }: ActivityInterestConversationParams): Promise<ActivityInterestConversationPathResult> {
   const result = await ensureConversationForActivityInterest(postId, interestId, targetUserId);
 
   if (!result.success || !result.matchId) {
+    const phase = result.phase ?? (!result.success ? 'rpc_failed' : 'match_id_missing');
+    const message = result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : 'matchIdを取得できませんでした。');
     console.error('[DM] conversation creation failed', {
-      phase: result.phase ?? 'ensure_activity_interest_match',
+      phase,
       postId,
       interestId,
       targetUserId,
       result,
     });
-    return result;
+    return {
+      ...result,
+      phase,
+      message: formatConversationFailureMessage(phase, message, result.debugError),
+    };
   }
 
   const path = `/messages/${result.matchId}?postId=${encodeURIComponent(postId)}`;
-  console.log('[DM] navigate to messages', { matchId: result.matchId });
+  console.log('[DM] before navigate to messages', { matchId: result.matchId, path });
   return { ...result, path };
 }
 

@@ -25,12 +25,20 @@ export type MatchCreateResult = {
 };
 
 
+export type ConversationFailurePhase = 'rpc_failed' | 'match_id_missing' | 'navigation_failed' | 'messages_load_failed' | 'validate-direct-target' | 'ensure_direct_conversation';
+
 export type DirectConversationResult = {
   success: boolean;
   matchId?: string;
   alreadyExists?: boolean;
   blocked?: boolean;
   message?: string;
-  phase?: string;
+  phase?: ConversationFailurePhase | string;
   debugError?: string;
+  errorDetails?: {
+    message?: string;
+    details?: string | null;
+    hint?: string | null;
+    code?: string;
+  };
 };
