@@ -9,8 +9,8 @@ import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { createInviteCode, deactivateInviteCode, deleteInviteCode, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
-import { getAdminReports } from '../lib/reportApi';
-import type { ReportWithProfiles } from '../types/report';
+import { getAdminReports, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
+import type { ReportStatus, ReportWithProfiles } from '../types/report';
 
 type InviteCodeForm = {
   code: string;
@@ -29,6 +29,12 @@ const defaultInviteCodeForm: InviteCodeForm = {
 };
 
 const inviteCodePrefixes = ['GOEN', 'BLOOM', 'ENBLOOM', 'MYPACE', 'SAKURA'];
+const reportStatusOptions: Array<{ value: ReportStatus; label: string }> = [
+  { value: 'open', label: '未対応' },
+  { value: 'reviewing', label: '確認中' },
+  { value: 'resolved', label: '対応済み' },
+  { value: 'dismissed', label: '対応不要' },
+];
 const inviteCodeCharacters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function randomInt(max: number) {
@@ -49,8 +55,8 @@ function generateInviteCodeCandidate() {
   return `${prefix}-${suffix}`;
 }
 
-function formatDateTime(value: string | null) {
-  if (!value) return '期限なし';
+function formatDateTime(value: string | null, emptyLabel = '期限なし') {
+  if (!value) return emptyLabel;
   return new Intl.DateTimeFormat('ja-JP', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -63,6 +69,10 @@ export function AdminPage() {
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
   const [supabaseReports, setSupabaseReports] = useState<ReportWithProfiles[]>([]);
   const [reportError, setReportError] = useState('');
+  const [reportNotice, setReportNotice] = useState('');
+  const [reportNoteDrafts, setReportNoteDrafts] = useState<Record<string, string>>({});
+  const [updatingReportStatusId, setUpdatingReportStatusId] = useState<string | null>(null);
+  const [savingReportNoteId, setSavingReportNoteId] = useState<string | null>(null);
   const [form, setForm] = useState<InviteCodeForm>(defaultInviteCodeForm);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
@@ -78,10 +88,8 @@ export function AdminPage() {
   const adminCards = [
     { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: '紹介者に紐づいた無制限利用コードの発行・利用状況・期限管理です。' },
     { icon: UsersRound, title: 'ユーザー管理', count: `${mockUsers.length}人`, body: 'プロフィール確認とステータス管理のプレースホルダーです。' },
-    { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: isSupabaseMode && isAuthenticated ? 'Supabase reports テーブルから通報内容を確認します。' : `ブロック ${blockedUserIds.length}件 / 通報 ${reportedUserIds.length}件のローカル集計です。` },
+    { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: isSupabaseMode && isAuthenticated ? '安心してご縁を育てるため、通報内容・対応状況・管理メモを落ち着いて確認します。' : `ブロック ${blockedUserIds.length}件 / 通報 ${reportedUserIds.length}件のローカル集計です。` },
   ];
-
-
 
   useEffect(() => {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
@@ -89,7 +97,10 @@ export function AdminPage() {
     let ignore = false;
     getAdminReports()
       .then((reports) => {
-        if (!ignore) setSupabaseReports(reports);
+        if (!ignore) {
+          setSupabaseReports(reports);
+          setReportNoteDrafts(Object.fromEntries(reports.map((report) => [report.id, report.admin_note ?? ''])));
+        }
       })
       .catch((caughtError: unknown) => {
         if (!ignore) setReportError(caughtError instanceof Error ? caughtError.message : '通報一覧の取得に失敗しました。');
@@ -200,6 +211,66 @@ export function AdminPage() {
       setInviteError(caughtError instanceof Error ? caughtError.message : '招待コードの削除に失敗しました。');
     } finally {
       setManagingInviteCodeId(null);
+    }
+  }
+
+  function getReportStatusLabel(status: ReportStatus) {
+    return reportStatusOptions.find((option) => option.value === status)?.label ?? status;
+  }
+
+  function updateReportNoteDraft(reportId: string, value: string) {
+    setReportNoteDrafts((current) => ({ ...current, [reportId]: value }));
+  }
+
+  async function handleUpdateReportStatus(report: ReportWithProfiles, nextStatus: ReportStatus) {
+    if (nextStatus === report.status) return;
+    setReportError('');
+    setReportNotice('');
+
+    if (!isSupabaseMode || !isAuthenticated) {
+      setReportError('ステータス更新はSupabase接続時に管理できます。');
+      return;
+    }
+
+    setUpdatingReportStatusId(report.id);
+    try {
+      const updatedReview = await updateReportStatus(report.id, nextStatus);
+      setSupabaseReports((current) => current.map((currentReport) => (
+        currentReport.id === report.id
+          ? { ...currentReport, status: updatedReview.status, reviewed_at: updatedReview.reviewed_at }
+          : currentReport
+      )));
+      setReportNotice('ステータスを更新しました');
+    } catch (caughtError) {
+      setReportError(caughtError instanceof Error ? `ステータス更新に失敗しました（${caughtError.message}）` : 'ステータス更新に失敗しました');
+    } finally {
+      setUpdatingReportStatusId(null);
+    }
+  }
+
+  async function handleSaveReportAdminNote(report: ReportWithProfiles) {
+    setReportError('');
+    setReportNotice('');
+
+    if (!isSupabaseMode || !isAuthenticated) {
+      setReportError('管理メモ保存はSupabase接続時に管理できます。');
+      return;
+    }
+
+    const nextAdminNote = reportNoteDrafts[report.id] ?? '';
+    setSavingReportNoteId(report.id);
+    try {
+      const updatedReview = await updateReportAdminNote(report.id, nextAdminNote);
+      setSupabaseReports((current) => current.map((currentReport) => (
+        currentReport.id === report.id
+          ? { ...currentReport, admin_note: nextAdminNote, status: updatedReview.status, reviewed_at: updatedReview.reviewed_at }
+          : currentReport
+      )));
+      setReportNotice('管理メモを保存しました');
+    } catch (caughtError) {
+      setReportError(caughtError instanceof Error ? `管理メモの保存に失敗しました（${caughtError.message}）` : '管理メモの保存に失敗しました');
+    } finally {
+      setSavingReportNoteId(null);
     }
   }
 
@@ -323,35 +394,80 @@ export function AdminPage() {
         })}
       </Card>
 
-      <Card className="space-y-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-black">通報済みユーザー</h2>
+      <Card className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-black">通報管理</h2>
+            <p className="mt-1 text-sm leading-6 text-theme-muted">通報は責めるためではなく、安心してご縁を育てるための運営メモとして扱います。</p>
+          </div>
           <Badge>{isSupabaseMode && isAuthenticated ? 'Supabase reports' : 'ローカルデモ'}</Badge>
         </div>
         {reportError ? <p className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{reportError}</p> : null}
+        {reportNotice ? <p className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{reportNotice}</p> : null}
         {isSupabaseMode && isAuthenticated ? (
           <>
             {supabaseReports.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたはDM画面の通報ボタンから reports テーブルへ保存されます。</p> : null}
-            {supabaseReports.map((report) => (
-              <div className="space-y-2 rounded-[1.15rem] bg-theme-accent-soft/45 p-3" key={report.id}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-black text-theme-main-dark">{report.reportedUser?.name ?? report.reported_user_id}</span>
-                  <Badge className="bg-red-50 text-red-600">{report.status}</Badge>
+            {supabaseReports.map((report) => {
+              const isUpdatingStatus = updatingReportStatusId === report.id;
+              const isSavingNote = savingReportNoteId === report.id;
+              const noteDraft = reportNoteDrafts[report.id] ?? '';
+
+              return (
+                <div className="space-y-3 rounded-[1.25rem] bg-theme-accent-soft/45 p-3" key={report.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-theme-muted">通報された相手</p>
+                      <p className="break-all font-black text-theme-main-dark">{report.reportedUser?.name ?? report.reported_user_id}</p>
+                    </div>
+                    <Badge className="bg-theme-background text-theme-main-dark">{getReportStatusLabel(report.status)}</Badge>
+                  </div>
+
+                  <div className="grid gap-2 rounded-[1rem] bg-white/55 p-3 text-xs font-bold leading-5 text-theme-muted">
+                    <span className="break-words">通報者: {report.reporter?.name ?? report.reporter_id}</span>
+                    <span className="break-words">理由: {report.reason}</span>
+                    <span className="break-words">補足: {report.detail || '未入力'}</span>
+                    <span>ステータス: {getReportStatusLabel(report.status)}（{report.status}）</span>
+                    <span>通報日時: {formatDateTime(report.created_at)}</span>
+                    <span>reviewed_at: {formatDateTime(report.reviewed_at, '未レビュー')}</span>
+                    <span className="break-words">admin_note: {report.admin_note || '未入力'}</span>
+                  </div>
+
+                  <label className="grid gap-1.5 text-sm font-black text-theme-text">
+                    ステータス変更
+                    <select
+                      className="min-h-11 w-full rounded-[1rem] border border-theme-main/15 bg-white px-3 text-sm font-bold text-theme-text outline-none transition focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
+                      disabled={isUpdatingStatus || isSavingNote}
+                      onChange={(event) => handleUpdateReportStatus(report, event.target.value as ReportStatus)}
+                      value={report.status}
+                    >
+                      {reportStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}（{option.value}）</option>)}
+                    </select>
+                  </label>
+
+                  <div className="space-y-2">
+                    <label className="grid gap-1.5 text-sm font-black text-theme-text">
+                      管理メモ
+                      <textarea
+                        className="min-h-24 w-full resize-y rounded-[1rem] border border-theme-main/15 bg-white px-3 py-2 text-sm font-bold leading-6 text-theme-text outline-none transition placeholder:text-theme-muted/70 focus:border-theme-main focus:ring-2 focus:ring-theme-main/20 disabled:opacity-60"
+                        disabled={isUpdatingStatus || isSavingNote}
+                        onChange={(event) => updateReportNoteDraft(report.id, event.target.value)}
+                        placeholder="対応方針や確認メモを、必要な範囲だけ残します。"
+                        value={noteDraft}
+                      />
+                    </label>
+                    <div className="flex justify-end">
+                      <Button className="min-h-9 px-3 py-1.5" disabled={isUpdatingStatus || isSavingNote} onClick={() => handleSaveReportAdminNote(report)} type="button" variant="secondary">
+                        {isSavingNote ? '保存中...' : 'メモを保存'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid gap-1.5 text-xs font-bold leading-5 text-theme-muted">
-                  <span>通報理由: {report.reason}</span>
-                  {report.detail ? <span>補足: {report.detail}</span> : null}
-                  <span>通報日時: {formatDateTime(report.created_at)}</span>
-                  <span>通報者: {report.reporter?.name ?? report.reporter_id}</span>
-                  <span>対象ユーザー: {report.reportedUser?.name ?? report.reported_user_id}</span>
-                  <span>reviewed_at: {formatDateTime(report.reviewed_at)}</span>
-                  {report.admin_note ? <span>admin_note: {report.admin_note}</span> : null}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         ) : (
           <>
+            <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは通報済みユーザーの仮表示を維持します。ステータス更新と管理メモ保存はSupabase接続時に管理できます。</p>
             {reportedUsers.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたはDM画面の通報ボタンから反映されます。</p> : null}
             {reportedUsers.map((reportedUser) => (
               <div className="flex items-center gap-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-2.5" key={reportedUser.id}>
