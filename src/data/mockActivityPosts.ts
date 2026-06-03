@@ -42,6 +42,7 @@ export const mockActivityPosts: ActivityPostWithAuthor[] = [
     updated_at: '2026-05-28T09:00:00.000Z',
     closed_at: null,
     interest_count: 4,
+    accepted_count: 1,
     author: {
       id: 'mock-user-a',
       name: 'ゆう',
@@ -72,6 +73,7 @@ export const mockActivityPosts: ActivityPostWithAuthor[] = [
     updated_at: '2026-05-31T12:30:00.000Z',
     closed_at: null,
     interest_count: 2,
+    accepted_count: 0,
     author: {
       id: 'mock-user-b',
       name: 'さき',
@@ -102,6 +104,7 @@ export const mockActivityPosts: ActivityPostWithAuthor[] = [
     updated_at: '2026-06-01T08:20:00.000Z',
     closed_at: null,
     interest_count: 5,
+    accepted_count: 2,
     author: {
       id: 'mock-user-c',
       name: 'はる',

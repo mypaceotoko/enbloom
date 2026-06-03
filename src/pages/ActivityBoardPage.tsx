@@ -87,6 +87,11 @@ export function ActivityBoardPage() {
         </div>
       </Card>
 
+      <div className="flex flex-wrap justify-end gap-2 text-xs font-black">
+        <Link className="rounded-full bg-theme-card/86 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-board">自分の募集を見る</Link>
+        <Link className="rounded-full bg-theme-card/86 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-interests">参加希望した募集を見る</Link>
+      </div>
+
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
 
       <Card className="space-y-3">

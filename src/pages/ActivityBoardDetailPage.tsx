@@ -30,7 +30,7 @@ function getModeLabel(mode: ActivityPostMode) {
 }
 
 function getStatusLabel(status: string) {
-  if (status === 'closed') return '締切';
+  if (status === 'closed') return '締切済み';
   if (status === 'archived') return 'アーカイブ';
   return '募集中';
 }
@@ -204,14 +204,14 @@ export function ActivityBoardDetailPage() {
               <span className="inline-flex items-center gap-1"><CalendarDays size={16} />開催予定日: {formatDate(post.scheduled_at)}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
-            <div className="rounded-xl bg-theme-accent-soft/60 p-3 text-sm font-black text-theme-main-dark">参加希望 {post.interest_count}件</div>
+            <div className="rounded-xl bg-theme-accent-soft/60 p-3 text-sm font-black text-theme-main-dark">参加希望 {post.interest_count}件 / 承認済み {post.accepted_count}件</div>
             {!isOwnPost ? (
               <Button className="w-full" disabled={saving || !useSupabaseBoard || post.status !== 'open'} onClick={handleInterest}>
                 <UsersRound size={16} />{interested ? '参加希望を取り消す' : '参加したい'}
               </Button>
             ) : null}
             {!useSupabaseBoard ? <p className="text-xs font-bold text-theme-muted">Supabaseログイン時に参加希望者を管理できます。</p> : null}
-            {isOwnPost ? <p className="text-xs font-bold text-theme-muted">今回は会話連携前の管理フェーズです。</p> : null}
+            {isOwnPost ? <p className="text-xs font-bold text-theme-muted">会話導線は次フェーズで整理します。</p> : null}
           </Card>
 
           {isOwnPost ? (
@@ -219,7 +219,7 @@ export function ActivityBoardDetailPage() {
               <div className="space-y-2">
                 <h2 className="flex items-center gap-1.5 text-lg font-black text-theme-text"><UsersRound size={18} />参加希望者</h2>
                 <p className="text-sm leading-6 text-theme-muted">この募集に興味を持っている人を確認し、承認または見送りできます。</p>
-                <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認すると、次のフェーズで会話につなげられる予定です。今回は会話連携前の管理フェーズです。</p>
+                <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認後の会話導線は既存DMに接続できるか確認中です。会話導線は次フェーズで整理します。</p>
               </div>
               {interestError ? <div className="rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{interestError}</div> : null}
               {interestsLoading ? <p className="text-sm font-bold text-theme-muted">参加希望者を読み込んでいます...</p> : null}
@@ -246,8 +246,20 @@ export function ActivityBoardDetailPage() {
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/70 pt-3">
                       <Link className="inline-flex items-center gap-1 text-sm font-black text-theme-main-dark" to={`/profile/${interest.user_id}`}><MessageSquareText size={15} />プロフィール詳細</Link>
                       <div className="flex flex-wrap gap-2">
-                        <Button disabled={updatingInterestId === interest.id || interest.status !== 'interested'} onClick={() => void handleOwnerStatusChange(interest.id, 'accepted')} variant="secondary"><CheckCircle2 size={16} />承認する</Button>
-                        <Button disabled={updatingInterestId === interest.id || interest.status !== 'interested'} onClick={() => void handleOwnerStatusChange(interest.id, 'declined')} variant="danger"><XCircle size={16} />見送る</Button>
+                        {interest.status === 'interested' ? (
+                          <>
+                            <Button disabled={updatingInterestId === interest.id} onClick={() => void handleOwnerStatusChange(interest.id, 'accepted')} variant="secondary"><CheckCircle2 size={16} />承認する</Button>
+                            <Button disabled={updatingInterestId === interest.id} onClick={() => void handleOwnerStatusChange(interest.id, 'declined')} variant="danger"><XCircle size={16} />見送る</Button>
+                          </>
+                        ) : null}
+                        {interest.status === 'accepted' ? (
+                          <>
+                            <span className="inline-flex min-h-11 items-center rounded-xl bg-emerald-50 px-4 py-2 text-[13px] font-black text-emerald-700">承認済み</span>
+                            <Button disabled title="会話導線は次フェーズで整理します" variant="secondary"><MessageSquareText size={16} />会話へ</Button>
+                          </>
+                        ) : null}
+                        {interest.status === 'declined' ? <span className="inline-flex min-h-11 items-center rounded-xl bg-slate-100 px-4 py-2 text-[13px] font-black text-slate-600">見送り</span> : null}
+                        {interest.status === 'cancelled' ? <span className="inline-flex min-h-11 items-center rounded-xl bg-orange-50 px-4 py-2 text-[13px] font-black text-orange-700">取り消し済み</span> : null}
                       </div>
                     </div>
                   </div>

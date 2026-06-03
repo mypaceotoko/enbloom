@@ -13,6 +13,8 @@ import { LikesPage } from './pages/LikesPage';
 import { LoginPage } from './pages/LoginPage';
 import { MatchesPage } from './pages/MatchesPage';
 import { MessagesPage } from './pages/MessagesPage';
+import { MyBoardPage } from './pages/MyBoardPage';
+import { MyInterestsPage } from './pages/MyInterestsPage';
 import { MyProfilePage } from './pages/MyProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -33,6 +35,8 @@ export default function App() {
         <Route element={<ActivityBoardPage />} path="board" />
         <Route element={<ActivityBoardNewPage />} path="board/new" />
         <Route element={<ActivityBoardDetailPage />} path="board/:postId" />
+        <Route element={<MyBoardPage />} path="my-board" />
+        <Route element={<MyInterestsPage />} path="my-interests" />
         <Route element={<ProfileDetailPage />} path="profile/:id" />
         <Route element={<LikesPage />} path="likes" />
         <Route element={<MatchesPage />} path="matches" />
