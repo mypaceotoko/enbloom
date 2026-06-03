@@ -28,7 +28,10 @@ type MatchRpcRow = {
 type DirectConversationRpcRow = {
   success?: boolean;
   match_id?: string | null;
+  matchId?: string | null;
+  id?: string | null;
   already_exists?: boolean;
+  alreadyExists?: boolean;
   blocked?: boolean;
   message?: string | null;
 };
@@ -136,13 +139,39 @@ function mapRpcResult(row: MatchRpcRow | null | undefined): MatchCreateResult {
 }
 
 
-function mapDirectConversationResult(row: DirectConversationRpcRow | null | undefined): DirectConversationResult {
+const resolveMatchId = (data: unknown): string | null => {
+  if (typeof data === 'string' && data.length > 0) return data;
+  if (Array.isArray(data) && data.length > 0) {
+    const first = data[0] as DirectConversationRpcRow | string | null | undefined;
+    if (typeof first === 'string') return first;
+    return first?.match_id ?? first?.matchId ?? first?.id ?? null;
+  }
+  if (data && typeof data === 'object') {
+    const obj = data as DirectConversationRpcRow;
+    return obj.match_id ?? obj.matchId ?? obj.id ?? null;
+  }
+  return null;
+};
+
+function safeStringifyRpcData(data: unknown) {
+  try {
+    return JSON.stringify(data);
+  } catch {
+    return String(data);
+  }
+}
+
+function mapDirectConversationResult(data: unknown): DirectConversationResult {
+  const row = Array.isArray(data) ? data[0] : data;
+  const objectRow = row && typeof row === 'object' ? row as DirectConversationRpcRow : null;
+  const matchId = resolveMatchId(data) ?? undefined;
+
   return {
-    success: Boolean(row?.success),
-    matchId: row?.match_id ?? undefined,
-    alreadyExists: Boolean(row?.already_exists),
-    blocked: Boolean(row?.blocked),
-    message: row?.message ?? undefined,
+    success: objectRow?.success ?? Boolean(matchId),
+    matchId,
+    alreadyExists: Boolean(objectRow?.already_exists ?? objectRow?.alreadyExists),
+    blocked: Boolean(objectRow?.blocked),
+    message: objectRow?.message ?? undefined,
   };
 }
 
@@ -337,6 +366,7 @@ export async function getOrCreateMatchForUsers(userAId: string, userBId: string)
   console.log('[DM] calling rpc ensure_direct_conversation');
   const { data, error } = await requireSupabaseClient()
     .rpc('ensure_direct_conversation', { target_user_id: targetUserId });
+  console.log('[DM] rpc raw data ensure_direct_conversation', data);
   console.log('[DM] rpc result', { data, error });
 
   if (error) {
@@ -351,9 +381,11 @@ export async function getOrCreateMatchForUsers(userAId: string, userBId: string)
     };
   }
 
-  const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
+  const result = mapDirectConversationResult(data);
+  const phase = result.success && result.matchId ? 'ensure_direct_conversation' : 'match_id_missing';
+  const debugError = phase === 'match_id_missing' ? `rpc data: ${safeStringifyRpcData(data)}` : result.debugError;
   console.info('[ConnectBloom] direct conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
-  return { ...result, phase: result.success && result.matchId ? 'ensure_direct_conversation' : 'match_id_missing' };
+  return { ...result, phase, debugError };
 }
 
 export async function ensureDirectConversation(userAId: string, userBId: string): Promise<DirectConversationResult> {
@@ -365,6 +397,7 @@ export async function ensureConversationForActivityInterest(postId: string, inte
   console.log('[DM] calling rpc ensure_activity_interest_match');
   const { data, error } = await requireSupabaseClient()
     .rpc('ensure_activity_interest_match', { target_post_id: postId, target_interest_id: interestId });
+  console.log('[DM] rpc raw data ensure_activity_interest_match', data);
   console.log('[DM] rpc result', { data, error });
 
   if (error) {
@@ -379,10 +412,12 @@ export async function ensureConversationForActivityInterest(postId: string, inte
     };
   }
 
-  const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
+  const result = mapDirectConversationResult(data);
+  const phase = result.success && result.matchId ? 'ensure_activity_interest_match' : 'match_id_missing';
+  const debugError = phase === 'match_id_missing' ? `rpc data: ${safeStringifyRpcData(data)}` : result.debugError;
   console.info('[ConnectBloom] ensure_activity_interest_match matchId', { matchId: result.matchId ?? null, hasMatchId: Boolean(result.matchId) });
   console.info('[ConnectBloom] activity conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
-  return { ...result, phase: result.success && result.matchId ? 'ensure_activity_interest_match' : 'match_id_missing' };
+  return { ...result, phase, debugError };
 }
 
 export async function getActivityInterestConversationPath({ postId, interestId, targetUserId }: ActivityInterestConversationParams): Promise<ActivityInterestConversationPathResult> {
