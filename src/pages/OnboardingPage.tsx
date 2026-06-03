@@ -13,7 +13,7 @@ import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
 import { upsertMyProfile } from '../lib/profileApi';
-import type { CurrentUserProfile } from '../types/user';
+import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile } from '../types/user';
 
 const tags = ['読書', '映画', '散歩', '料理', '花', 'カフェ', '旅行', '音楽'];
 const steps = ['基本情報', '温度感', '趣味タグ', '招待コード'];
@@ -61,7 +61,7 @@ export function OnboardingPage() {
     age: String(currentUser.age),
     location: currentUser.location,
     occupation: currentUser.occupation,
-    datingTemperature: currentUser.datingTemperature,
+    datingTemperature: currentUser.datingTemperature || DEFAULT_DATING_TEMPERATURE,
     interests: currentUser.interests,
     inviteCode: '',
   });
@@ -113,7 +113,7 @@ export function OnboardingPage() {
       age: Number(form.age),
       location: form.location.trim(),
       occupation: form.occupation.trim() || '自然体のプロフィール',
-      datingTemperature: form.datingTemperature.trim(),
+      datingTemperature: form.datingTemperature.trim() || DEFAULT_DATING_TEMPERATURE,
       selectedInterestTags: Array.isArray(form.interests) ? form.interests : [],
       inviteCode: form.inviteCode.trim().toUpperCase(),
     };
@@ -343,8 +343,9 @@ export function OnboardingPage() {
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
             <span>今の気持ちに近いもの</span>
             <p className="text-xs font-medium leading-5 text-theme-muted">現在の気持ちに近いものを1つ選んでください。どのくらいのペースで出会いを進めたいかを保存します。</p>
+            <p className="text-xs font-bold leading-5 text-theme-main-dark">最初は“ゆっくり会話から始めたい”をおすすめ設定にしています。迷ったらこのままでも大丈夫です。あとからマイプロフィールで変更できます。</p>
             <select className="min-h-11 w-full rounded-xl border border-theme-main/20 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-main focus:ring-4 focus:ring-theme-main/15" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
-              <option>ゆっくり会話から始めたい</option>
+              <option value={DEFAULT_DATING_TEMPERATURE}>{DEFAULT_DATING_TEMPERATURE}</option>
               <option>安心感があれば会ってみたい</option>
               <option>価値観が合えば前向きに進めたい</option>
             </select>
