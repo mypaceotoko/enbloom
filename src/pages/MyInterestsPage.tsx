@@ -7,7 +7,7 @@ import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { useAuth } from '../hooks/useAuth';
 import { cancelActivityPostInterest, getMyInterestedPosts } from '../lib/activityBoardApi';
-import { ensureConversationForActivityInterest } from '../lib/matchApi';
+import { getActivityInterestConversationPath } from '../lib/matchApi';
 import type { ActivityInterestStatus, MyInterestedActivityPost } from '../types/activityBoard';
 
 function formatDate(value: string | null) {
@@ -97,12 +97,12 @@ export function MyInterestsPage() {
     setOpeningInterestId(interest.id);
     setError('');
     try {
-      const result = await ensureConversationForActivityInterest(interest.post_id, interest.id);
-      if (!result.success || !result.matchId) {
+      const result = await getActivityInterestConversationPath({ postId: interest.post_id, interestId: interest.id, targetUserId: interest.post?.created_by });
+      if (!result.success || !result.path) {
         setError(result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : '会話の作成に失敗しました。'));
         return;
       }
-      navigate(`/messages/${result.matchId}?postId=${encodeURIComponent(interest.post_id)}`);
+      navigate(result.path);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? `会話への移動に失敗しました: ${caughtError.message}` : '会話への移動に失敗しました。');
     } finally {

@@ -17,7 +17,7 @@ import {
   getActivityPostInterestsForOwner,
   getMyInterestedPostIds,
 } from '../lib/activityBoardApi';
-import { ensureConversationForActivityInterest } from '../lib/matchApi';
+import { getActivityInterestConversationPath } from '../lib/matchApi';
 import { getChatRoomById } from '../lib/chatRoomApi';
 import type { ActivityInterestStatus, ActivityPostInterestWithProfile, ActivityPostMode, ActivityPostWithAuthor } from '../types/activityBoard';
 
@@ -219,12 +219,12 @@ export function ActivityBoardDetailPage() {
     setOpeningConversationId(interest.id);
     setInterestError('');
     try {
-      const result = await ensureConversationForActivityInterest(post.id, interest.id);
-      if (!result.success || !result.matchId) {
+      const result = await getActivityInterestConversationPath({ postId: post.id, interestId: interest.id, targetUserId: interest.user_id });
+      if (!result.success || !result.path) {
         setInterestError(result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : '会話の作成に失敗しました。'));
         return;
       }
-      navigate(`/messages/${result.matchId}?postId=${encodeURIComponent(post.id)}`);
+      navigate(result.path);
     } catch (caughtError) {
       setInterestError(caughtError instanceof Error ? `会話への移動に失敗しました: ${caughtError.message}` : '会話への移動に失敗しました。');
     } finally {
