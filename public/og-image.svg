@@ -1,14 +1,21 @@
 <svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">ConnectBloom</title>
   <desc id="desc">ConnectBloom brand image with the copy 紹介から、共創がひらく。</desc>
-  <rect width="1200" height="630" fill="#FBFFF9"/>
-  <circle cx="156" cy="142" r="170" fill="#FDEBF0"/>
-  <circle cx="1042" cy="104" r="210" fill="#E4F8EE"/>
-  <circle cx="910" cy="560" r="230" fill="#FDEBF0" opacity="0.75"/>
-  <path d="M196 392C196 276.02 290.02 182 406 182H794C909.98 182 1004 276.02 1004 392V398C1004 470.902 944.902 530 872 530H328C255.098 530 196 470.902 196 398V392Z" fill="white" fill-opacity="0.78"/>
-  <path d="M600 134C632.8 134 653.2 166.6 639.4 196.1C670.3 185.7 700.7 210.6 696.4 243C692 275.4 657.5 292.4 630.8 273.7C632.3 306.3 600 327.4 571.9 310.7C543.8 294 545.1 255.6 574 240.9C543.1 230.5 533.8 193.2 556.3 169.5C567.8 157.4 583.5 134 600 134Z" fill="#58B878"/>
-  <circle cx="600" cy="232" r="34" fill="#F08AA4"/>
-  <text x="600" y="392" text-anchor="middle" font-family="Inter, 'Noto Sans JP', Arial, sans-serif" font-size="76" font-weight="900" letter-spacing="-2" fill="#2F3A34">ConnectBloom</text>
-  <text x="600" y="462" text-anchor="middle" font-family="Inter, 'Noto Sans JP', Arial, sans-serif" font-size="38" font-weight="800" fill="#2F7A50">紹介から、共創がひらく。</text>
-  <text x="600" y="516" text-anchor="middle" font-family="Inter, 'Noto Sans JP', Arial, sans-serif" font-size="24" font-weight="700" fill="#7A8A80">Invite-only Connect SNS</text>
+  <rect width="1200" height="630" fill="#F8FAFC"/>
+  <circle cx="160" cy="96" r="190" fill="#FFD600" opacity="0.14"/>
+  <circle cx="1010" cy="78" r="230" fill="#40B5FF" opacity="0.22"/>
+  <circle cx="942" cy="540" r="250" fill="#00D4CE" opacity="0.16"/>
+  <path d="M178 372C178 247.736 278.736 147 403 147H797C921.264 147 1022 247.736 1022 372C1022 461.47 949.47 534 860 534H340C250.53 534 178 461.47 178 372Z" fill="white" fill-opacity="0.82" stroke="#E2E8F0"/>
+  <g transform="translate(236 190) scale(2.05)">
+    <defs>
+      <linearGradient id="s" x1="48" x2="48" y1="6" y2="90" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD600"/><stop offset=".43" stop-color="#00D4CE"/><stop offset="1" stop-color="#0057FF"/></linearGradient>
+    </defs>
+    <g stroke="url(#s)" stroke-linecap="round" stroke-linejoin="round" stroke-width="7.5"><path d="M48 43C38 31 38 19 48 12C58 19 58 31 48 43Z"/><path d="M42 49C25 48 16 39 20 27C32 24 43 30 48 43"/><path d="M54 49C71 48 80 39 76 27C64 24 53 30 48 43"/><path d="M43 53C31 66 18 66 12 55C17 43 29 41 42 49"/><path d="M53 53C65 66 78 66 84 55C79 43 67 41 54 49"/><path d="M48 56C60 68 59 82 48 88C37 82 36 68 48 56Z"/></g>
+    <g fill="url(#s)"><circle cx="28" cy="42" r="5.8"/><circle cx="72" cy="42" r="5.8"/><circle cx="37" cy="25" r="5.8"/><circle cx="59" cy="25" r="5.8"/><path d="M48 43C42 50 35 53 26 53C35 57 42 57 48 52C54 57 61 57 70 53C61 53 54 50 48 43Z" opacity=".95"/></g>
+  </g>
+  <defs><linearGradient id="b" x1="580" x2="968" y1="282" y2="282" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD600"/><stop offset=".42" stop-color="#00D4CE"/><stop offset="1" stop-color="#0057FF"/></linearGradient></defs>
+  <text x="446" y="290" font-family="Inter, 'Noto Sans JP', Arial, sans-serif" font-size="82" font-weight="900" letter-spacing="-4" fill="#081D3A">Connect</text>
+  <text x="740" y="290" font-family="Inter, 'Noto Sans JP', Arial, sans-serif" font-size="82" font-weight="900" letter-spacing="-4" fill="url(#b)">Bloom</text>
+  <text x="452" y="378" font-family="Inter, 'Noto Sans JP', Arial, sans-serif" font-size="36" font-weight="800" letter-spacing="8" fill="#081D3A">紹介から、共創がひらく。</text>
+  <text x="600" y="470" text-anchor="middle" font-family="Inter, 'Noto Sans JP', Arial, sans-serif" font-size="25" font-weight="800" fill="#0057FF">Yellow × Cyan × Blue brand system</text>
 </svg>

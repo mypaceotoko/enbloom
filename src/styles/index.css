@@ -6,6 +6,10 @@
   --color-theme-main-dark: var(--color-main-dark);
   --color-theme-accent: var(--color-accent);
   --color-theme-accent-soft: var(--color-accent-soft);
+  --color-theme-yellow: var(--color-highlight);
+  --color-theme-cyan: var(--color-cyan);
+  --color-theme-sky: var(--color-sky);
+  --color-theme-border: var(--color-border);
   --color-theme-background: var(--color-bg);
   --color-theme-card: var(--color-card);
   --color-theme-text: var(--color-text);
@@ -14,70 +18,108 @@
 
 :root,
 [data-theme='natural'] {
-  --color-main: #6dbe8a;
-  --color-main-dark: #3e7c59;
-  --color-accent: #f48ca8;
-  --color-accent-soft: #fde7ee;
-  --color-bg: #fffdf9;
+  --color-main: #0057ff;
+  --color-main-dark: #081d3a;
+  --color-accent: #00d4ce;
+  --color-accent-soft: #e6f6ff;
+  --color-highlight: #ffd600;
+  --color-cyan: #00d4ce;
+  --color-sky: #40b5ff;
+  --color-bg: #f8fafc;
   --color-card: #ffffff;
-  --color-text: #2f3a34;
-  --color-muted: #7a8a80;
-  --color-input-bg: rgb(255 255 255 / 0.78);
+  --color-text: #081d3a;
+  --color-muted: #475569;
+  --color-border: #e2e8f0;
+  --color-input-bg: rgb(255 255 255 / 0.88);
   --color-input-text: var(--color-text);
-  --color-input-placeholder: color-mix(in srgb, var(--color-muted) 88%, var(--color-text));
-  --color-input-border: color-mix(in srgb, var(--color-main) 24%, transparent);
+  --color-input-placeholder: color-mix(in srgb, var(--color-muted) 82%, white);
+  --color-input-border: color-mix(in srgb, var(--color-sky) 34%, var(--color-border));
+  --color-input-focus: var(--color-cyan);
+  --color-input-focus-ring: color-mix(in srgb, var(--color-cyan) 20%, transparent);
+}
+
+[data-theme='sakura'] {
+  --color-main: #0057ff;
+  --color-main-dark: #081d3a;
+  --color-accent: #ffd600;
+  --color-accent-soft: #fff7c2;
+  --color-highlight: #ffd600;
+  --color-cyan: #00d4ce;
+  --color-sky: #40b5ff;
+  --color-bg: #f8fbff;
+  --color-card: #ffffff;
+  --color-text: #081d3a;
+  --color-muted: #475569;
+  --color-border: #e2e8f0;
+  --color-input-bg: rgb(255 255 255 / 0.9);
+  --color-input-text: var(--color-text);
+  --color-input-placeholder: color-mix(in srgb, var(--color-muted) 82%, white);
+  --color-input-border: color-mix(in srgb, var(--color-highlight) 36%, var(--color-border));
   --color-input-focus: var(--color-main);
   --color-input-focus-ring: color-mix(in srgb, var(--color-main) 18%, transparent);
 }
 
-[data-theme='sakura'] {
-  --color-main: #f48ca8;
-  --color-main-dark: #c85f7d;
-  --color-accent: #6dbe8a;
-  --color-accent-soft: #fde7ee;
-  --color-bg: #fff8fa;
-  --color-card: #ffffff;
-  --color-text: #3a2f34;
-  --color-muted: #8a747c;
-}
-
 [data-theme='mint'] {
-  --color-main: #7bcfa6;
-  --color-main-dark: #3e8a67;
-  --color-accent: #f48ca8;
-  --color-accent-soft: #e4f8ee;
-  --color-bg: #fcfffd;
+  --color-main: #00d4ce;
+  --color-main-dark: #081d3a;
+  --color-accent: #40b5ff;
+  --color-accent-soft: #ddfbfa;
+  --color-highlight: #ffd600;
+  --color-cyan: #00d4ce;
+  --color-sky: #40b5ff;
+  --color-bg: #f4feff;
   --color-card: #ffffff;
-  --color-text: #263a32;
-  --color-muted: #6f877a;
+  --color-text: #081d3a;
+  --color-muted: #475569;
+  --color-border: #d7eef7;
+  --color-input-bg: rgb(255 255 255 / 0.9);
+  --color-input-text: var(--color-text);
+  --color-input-placeholder: color-mix(in srgb, var(--color-muted) 82%, white);
+  --color-input-border: color-mix(in srgb, var(--color-cyan) 30%, var(--color-border));
+  --color-input-focus: var(--color-cyan);
+  --color-input-focus-ring: color-mix(in srgb, var(--color-cyan) 20%, transparent);
 }
 
 [data-theme='lavender'] {
-  --color-main: #9b8fe8;
-  --color-main-dark: #6e61ba;
-  --color-accent: #f48ca8;
-  --color-accent-soft: #eeeafe;
-  --color-bg: #fffcff;
+  --color-main: #40b5ff;
+  --color-main-dark: #081d3a;
+  --color-accent: #0057ff;
+  --color-accent-soft: #eaf7ff;
+  --color-highlight: #ffd600;
+  --color-cyan: #00d4ce;
+  --color-sky: #40b5ff;
+  --color-bg: #f5fbff;
   --color-card: #ffffff;
-  --color-text: #302b3a;
-  --color-muted: #7d758a;
+  --color-text: #081d3a;
+  --color-muted: #475569;
+  --color-border: #dceffd;
+  --color-input-bg: rgb(255 255 255 / 0.9);
+  --color-input-text: var(--color-text);
+  --color-input-placeholder: color-mix(in srgb, var(--color-muted) 82%, white);
+  --color-input-border: color-mix(in srgb, var(--color-sky) 34%, var(--color-border));
+  --color-input-focus: var(--color-main);
+  --color-input-focus-ring: color-mix(in srgb, var(--color-main) 18%, transparent);
 }
 
 [data-theme='night'] {
-  --color-main: #6dbe8a;
-  --color-main-dark: #9ee3b4;
-  --color-accent: #f48ca8;
-  --color-accent-soft: #392632;
-  --color-bg: #16221b;
-  --color-card: #213128;
-  --color-text: #f4fff8;
-  --color-muted: #afc8b7;
+  --color-main: #40b5ff;
+  --color-main-dark: #d9f2ff;
+  --color-accent: #ffd600;
+  --color-accent-soft: #123158;
+  --color-highlight: #ffd600;
+  --color-cyan: #00d4ce;
+  --color-sky: #40b5ff;
+  --color-bg: #07162d;
+  --color-card: #0d2442;
+  --color-text: #f4fbff;
+  --color-muted: #b9d3e8;
+  --color-border: #1e4978;
   --color-input-bg: rgb(255 255 255 / 0.1);
-  --color-input-text: #fafffc;
-  --color-input-placeholder: rgb(244 255 248 / 0.72);
-  --color-input-border: rgb(244 255 248 / 0.24);
-  --color-input-focus: var(--color-accent);
-  --color-input-focus-ring: rgb(244 140 168 / 0.22);
+  --color-input-text: #f4fbff;
+  --color-input-placeholder: rgb(244 251 255 / 0.7);
+  --color-input-border: rgb(217 242 255 / 0.24);
+  --color-input-focus: var(--color-cyan);
+  --color-input-focus-ring: rgb(0 212 206 / 0.22);
 }
 
 * {
@@ -93,9 +135,10 @@ body {
   margin: 0;
   color: var(--color-text);
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent-soft) 75%, transparent), transparent 34rem),
-    radial-gradient(circle at 85% 12%, color-mix(in srgb, var(--color-main) 20%, transparent), transparent 22rem),
-    linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-bg) 82%, var(--color-main) 18%));
+    radial-gradient(circle at 12% 4%, color-mix(in srgb, var(--color-highlight) 20%, transparent), transparent 20rem),
+    radial-gradient(circle at 85% 8%, color-mix(in srgb, var(--color-sky) 28%, transparent), transparent 24rem),
+    radial-gradient(circle at 72% 62%, color-mix(in srgb, var(--color-cyan) 12%, transparent), transparent 28rem),
+    linear-gradient(180deg, var(--color-bg), color-mix(in srgb, var(--color-accent-soft) 72%, var(--color-bg) 28%));
   font-family: var(--font-sans);
 }
 
@@ -128,13 +171,13 @@ a {
 }
 
 .soft-shadow {
-  box-shadow: 0 18px 55px color-mix(in srgb, var(--color-main-dark) 14%, transparent);
+  box-shadow: 0 18px 55px color-mix(in srgb, var(--color-main) 13%, transparent);
 }
 
 .flower-gradient {
   background:
-    radial-gradient(circle at 25% 20%, color-mix(in srgb, var(--color-accent) 42%, transparent), transparent 26%),
-    radial-gradient(circle at 75% 18%, color-mix(in srgb, var(--color-main) 38%, transparent), transparent 28%),
-    radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--color-accent-soft) 82%, transparent), transparent 30%),
-    linear-gradient(135deg, color-mix(in srgb, var(--color-accent-soft) 80%, var(--color-card)), color-mix(in srgb, var(--color-main) 42%, var(--color-card)));
+    radial-gradient(circle at 24% 18%, color-mix(in srgb, var(--color-highlight) 52%, transparent), transparent 24%),
+    radial-gradient(circle at 75% 18%, color-mix(in srgb, var(--color-cyan) 42%, transparent), transparent 28%),
+    radial-gradient(circle at 82% 82%, color-mix(in srgb, var(--color-sky) 40%, transparent), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-cyan) 82%, var(--color-card)), var(--color-main));
 }

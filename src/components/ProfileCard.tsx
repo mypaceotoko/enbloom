@@ -126,7 +126,7 @@ export function ProfileCard({ user, compact = false, liked: likedOverride, match
 
         <div className="flex gap-2 pt-0.5">
           {isCurrentUser ? null : (
-            <Button className={`flex-1 shadow-lg ${liked ? 'bg-theme-accent text-white shadow-theme-accent/25 hover:bg-theme-accent/90' : 'bg-theme-accent-soft text-theme-text'}`} disabled={likeSaving} onClick={handleLike} variant="secondary">
+            <Button className={`flex-1 shadow-lg ${liked ? 'bg-gradient-to-r from-theme-cyan to-theme-main text-white shadow-theme-main/25 hover:saturate-125' : 'bg-theme-accent-soft text-theme-text'}`} disabled={likeSaving} onClick={handleLike} variant="secondary">
               <Heart fill={liked ? 'currentColor' : 'none'} size={16} />
               {liked ? '話してみたい済み' : '話してみたい'}
             </Button>

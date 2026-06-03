@@ -108,7 +108,7 @@ function MatchRow({ createdAt, messagePath, user }: { createdAt?: string; messag
           <span className="block text-xs leading-5 text-theme-muted">{user.location}・{user.datingTemperature}</span>
           {createdAt ? <span className="block text-[11px] font-bold text-theme-muted">{new Date(createdAt).toLocaleDateString('ja-JP')}にご縁がつながりました</span> : <span className="block text-[11px] font-bold text-theme-muted">紹介のご縁からコネクトしました</span>}
         </span>
-        <Badge className="bg-theme-accent text-white"><Sparkles size={12} />ご縁</Badge>
+        <Badge className="bg-theme-main text-white"><Sparkles size={12} />ご縁</Badge>
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1.5">

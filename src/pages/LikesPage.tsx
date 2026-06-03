@@ -141,7 +141,7 @@ function LikeRow({ createdAt, matched = false, messagePath, user }: { createdAt?
           {createdAt ? <span className="block text-[11px] font-bold text-theme-muted">{new Date(createdAt).toLocaleDateString('ja-JP')}に届いたご縁</span> : null}
         </span>
         <Badge><Heart size={12} />Like</Badge>
-        {matched ? <Badge className="bg-theme-accent text-white"><Sparkles size={12} />コネクト済み</Badge> : <Badge className="bg-theme-accent text-white"><Sparkles size={12} />相互候補</Badge>}
+        {matched ? <Badge className="bg-theme-main text-white"><Sparkles size={12} />コネクト済み</Badge> : <Badge className="bg-theme-main text-white"><Sparkles size={12} />相互候補</Badge>}
       </Link>
       {matched && messagePath ? (
         <div className="mt-2 flex justify-end">

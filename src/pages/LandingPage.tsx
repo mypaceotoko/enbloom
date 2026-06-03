@@ -45,7 +45,7 @@ export function LandingPage() {
                 </Button>
               </Link>
               <Link to="/login">
-                <Button className="w-full bg-theme-accent text-white shadow-theme-accent/25 hover:bg-theme-accent/90" variant="secondary">
+                <Button className="w-full bg-gradient-to-r from-theme-cyan to-theme-main text-white shadow-theme-main/25 hover:saturate-125" variant="secondary">
                   招待コードで始める
                 </Button>
               </Link>

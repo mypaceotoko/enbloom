@@ -180,7 +180,7 @@ export function MyProfilePage() {
         <div className="flower-gradient rounded-[1.15rem] p-3">
           <div className="rounded-[1rem] bg-white/66 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center">
-              <ProfileAvatar className="size-24 rounded-[1.65rem] border border-white/80 shadow-xl" fallbackClassName="text-3xl font-black" user={{ name: form.name || '自分', gradient: 'from-pink-100 via-rose-50 to-emerald-100', photoUrl: selectedPhotoPreview || photoUrl }} />
+              <ProfileAvatar className="size-24 rounded-[1.65rem] border border-white/80 shadow-xl" fallbackClassName="text-3xl font-black" user={{ name: form.name || '自分', gradient: 'from-sky-100 via-cyan-50 to-yellow-100', photoUrl: selectedPhotoPreview || photoUrl }} />
               <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
                 <div>
                   <p className="text-sm font-black text-theme-text">プロフィール画像</p>

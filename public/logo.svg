@@ -1,0 +1,15 @@
+<svg width="520" height="128" viewBox="0 0 520 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ConnectBloom</title>
+  <desc id="desc">ConnectBloom logo with the copy 紹介から、共創がひらく。</desc>
+  <defs>
+    <linearGradient id="markStroke" x1="48" x2="48" y1="10" y2="98" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD600"/><stop offset=".43" stop-color="#00D4CE"/><stop offset="1" stop-color="#0057FF"/></linearGradient>
+    <linearGradient id="bloomText" x1="266" x2="485" y1="44" y2="44" gradientUnits="userSpaceOnUse"><stop stop-color="#FFD600"/><stop offset=".42" stop-color="#00D4CE"/><stop offset="1" stop-color="#0057FF"/></linearGradient>
+  </defs>
+  <g transform="translate(6 8)" stroke="url(#markStroke)" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+    <path d="M48 43C38 31 38 19 48 12C58 19 58 31 48 43Z"/><path d="M42 49C25 48 16 39 20 27C32 24 43 30 48 43"/><path d="M54 49C71 48 80 39 76 27C64 24 53 30 48 43"/><path d="M43 53C31 66 18 66 12 55C17 43 29 41 42 49"/><path d="M53 53C65 66 78 66 84 55C79 43 67 41 54 49"/><path d="M48 56C60 68 59 82 48 88C37 82 36 68 48 56Z"/>
+  </g>
+  <g transform="translate(6 8)" fill="url(#markStroke)"><circle cx="28" cy="42" r="6"/><circle cx="72" cy="42" r="6"/><circle cx="37" cy="25" r="6"/><circle cx="59" cy="25" r="6"/><path d="M48 43C42 50 35 53 26 53C35 57 42 57 48 52C54 57 61 57 70 53C61 53 54 50 48 43Z" opacity=".95"/></g>
+  <text x="118" y="62" font-family="Inter, Noto Sans JP, Arial, sans-serif" font-size="46" font-weight="900" letter-spacing="-2.4" fill="#081D3A">Connect</text>
+  <text x="284" y="62" font-family="Inter, Noto Sans JP, Arial, sans-serif" font-size="46" font-weight="900" letter-spacing="-2.4" fill="url(#bloomText)">Bloom</text>
+  <text x="121" y="99" font-family="Inter, Noto Sans JP, Arial, sans-serif" font-size="17" font-weight="800" letter-spacing="5" fill="#081D3A">紹介から、共創がひらく。</text>
+</svg>

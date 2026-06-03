@@ -43,7 +43,7 @@ function getInterestStatusLabel(status: ActivityInterestStatus) {
 }
 
 function getInterestStatusClass(status: ActivityInterestStatus) {
-  if (status === 'accepted') return 'bg-emerald-50 text-emerald-700';
+  if (status === 'accepted') return 'bg-cyan-50 text-cyan-700';
   if (status === 'declined') return 'bg-slate-100 text-slate-600';
   if (status === 'cancelled') return 'bg-orange-50 text-orange-700';
   return 'bg-theme-main text-white';
@@ -234,7 +234,7 @@ export function ActivityBoardDetailPage() {
                   <div className="rounded-2xl border border-white/70 bg-white/55 p-4 shadow-sm" key={interest.id}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="flex items-start gap-3">
-                        <div className={`size-12 shrink-0 rounded-2xl bg-gradient-to-br ${interest.profile?.gradient ?? 'from-emerald-100 to-pink-100'}`} />
+                        <div className={`size-12 shrink-0 rounded-2xl bg-gradient-to-br ${interest.profile?.gradient ?? 'from-cyan-100 to-sky-100'}`} />
                         <div className="space-y-1">
                           <p className="font-black text-theme-text">{interest.profile?.name ?? 'ConnectBloomユーザー'}</p>
                           <p className="text-xs font-bold text-theme-muted">{interest.profile?.age ?? 18}歳 / {interest.profile?.location ?? '活動エリア未設定'}</p>
@@ -259,7 +259,7 @@ export function ActivityBoardDetailPage() {
                         ) : null}
                         {interest.status === 'accepted' ? (
                           <>
-                            <span className="inline-flex min-h-11 items-center rounded-xl bg-emerald-50 px-4 py-2 text-[13px] font-black text-emerald-700">承認済み</span>
+                            <span className="inline-flex min-h-11 items-center rounded-xl bg-cyan-50 px-4 py-2 text-[13px] font-black text-cyan-700">承認済み</span>
                             <Button disabled title="会話導線は次フェーズで整理します" variant="secondary"><MessageSquareText size={16} />会話へ</Button>
                           </>
                         ) : null}
@@ -276,7 +276,7 @@ export function ActivityBoardDetailPage() {
           <Card className="space-y-3">
             <h2 className="text-base font-black text-theme-text">投稿者プロフィール概要</h2>
             <div className="flex items-start gap-3">
-              <div className={`size-12 shrink-0 rounded-2xl bg-gradient-to-br ${post.author?.gradient ?? 'from-emerald-100 to-pink-100'}`} />
+              <div className={`size-12 shrink-0 rounded-2xl bg-gradient-to-br ${post.author?.gradient ?? 'from-cyan-100 to-sky-100'}`} />
               <div className="space-y-1">
                 <p className="font-black text-theme-text">{post.author?.name ?? 'ConnectBloomユーザー'}</p>
                 <p className="text-xs font-bold text-theme-muted">{post.author?.location ?? '活動エリア未設定'} / {post.author?.occupation ?? 'プロフィール準備中'}</p>

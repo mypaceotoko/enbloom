@@ -215,7 +215,7 @@ export function ProfileDetailPage() {
           <div className="flex flex-wrap gap-1.5">
             <Badge><UserRoundCheck size={13} />{profileUser.introducedBy} からの紹介</Badge>
             <Badge className="bg-theme-background"><ShieldCheck size={13} />安心して進める</Badge>
-            {matched ? <Badge className="bg-theme-accent text-white">コネクト済み</Badge> : null}
+            {matched ? <Badge className="bg-theme-main text-white">コネクト済み</Badge> : null}
           </div>
 
           <p className="rounded-[1.15rem] bg-theme-background/70 p-3.5 text-[13px] leading-6 text-theme-text">{profileUser.bio}</p>
@@ -229,7 +229,7 @@ export function ProfileDetailPage() {
           <InfoBlock icon={<Heart size={17} />} title="一緒にやりたいこと" body={profileUser.relationshipGoal} />
 
           <div className="sticky bottom-24 z-10 space-y-2 rounded-[1.25rem] border border-white/60 bg-theme-card/88 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
-            <Button className={`w-full ${liked ? 'bg-theme-accent text-white shadow-theme-accent/25 hover:bg-theme-accent/90' : 'bg-theme-accent-soft text-theme-text'}`} onClick={() => { void handleLike(); }} variant="secondary">
+            <Button className={`w-full ${liked ? 'bg-gradient-to-r from-theme-cyan to-theme-main text-white shadow-theme-main/25 hover:saturate-125' : 'bg-theme-accent-soft text-theme-text'}`} onClick={() => { void handleLike(); }} variant="secondary">
               <Heart fill={liked ? 'currentColor' : 'none'} size={16} />{liked ? '話してみたい済み' : '話してみたいを送る'}
             </Button>
             {matched ? <Link to={`/messages/${useSupabaseProfile ? supabaseMatchId : profileUser.id}`}><Button className="w-full"><MessageCircle size={16} />会話へ</Button></Link> : null}
