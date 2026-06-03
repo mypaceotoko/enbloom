@@ -2,9 +2,6 @@
 -- preserving generated user_low_id/user_high_id as database-owned columns.
 -- activity_posts owner is created_by; activity_post_interests participant is user_id.
 
-alter table public.matches
-  add column if not exists updated_at timestamptz not null default now();
-
 create or replace function public.ensure_direct_conversation(target_user_id uuid)
 returns table (
   success boolean,
@@ -55,11 +52,10 @@ begin
     return;
   end if;
 
-  insert into public.matches (user1_id, user2_id, status, created_at, updated_at)
-  values (current_user_id, target_user_id, 'active', now(), now())
+  insert into public.matches (user1_id, user2_id, status, created_at)
+  values (current_user_id, target_user_id, 'active', now())
   on conflict (user_low_id, user_high_id) do update
-    set status = 'active',
-        updated_at = now()
+    set status = 'active'
     where public.matches.status <> 'blocked'
   returning id into inserted_match_id;
 
@@ -150,11 +146,10 @@ begin
     return;
   end if;
 
-  insert into public.matches (user1_id, user2_id, status, created_at, updated_at)
-  values (post_owner_id, interested_user_id, 'active', now(), now())
+  insert into public.matches (user1_id, user2_id, status, created_at)
+  values (post_owner_id, interested_user_id, 'active', now())
   on conflict (user_low_id, user_high_id) do update
-    set status = 'active',
-        updated_at = now()
+    set status = 'active'
     where public.matches.status <> 'blocked'
   returning id into inserted_match_id;
 
