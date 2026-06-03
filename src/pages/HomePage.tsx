@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { CalendarHeart, CheckCircle2, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Bell, CalendarHeart, CheckCircle2, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { ProfileCard } from '../components/ProfileCard';
@@ -11,6 +12,7 @@ import { useAuth } from '../hooks/useAuth';
 import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
+import { getUnreadNotificationCount } from '../lib/notificationApi';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from '../lib/profilePhotoApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
 import type { UserProfile } from '../types/user';
@@ -24,6 +26,7 @@ export function HomePage() {
   const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const [loadingLikes, setLoadingLikes] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const location = useLocation();
   const homeState = location.state as { profileSaved?: boolean; message?: string } | null;
   const profileSaved = Boolean(homeState?.profileSaved);
@@ -32,6 +35,31 @@ export function HomePage() {
   const sourceUsers = useSupabaseLikes ? supabaseUsers : mockUsers;
   const safetyHiddenIds = useSupabaseLikes ? hiddenUserIds : blockedUserIds;
   const todaysUsers = sourceUsers.filter((profile) => !safetyHiddenIds.includes(profile.id)).slice(0, 3);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUnreadNotificationCount() {
+      if (!useSupabaseLikes) {
+        setUnreadNotificationCount(0);
+        return;
+      }
+
+      try {
+        const count = await getUnreadNotificationCount();
+        if (mounted) setUnreadNotificationCount(count);
+      } catch (caughtError) {
+        console.warn('[ConnectBloom] notification count fetch failed', { error: caughtError });
+        if (mounted) setUnreadNotificationCount(0);
+      }
+    }
+
+    void loadUnreadNotificationCount();
+
+    return () => {
+      mounted = false;
+    };
+  }, [useSupabaseLikes]);
 
   useEffect(() => {
     let mounted = true;
@@ -117,6 +145,17 @@ export function HomePage() {
       ) : null}
 
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
+
+      {unreadNotificationCount > 0 ? (
+        <Card className="flex items-center gap-3 border-theme-main/15 bg-cyan-50/80 py-3 shadow-sm">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-theme-main text-white"><Bell size={18} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-black text-theme-text">未読通知があります</span>
+            <span className="block text-xs leading-5 text-theme-muted">参加希望・承認・DMの新着 {unreadNotificationCount}件を確認できます。</span>
+          </span>
+          <Link to="/notifications"><Button className="min-h-9 px-3 text-xs" variant="secondary">通知を見る</Button></Link>
+        </Card>
+      ) : null}
 
       <Card className="flower-gradient relative overflow-hidden border-0 p-1">
         <div className="absolute -right-8 -top-8 size-28 rounded-full bg-white/30" />

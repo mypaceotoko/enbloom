@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { ArrowRight, Bell, ChevronDown, ChevronUp, ClipboardList, HeartHandshake, Languages, LogOut, Palette, ShieldCheck, ShieldMinus, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -9,6 +9,7 @@ import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { getUnreadNotificationCount } from '../lib/notificationApi';
 import { getSupabaseConnectionStatus } from '../lib/supabase';
 
 export function SettingsPage() {
@@ -19,7 +20,33 @@ export function SettingsPage() {
   const [notice, setNotice] = useState('');
   const [signingOut, setSigningOut] = useState(false);
   const [showDeveloperStatus, setShowDeveloperStatus] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const supabaseStatus = getSupabaseConnectionStatus();
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUnreadNotificationCount() {
+      if (!isSupabaseMode || !isAuthenticated) {
+        setUnreadNotificationCount(0);
+        return;
+      }
+
+      try {
+        const count = await getUnreadNotificationCount();
+        if (mounted) setUnreadNotificationCount(count);
+      } catch (caughtError) {
+        console.warn('[ConnectBloom] notification count fetch failed', { error: caughtError });
+        if (mounted) setUnreadNotificationCount(0);
+      }
+    }
+
+    void loadUnreadNotificationCount();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthenticated, isSupabaseMode]);
 
   async function handleSignOut() {
     const confirmed = window.confirm('ConnectBloomからログアウトしますか？');
@@ -121,7 +148,23 @@ export function SettingsPage() {
       </Card>
 
       <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語 / 英語切り替えは将来実装予定です。" />
-      <Placeholder icon={<Bell size={18} />} title="通知設定" body="コネクト・会話通知の設定を次フェーズ以降に追加します。" />
+
+      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/notifications')} type="button">
+        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark"><Bell size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2 text-sm font-black text-theme-text">
+                通知
+                {unreadNotificationCount > 0 ? <span className="rounded-full bg-theme-main px-2 py-0.5 text-[10px] font-black text-white">未読 {unreadNotificationCount}</span> : null}
+              </span>
+              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">参加希望・承認・メッセージを確認できます。</span>
+            </span>
+            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
+          </div>
+        </Card>
+      </button>
+
       <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲をユーザー設定として保存できるようにします。" />
       <Placeholder icon={<ShieldCheck size={18} />} title="安全設定" body="本人確認・年齢確認は次フェーズ以降の検討項目です。今回はUIのみです。" />
 

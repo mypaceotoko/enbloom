@@ -18,6 +18,7 @@ import {
   getMyInterestedPostIds,
 } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
+import { notifyActivityInterestAccepted, notifyActivityInterestReceived } from '../lib/notificationApi';
 import { getChatRoomById } from '../lib/chatRoomApi';
 import type { ActivityInterestStatus, ActivityPostInterestWithProfile, ActivityPostMode, ActivityPostWithAuthor } from '../types/activityBoard';
 
@@ -50,6 +51,12 @@ function getInterestStatusClass(status: ActivityInterestStatus) {
   if (status === 'declined') return 'bg-slate-100 text-slate-600';
   if (status === 'cancelled') return 'bg-orange-50 text-orange-700';
   return 'bg-theme-main text-white';
+}
+
+function getNotificationDisplayName(user: { user_metadata?: Record<string, unknown>; email?: string } | null | undefined) {
+  const metadataName = user?.user_metadata?.full_name ?? user?.user_metadata?.name;
+  if (typeof metadataName === 'string' && metadataName.trim()) return metadataName.trim();
+  return user?.email?.split('@')[0] || 'ユーザー';
 }
 
 export function ActivityBoardDetailPage() {
@@ -171,6 +178,9 @@ export function ActivityBoardDetailPage() {
         setNotice('参加希望を取り消しました。');
       } else {
         await expressInterest(post.id);
+        void notifyActivityInterestReceived(post.id, post.title, post.created_by, getNotificationDisplayName(user)).catch((caughtError) => {
+          console.warn('[ConnectBloom] notification creation failed', { type: 'activity_interest_received', error: caughtError });
+        });
         setInterested(true);
         setPost({ ...post, interest_count: post.interest_count + 1 });
         setNotice('参加したいを送りました。');
@@ -190,6 +200,11 @@ export function ActivityBoardDetailPage() {
       const updatedInterest = status === 'accepted'
         ? await acceptActivityPostInterest(interestId)
         : await declineActivityPostInterest(interestId);
+      if (status === 'accepted' && post) {
+        void notifyActivityInterestAccepted(post.id, post.title, updatedInterest.user_id).catch((caughtError) => {
+          console.warn('[ConnectBloom] notification creation failed', { type: 'activity_interest_accepted', error: caughtError });
+        });
+      }
       setInterests((current) => current.map((interest) => (
         interest.id === interestId ? { ...interest, status: updatedInterest.status, updated_at: updatedInterest.updated_at } : interest
       )));

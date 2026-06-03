@@ -14,10 +14,17 @@ import { getActivityPostById } from '../lib/activityBoardApi';
 import { blockUser as blockSupabaseUser, hasSafetyBlockBetween } from '../lib/blockApi';
 import { formatConversationFailureMessage } from '../lib/matchApi';
 import { getMessageMatchById, getMessagesByMatchId, sendMessage as sendSupabaseMessage } from '../lib/messageApi';
+import { notifyDirectMessageReceived } from '../lib/notificationApi';
 import { reportUser as reportSupabaseUser } from '../lib/reportApi';
 import type { Message, MessageMatch } from '../types/message';
 
 const reportReasonOptions = ['不適切なプロフィール', '迷惑行為', 'なりすまし', '不安を感じた', 'その他'];
+
+function getNotificationDisplayName(user: { user_metadata?: Record<string, unknown>; email?: string } | null | undefined) {
+  const metadataName = user?.user_metadata?.full_name ?? user?.user_metadata?.name;
+  if (typeof metadataName === 'string' && metadataName.trim()) return metadataName.trim();
+  return user?.email?.split('@')[0] || 'ユーザー';
+}
 
 export function MessagesPage() {
   const { matchId } = useParams();
@@ -179,6 +186,11 @@ export function MessagesPage() {
       }
 
       setSupabaseMessages((currentMessages) => [...currentMessages, result.message as Message]);
+      if (messageMatch?.otherUserId) {
+        void notifyDirectMessageReceived(activeMatchId, messageMatch.otherUserId, getNotificationDisplayName(authUser)).catch((caughtError) => {
+          console.warn('[ConnectBloom] notification creation failed', { type: 'direct_message_received', error: caughtError });
+        });
+      }
       setDraft('');
     } catch (caughtError) {
       setSendError(caughtError instanceof Error ? `会話の送信に失敗しました: ${caughtError.message}` : '通信に失敗しました。少し時間を置いてもう一度お試しください。');

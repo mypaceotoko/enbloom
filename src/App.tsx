@@ -18,6 +18,7 @@ import { MyBoardPage } from './pages/MyBoardPage';
 import { MyInterestsPage } from './pages/MyInterestsPage';
 import { MyProfilePage } from './pages/MyProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { ProfileDetailPage } from './pages/ProfileDetailPage';
 import { RoomDetailPage } from './pages/RoomDetailPage';
@@ -48,6 +49,7 @@ export default function App() {
         <Route element={<MatchesPage />} path="matches" />
         <Route element={<MessagesPage />} path="messages/:matchId" />
         <Route element={<MyProfilePage />} path="my-profile" />
+        <Route element={<NotificationsPage />} path="notifications" />
         <Route element={<SettingsPage />} path="settings" />
         <Route element={<SafetyPage />} path="safety" />
         <Route element={<BlockedUsersPage />} path="blocked-users" />
