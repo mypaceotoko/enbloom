@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Bell, ChevronDown, ChevronUp, Languages, LogOut, Palette, ShieldCheck, ShieldMinus, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Bell, ChevronDown, ChevronUp, ClipboardList, HeartHandshake, Languages, LogOut, Palette, ShieldCheck, ShieldMinus, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -59,6 +59,33 @@ export function SettingsPage() {
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-black text-theme-text">マイプロフィール</span>
               <span className="mt-0.5 block text-xs leading-5 text-theme-muted">登録したプロフィールを確認・編集できます。</span>
+            </span>
+            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
+          </div>
+        </Card>
+      </button>
+
+
+      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/my-board')} type="button">
+        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark"><ClipboardList size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-black text-theme-text">自分の募集</span>
+              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">投稿した募集と届いた参加希望を管理できます。</span>
+            </span>
+            <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
+          </div>
+        </Card>
+      </button>
+
+      <button className="w-full text-left transition active:scale-[0.99]" onClick={() => navigate('/my-interests')} type="button">
+        <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><HeartHandshake size={18} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-black text-theme-text">参加希望した募集</span>
+              <span className="mt-0.5 block text-xs leading-5 text-theme-muted">自分が送った参加希望の状態を確認・取り消しできます。</span>
             </span>
             <ArrowRight className="shrink-0 text-theme-main-dark" size={18} />
           </div>

@@ -2,6 +2,7 @@ import type { UserProfile } from './user';
 
 export type ActivityPostMode = 'online' | 'offline' | 'either';
 export type ActivityPostStatus = 'open' | 'closed' | 'archived';
+export type ActivityPostStatusLabel = '募集中' | '締切済み' | 'アーカイブ';
 export type ActivityInterestStatus = 'interested' | 'accepted' | 'declined' | 'cancelled';
 export type ActivityInterestStatusLabel = '参加希望中' | '承認済み' | '見送り' | '取り消し済み';
 
@@ -22,10 +23,19 @@ export type ActivityPost = {
   closed_at: string | null;
 };
 
+export type ActivityPostStats = {
+  post_id: string;
+  interest_count: number;
+  accepted_count: number;
+};
+
 export type ActivityPostWithAuthor = ActivityPost & {
   author: UserProfile | null;
   interest_count: number;
+  accepted_count: number;
 };
+
+export type ActivityPostWithStats = ActivityPostWithAuthor & ActivityPostStats;
 
 export type ActivityPostInterest = {
   id: string;
@@ -39,6 +49,10 @@ export type ActivityPostInterest = {
 
 export type ActivityPostInterestWithProfile = ActivityPostInterest & {
   profile: UserProfile | null;
+};
+
+export type MyInterestedActivityPost = ActivityPostInterest & {
+  post: ActivityPostWithAuthor | null;
 };
 
 export type ActivityPostInput = {

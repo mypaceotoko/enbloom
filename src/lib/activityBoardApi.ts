@@ -1,4 +1,15 @@
-import type { ActivityInterestStatus, ActivityPost, ActivityPostFilters, ActivityPostInput, ActivityPostInterest, ActivityPostInterestWithProfile, ActivityPostWithAuthor } from '../types/activityBoard';
+import type {
+  ActivityInterestStatus,
+  ActivityPost,
+  ActivityPostFilters,
+  ActivityPostInput,
+  ActivityPostInterest,
+  ActivityPostInterestWithProfile,
+  ActivityPostStats,
+  ActivityPostWithAuthor,
+  ActivityPostWithStats,
+  MyInterestedActivityPost,
+} from '../types/activityBoard';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { requireSupabaseClient } from './supabase';
 
@@ -8,6 +19,7 @@ type ActivityPostRow = ActivityPost & {
 
 type ActivityInterestRow = ActivityPostInterest & {
   profile?: ProfileRow | ProfileRow[] | null;
+  post?: ActivityPostRow | ActivityPostRow[] | null;
 };
 
 type InterestCountRpcRow = {
@@ -32,20 +44,30 @@ const activityPostColumns = [
   'closed_at',
 ].join(',');
 
+const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 const activityPostWithAuthorColumns = [
   activityPostColumns,
-  'author:profiles!activity_posts_created_by_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used)',
+  `author:profiles!activity_posts_created_by_fkey(${profileSelectColumns})`,
 ].join(',');
 
 const activityInterestColumns = 'id,post_id,user_id,message,status,created_at,updated_at';
 const activityInterestWithProfileColumns = [
   activityInterestColumns,
-  'profile:profiles!activity_post_interests_user_id_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used)',
+  `profile:profiles!activity_post_interests_user_id_fkey(${profileSelectColumns})`,
+].join(',');
+const myInterestedPostColumns = [
+  activityInterestColumns,
+  `post:activity_posts!activity_post_interests_post_id_fkey(${activityPostWithAuthorColumns})`,
 ].join(',');
 
 function firstProfile(profile: ProfileRow | ProfileRow[] | null | undefined): ProfileRow | null {
   if (Array.isArray(profile)) return profile[0] ?? null;
   return profile ?? null;
+}
+
+function firstPost(post: ActivityPostRow | ActivityPostRow[] | null | undefined): ActivityPostRow | null {
+  if (Array.isArray(post)) return post[0] ?? null;
+  return post ?? null;
 }
 
 function mapInterest(row: ActivityInterestRow): ActivityPostInterestWithProfile {
@@ -63,11 +85,12 @@ function mapInterest(row: ActivityInterestRow): ActivityPostInterestWithProfile 
   };
 }
 
-function mapPost(row: ActivityPostRow, interestCount = 0): ActivityPostWithAuthor {
+function mapPost(row: ActivityPostRow, stats: Partial<ActivityPostStats> = {}): ActivityPostWithStats {
   const author = firstProfile(row.author);
 
   return {
     id: row.id,
+    post_id: row.id,
     created_by: row.created_by,
     title: row.title,
     body: row.body,
@@ -82,7 +105,8 @@ function mapPost(row: ActivityPostRow, interestCount = 0): ActivityPostWithAutho
     updated_at: row.updated_at,
     closed_at: row.closed_at,
     author: author ? profileRowToUserProfile(author) : null,
-    interest_count: interestCount,
+    interest_count: stats.interest_count ?? 0,
+    accepted_count: stats.accepted_count ?? 0,
   };
 }
 
@@ -91,6 +115,10 @@ async function getCurrentUserId() {
   if (error) throw error;
   if (!data.user) throw new Error('ログイン情報を確認できませんでした。もう一度ログインしてください。');
   return data.user.id;
+}
+
+function emptyStats(postIds: string[]) {
+  return new Map(postIds.map((postId) => [postId, { post_id: postId, interest_count: 0, accepted_count: 0 }]));
 }
 
 async function getInterestCounts(postIds: string[]) {
@@ -103,6 +131,35 @@ async function getInterestCounts(postIds: string[]) {
   }
 
   return new Map((data as InterestCountRpcRow[] | null ?? []).map((row) => [row.post_id, Number(row.interest_count) || 0]));
+}
+
+async function getActivityPostStatsMap(postIds: string[]): Promise<Map<string, ActivityPostStats>> {
+  const stats = emptyStats(postIds);
+  if (!postIds.length) return stats;
+
+  const { data, error } = await requireSupabaseClient()
+    .from('activity_post_interests')
+    .select('post_id,status')
+    .in('post_id', postIds);
+
+  if (error) {
+    console.info('[ConnectBloom] activity post stats fetch skipped', { success: false });
+    const counts = await getInterestCounts(postIds);
+    counts.forEach((interestCount, postId) => {
+      stats.set(postId, { post_id: postId, interest_count: interestCount, accepted_count: 0 });
+    });
+    return stats;
+  }
+
+  (data ?? []).forEach((row) => {
+    const postId = String(row.post_id);
+    const current = stats.get(postId) ?? { post_id: postId, interest_count: 0, accepted_count: 0 };
+    if (row.status === 'interested' || row.status === 'accepted') current.interest_count += 1;
+    if (row.status === 'accepted') current.accepted_count += 1;
+    stats.set(postId, current);
+  });
+
+  return stats;
 }
 
 export async function getActivityPosts(filters: ActivityPostFilters = {}): Promise<ActivityPostWithAuthor[]> {
@@ -121,7 +178,7 @@ export async function getActivityPosts(filters: ActivityPostFilters = {}): Promi
   const rows = (data ?? []) as unknown as ActivityPostRow[];
   const counts = await getInterestCounts(rows.map((row) => row.id));
   console.info('[ConnectBloom] activity posts loaded', { count: rows.length });
-  return rows.map((row) => mapPost(row, counts.get(row.id) ?? 0));
+  return rows.map((row) => mapPost(row, { interest_count: counts.get(row.id) ?? 0 }));
 }
 
 export async function getActivityPostById(postId: string): Promise<ActivityPostWithAuthor | null> {
@@ -134,8 +191,8 @@ export async function getActivityPostById(postId: string): Promise<ActivityPostW
   if (error) throw error;
   if (!data) return null;
 
-  const count = await getPostInterestCount(postId);
-  return mapPost(data, count);
+  const [counts, stats] = await Promise.all([getInterestCounts([postId]), getActivityPostStats(postId)]);
+  return mapPost(data, { ...stats, interest_count: counts.get(postId) ?? stats.interest_count });
 }
 
 export async function createActivityPost(input: ActivityPostInput): Promise<ActivityPostWithAuthor> {
@@ -161,10 +218,10 @@ export async function createActivityPost(input: ActivityPostInput): Promise<Acti
 
   if (error) throw error;
   console.info('[ConnectBloom] activity post created', { success: true });
-  return mapPost(data, 0);
+  return mapPost(data, { interest_count: 0, accepted_count: 0 });
 }
 
-export async function getMyActivityPosts(userId: string): Promise<ActivityPostWithAuthor[]> {
+export async function getMyActivityPosts(userId: string): Promise<ActivityPostWithStats[]> {
   const { data, error } = await requireSupabaseClient()
     .from('activity_posts')
     .select(activityPostWithAuthorColumns)
@@ -173,8 +230,35 @@ export async function getMyActivityPosts(userId: string): Promise<ActivityPostWi
 
   if (error) throw error;
   const rows = (data ?? []) as unknown as ActivityPostRow[];
-  const counts = await getInterestCounts(rows.map((row) => row.id));
-  return rows.map((row) => mapPost(row, counts.get(row.id) ?? 0));
+  const stats = await getActivityPostStatsMap(rows.map((row) => row.id));
+  return rows.map((row) => mapPost(row, stats.get(row.id)));
+}
+
+export async function getMyInterestedPosts(userId: string): Promise<MyInterestedActivityPost[]> {
+  const { data, error } = await requireSupabaseClient()
+    .from('activity_post_interests')
+    .select(myInterestedPostColumns)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as ActivityInterestRow[];
+  const postRows = rows.map((row) => firstPost(row.post)).filter((post): post is ActivityPostRow => Boolean(post));
+  const stats = await getActivityPostStatsMap(postRows.map((post) => post.id));
+
+  return rows.map((row) => {
+    const post = firstPost(row.post);
+    return {
+      id: row.id,
+      post_id: row.post_id,
+      user_id: row.user_id,
+      message: row.message,
+      status: row.status,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      post: post ? mapPost(post, stats.get(post.id)) : null,
+    };
+  });
 }
 
 export async function expressInterest(postId: string, message?: string): Promise<ActivityPostInterest> {
@@ -232,6 +316,11 @@ export async function getPostInterestCount(postId: string): Promise<number> {
   return counts.get(postId) ?? 0;
 }
 
+export async function getActivityPostStats(postId: string): Promise<ActivityPostStats> {
+  const stats = await getActivityPostStatsMap([postId]);
+  return stats.get(postId) ?? { post_id: postId, interest_count: 0, accepted_count: 0 };
+}
+
 export async function getActivityPostInterestsForOwner(postId: string): Promise<ActivityPostInterestWithProfile[]> {
   const { data, error } = await requireSupabaseClient()
     .from('activity_post_interests')
@@ -262,4 +351,53 @@ export async function acceptActivityPostInterest(interestId: string): Promise<Ac
 
 export async function declineActivityPostInterest(interestId: string): Promise<ActivityPostInterest> {
   return updateActivityPostInterestStatus(interestId, 'declined');
+}
+
+export async function closeActivityPost(postId: string): Promise<ActivityPost> {
+  const { data, error } = await requireSupabaseClient()
+    .from('activity_posts')
+    .update({ status: 'closed', closed_at: new Date().toISOString() })
+    .eq('id', postId)
+    .select(activityPostColumns)
+    .single<ActivityPost>();
+
+  if (error) throw error;
+  console.info('[ConnectBloom] activity post closed', { success: true });
+  return data;
+}
+
+export async function reopenActivityPost(postId: string): Promise<ActivityPost> {
+  const { data, error } = await requireSupabaseClient()
+    .from('activity_posts')
+    .update({ status: 'open', closed_at: null })
+    .eq('id', postId)
+    .select(activityPostColumns)
+    .single<ActivityPost>();
+
+  if (error) throw error;
+  console.info('[ConnectBloom] activity post reopened', { success: true });
+  return data;
+}
+
+export async function archiveActivityPost(postId: string): Promise<ActivityPost> {
+  const { data, error } = await requireSupabaseClient()
+    .from('activity_posts')
+    .update({ status: 'archived', closed_at: new Date().toISOString() })
+    .eq('id', postId)
+    .select(activityPostColumns)
+    .single<ActivityPost>();
+
+  if (error) throw error;
+  console.info('[ConnectBloom] activity post archived', { success: true });
+  return data;
+}
+
+export async function deleteActivityPost(postId: string): Promise<void> {
+  const { error } = await requireSupabaseClient()
+    .from('activity_posts')
+    .delete()
+    .eq('id', postId);
+
+  if (error) throw error;
+  console.info('[ConnectBloom] activity post deleted', { success: true });
 }
