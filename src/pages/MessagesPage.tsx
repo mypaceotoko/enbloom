@@ -86,7 +86,6 @@ export function MessagesPage() {
         if (!mounted) return;
         const message = caughtError instanceof Error ? caughtError.message : 'unknown';
         console.error('[ConnectBloom] messages fetch failed', { phase: 'messages_load_failed', error: caughtError });
-        console.info('[ConnectBloom] messages fetch success', { success: false });
         setMessageMatch(null);
         setBlockedConversation(false);
         setSupabaseMessages([]);

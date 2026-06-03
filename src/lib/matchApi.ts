@@ -356,22 +356,15 @@ export async function getOrCreateMatchForUsers(userAId: string, userBId: string)
   const currentUserId = await getCurrentUserId();
   const targetUserId = currentUserId === userAId ? userBId : userAId;
 
-  console.log('[DM] start', { postId: undefined, interestId: undefined, targetUserId });
-
   if (!targetUserId || targetUserId === currentUserId || (currentUserId !== userAId && currentUserId !== userBId)) {
     console.error('[DM] validation failed', { phase: 'validate-direct-target', userAId, userBId, currentUserId, targetUserId });
     return { success: false, phase: 'validate-direct-target', message: '会話の相手を確認できませんでした。' };
   }
 
-  console.log('[DM] calling rpc ensure_direct_conversation');
   const { data, error } = await requireSupabaseClient()
     .rpc('ensure_direct_conversation', { target_user_id: targetUserId });
-  console.log('[DM] rpc raw data ensure_direct_conversation', data);
-  console.log('[DM] rpc result', { data, error });
-
   if (error) {
     logDmSupabaseError('ensure_direct_conversation', error);
-    console.info('[ConnectBloom] direct conversation ensure success', { success: false });
     return {
       success: false,
       phase: 'rpc_failed',
@@ -384,7 +377,6 @@ export async function getOrCreateMatchForUsers(userAId: string, userBId: string)
   const result = mapDirectConversationResult(data);
   const phase = result.success && result.matchId ? 'ensure_direct_conversation' : 'match_id_missing';
   const debugError = phase === 'match_id_missing' ? `rpc data: ${safeStringifyRpcData(data)}` : result.debugError;
-  console.info('[ConnectBloom] direct conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
   return { ...result, phase, debugError };
 }
 
@@ -393,16 +385,11 @@ export async function ensureDirectConversation(userAId: string, userBId: string)
 }
 
 export async function ensureConversationForActivityInterest(postId: string, interestId: string, targetUserId?: string | null): Promise<DirectConversationResult> {
-  console.log('[DM] start', { postId, interestId, targetUserId });
-  console.log('[DM] calling rpc ensure_activity_interest_match');
+  void targetUserId;
   const { data, error } = await requireSupabaseClient()
     .rpc('ensure_activity_interest_match', { target_post_id: postId, target_interest_id: interestId });
-  console.log('[DM] rpc raw data ensure_activity_interest_match', data);
-  console.log('[DM] rpc result', { data, error });
-
   if (error) {
     logDmSupabaseError('ensure_activity_interest_match', error);
-    console.info('[ConnectBloom] activity conversation ensure success', { success: false });
     return {
       success: false,
       phase: 'rpc_failed',
@@ -415,8 +402,6 @@ export async function ensureConversationForActivityInterest(postId: string, inte
   const result = mapDirectConversationResult(data);
   const phase = result.success && result.matchId ? 'ensure_activity_interest_match' : 'match_id_missing';
   const debugError = phase === 'match_id_missing' ? `rpc data: ${safeStringifyRpcData(data)}` : result.debugError;
-  console.info('[ConnectBloom] ensure_activity_interest_match matchId', { matchId: result.matchId ?? null, hasMatchId: Boolean(result.matchId) });
-  console.info('[ConnectBloom] activity conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
   return { ...result, phase, debugError };
 }
 
@@ -441,7 +426,6 @@ export async function getActivityInterestConversationPath({ postId, interestId, 
   }
 
   const path = `/messages/${result.matchId}?postId=${encodeURIComponent(postId)}`;
-  console.log('[DM] before navigate to messages', { matchId: result.matchId, path });
   return { ...result, path };
 }
 

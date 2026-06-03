@@ -98,17 +98,13 @@ export function MyInterestsPage() {
     setError('');
     try {
       const result = await getActivityInterestConversationPath({ postId: interest.post_id, interestId: interest.id, targetUserId: interest.post?.created_by });
-      console.info('[ConnectBloom] open conversation matchId resolved', { matchId: result.matchId ?? null, phase: result.phase ?? null });
       if (!result.success || !result.path) {
         const phase = result.phase ?? (!result.success ? 'rpc_failed' : 'match_id_missing');
         const message = result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : 'matchIdを取得できませんでした。');
         setError(message.startsWith('会話の作成に失敗しました。') ? message : formatConversationFailureMessage(phase, message, result.debugError));
         return;
       }
-
-      console.info('[ConnectBloom] before messages navigation', { matchId: result.matchId, path: result.path });
       navigate(result.path);
-      console.info('[ConnectBloom] after messages navigation', { matchId: result.matchId, path: result.path });
     } catch (caughtError) {
       const message = caughtError instanceof Error ? caughtError.message : 'unknown';
       console.error('[ConnectBloom] messages navigation failed', { phase: 'navigation_failed', message: caughtError });
