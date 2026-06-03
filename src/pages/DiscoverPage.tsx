@@ -8,6 +8,7 @@ import { ProfileCard } from '../components/ProfileCard';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
@@ -21,10 +22,12 @@ export function DiscoverPage() {
   const [supabaseUsers, setSupabaseUsers] = useState<UserProfile[]>([]);
   const [likedUserIds, setLikedUserIds] = useState<string[]>([]);
   const [matchedUserIds, setMatchedUserIds] = useState<string[]>([]);
+  const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
   const sourceUsers = useSupabaseLikes ? supabaseUsers : mockUsers;
-  const visibleUsers = sourceUsers.filter((profile) => !blockedUserIds.includes(profile.id));
+  const safetyHiddenIds = useSupabaseLikes ? hiddenUserIds : blockedUserIds;
+  const visibleUsers = sourceUsers.filter((profile) => !safetyHiddenIds.includes(profile.id));
 
   useEffect(() => {
     let mounted = true;
@@ -34,6 +37,7 @@ export function DiscoverPage() {
         setSupabaseUsers([]);
         setLikedUserIds([]);
         setMatchedUserIds([]);
+        setHiddenUserIds([]);
         setNotice('');
         return;
       }
@@ -41,21 +45,24 @@ export function DiscoverPage() {
       setNotice('');
 
       try {
-        const [profiles, likedIds, matchedIds] = await Promise.all([
+        const [profiles, likedIds, matchedIds, nextHiddenUserIds] = await Promise.all([
           getPublicProfiles(user.id),
           getLikedUserIds(user.id),
           getMatchedUserIds(user.id),
+          getSafetyHiddenUserIds(user.id),
         ]);
 
         if (!mounted) return;
         setSupabaseUsers(profiles.map(profileRowToUserProfile));
         setLikedUserIds(likedIds);
         setMatchedUserIds(matchedIds);
+        setHiddenUserIds(nextHiddenUserIds);
       } catch (caughtError) {
         if (!mounted) return;
         setSupabaseUsers([]);
         setLikedUserIds([]);
         setMatchedUserIds([]);
+        setHiddenUserIds([]);
         setNotice(caughtError instanceof Error ? `いいね状態の取得に失敗しました: ${caughtError.message}` : 'いいね状態の取得に失敗しました。');
       }
     }

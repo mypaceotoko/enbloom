@@ -8,6 +8,7 @@ import { PageShell } from '../components/PageShell';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { getReceivedLikes, getSentLikes } from '../lib/likeApi';
 import { getMyMatches } from '../lib/matchApi';
 import type { LikeWithProfile } from '../types/like';
@@ -15,18 +16,22 @@ import type { MatchWithProfile } from '../types/match';
 import type { UserProfile } from '../types/user';
 
 export function LikesPage() {
-  const { likedUserIds, matchedUserIds: demoMatchedUserIds, receivedLikeUserIds } = useAppState();
+  const { blockedUserIds, likedUserIds, matchedUserIds: demoMatchedUserIds, receivedLikeUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [sentLikes, setSentLikes] = useState<LikeWithProfile[]>([]);
   const [receivedLikes, setReceivedLikes] = useState<LikeWithProfile[]>([]);
   const [matches, setMatches] = useState<MatchWithProfile[]>([]);
+  const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
-  const demoSent = mockUsers.filter((profile) => likedUserIds.includes(profile.id));
-  const demoReceived = mockUsers.filter((profile) => receivedLikeUserIds.includes(profile.id));
-  const matchedUserIds = useMemo(() => matches.map((match) => match.otherUserId), [matches]);
-  const matchIdByUserId = useMemo(() => Object.fromEntries(matches.map((match) => [match.otherUserId, match.id])), [matches]);
+  const demoSent = mockUsers.filter((profile) => likedUserIds.includes(profile.id) && !blockedUserIds.includes(profile.id));
+  const demoReceived = mockUsers.filter((profile) => receivedLikeUserIds.includes(profile.id) && !blockedUserIds.includes(profile.id));
+  const visibleSentLikes = useMemo(() => sentLikes.filter((like) => like.profile && !hiddenUserIds.includes(like.profile.id)), [hiddenUserIds, sentLikes]);
+  const visibleReceivedLikes = useMemo(() => receivedLikes.filter((like) => like.profile && !hiddenUserIds.includes(like.profile.id)), [hiddenUserIds, receivedLikes]);
+  const visibleMatches = useMemo(() => matches.filter((match) => !hiddenUserIds.includes(match.otherUserId)), [hiddenUserIds, matches]);
+  const matchedUserIds = useMemo(() => visibleMatches.map((match) => match.otherUserId), [visibleMatches]);
+  const matchIdByUserId = useMemo(() => Object.fromEntries(visibleMatches.map((match) => [match.otherUserId, match.id])), [visibleMatches]);
 
   useEffect(() => {
     let mounted = true;
@@ -36,6 +41,7 @@ export function LikesPage() {
         setSentLikes([]);
         setReceivedLikes([]);
         setMatches([]);
+        setHiddenUserIds([]);
         setNotice('');
         return;
       }
@@ -44,16 +50,18 @@ export function LikesPage() {
       setNotice('');
 
       try {
-        const [nextSentLikes, nextReceivedLikes, nextMatches] = await Promise.all([
+        const [nextSentLikes, nextReceivedLikes, nextMatches, nextHiddenUserIds] = await Promise.all([
           getSentLikes(user.id),
           getReceivedLikes(user.id),
           getMyMatches(user.id),
+          getSafetyHiddenUserIds(user.id),
         ]);
 
         if (!mounted) return;
         setSentLikes(nextSentLikes);
         setReceivedLikes(nextReceivedLikes);
         setMatches(nextMatches);
+        setHiddenUserIds(nextHiddenUserIds);
       } catch (caughtError) {
         if (!mounted) return;
         setNotice(caughtError instanceof Error ? `いいね一覧の取得に失敗しました: ${caughtError.message}` : 'いいね一覧の取得に失敗しました。');
@@ -85,8 +93,8 @@ export function LikesPage() {
 
       {useSupabaseLikes ? (
         <>
-          <LikeSection emptyText="まだもらったいいねはありません。プロフィールを整えて、ゆっくりご縁を待ちましょう。" likes={receivedLikes} matchIdByUserId={matchIdByUserId} matchedUserIds={matchedUserIds} title="もらったいいね" />
-          <LikeSection emptyText="まだ送ったいいねはありません。今日のご縁から気になる人に送ってみましょう。" likes={sentLikes} matchIdByUserId={matchIdByUserId} matchedUserIds={matchedUserIds} title="送ったいいね" />
+          <LikeSection emptyText="まだもらったいいねはありません。プロフィールを整えて、ゆっくりご縁を待ちましょう。" likes={visibleReceivedLikes} matchIdByUserId={matchIdByUserId} matchedUserIds={matchedUserIds} title="もらったいいね" />
+          <LikeSection emptyText="まだ送ったいいねはありません。今日のご縁から気になる人に送ってみましょう。" likes={visibleSentLikes} matchIdByUserId={matchIdByUserId} matchedUserIds={matchedUserIds} title="送ったいいね" />
         </>
       ) : (
         <>
