@@ -6,13 +6,13 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { useAuth } from '../hooks/useAuth';
-import { getMyNotifications, markAllNotificationsRead, markNotificationRead } from '../lib/notificationApi';
+import { getMyNotifications, getNotificationErrorMessage, markAllNotificationsRead, markNotificationRead } from '../lib/notificationApi';
 import type { AppNotification, NotificationType } from '../types/notification';
 
 function getTypeLabel(type: NotificationType) {
   if (type === 'activity_interest_received') return '参加希望';
   if (type === 'activity_interest_accepted') return '承認';
-  return 'DM';
+  return 'メッセージ';
 }
 
 function getTypeIcon(type: NotificationType) {
@@ -67,10 +67,7 @@ export function NotificationsPage() {
       } catch (caughtError) {
         if (!mounted) return;
         setNotifications([]);
-        const message = caughtError instanceof Error && /ログイン状態/.test(caughtError.message)
-          ? 'ログイン状態を確認できませんでした。'
-          : '通知の取得に失敗しました。';
-        setErrorMessage(message);
+        setErrorMessage(getNotificationErrorMessage(caughtError));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -94,7 +91,7 @@ export function NotificationsPage() {
           : notification
       )));
     } catch {
-      setErrorMessage('通知の既読更新に失敗しました。');
+      setErrorMessage('既読更新に失敗しました。');
     } finally {
       setUpdatingId(null);
     }
@@ -108,7 +105,7 @@ export function NotificationsPage() {
       const readAt = new Date().toISOString();
       setNotifications((current) => current.map((notification) => ({ ...notification, isRead: true, readAt })));
     } catch {
-      setErrorMessage('すべて既読にできませんでした。');
+      setErrorMessage('既読更新に失敗しました。');
     } finally {
       setUpdatingAll(false);
     }
@@ -124,7 +121,7 @@ export function NotificationsPage() {
             : currentNotification
         )));
       } catch {
-        setErrorMessage('通知の既読更新に失敗しました。');
+        setErrorMessage('既読更新に失敗しました。');
         return;
       }
     }
@@ -138,7 +135,7 @@ export function NotificationsPage() {
         <div className="rounded-[1.25rem] bg-theme-card/82 p-4 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <Badge className="bg-theme-main text-white"><Bell size={13} />通知センター Phase 1</Badge>
+              <Badge className="bg-theme-main text-white"><Bell size={13} />通知センター Phase 1.5</Badge>
               <h2 className="mt-3 text-xl font-black tracking-[-0.03em] text-theme-text">つながりの反応を、やさしくキャッチ。</h2>
               <p className="mt-2 text-[13px] leading-6 text-theme-muted">参加希望・承認・DMの通知をアプリ内で確認できます。リアルタイム通知やプッシュ通知は今後の拡張予定です。</p>
             </div>
@@ -163,6 +160,10 @@ export function NotificationsPage() {
 
       {errorMessage ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{errorMessage}</div> : null}
 
+      <div className="rounded-[1rem] bg-theme-card/62 px-3 py-2 text-[11px] font-bold text-theme-muted shadow-sm">
+        Debug: 通知取得 {canUseSupabaseNotifications ? (loading ? '確認中' : `${notifications.length}件`) : '未ログイン/デモ'}・未読 {unreadCount}件
+      </div>
+
       <div className="flex items-center justify-between rounded-full bg-theme-card/76 px-3.5 py-2.5 shadow-sm backdrop-blur">
         <span className="flex items-center gap-1.5 text-[13px] font-black text-theme-main-dark"><MailCheck size={16} />未読 {unreadCount}件</span>
         <Button className="min-h-8 px-3 text-xs" disabled={!canUseSupabaseNotifications || unreadCount === 0 || updatingAll} onClick={() => void handleMarkAllRead()} variant="secondary">
@@ -181,8 +182,8 @@ export function NotificationsPage() {
         <Card className="space-y-3 border-dashed border-theme-main/20 bg-theme-card/76 text-center shadow-sm">
           <Sparkles className="mx-auto text-theme-main" size={30} />
           <div>
-            <p className="text-sm font-black text-theme-text">まだ通知はありません</p>
-            <p className="mt-1 text-xs leading-5 text-theme-muted">参加希望・承認・DMが届くと、ここに表示されます。</p>
+            <p className="text-sm font-black text-theme-text">まだ通知はありません。参加希望やメッセージが届くと、ここに表示されます。</p>
+            <p className="mt-1 text-xs leading-5 text-theme-muted">新しい反応が届いたら、未読として分かりやすく表示します。</p>
           </div>
         </Card>
       ) : null}

@@ -1,6 +1,8 @@
 import type { AppNotification, NotificationCreateInput, NotificationType } from '../types/notification';
 import { supabase } from './supabase';
 
+export const notificationSetupMessage = '通知機能の準備がまだ完了していない可能性があります。Supabaseに 022_notifications.sql を適用してください。';
+
 type NotificationRow = {
   id: string;
   user_id: string;
@@ -11,6 +13,11 @@ type NotificationRow = {
   is_read: boolean;
   created_at: string;
   read_at: string | null;
+};
+
+export type NotificationSummary = {
+  unreadCount: number;
+  latestNotifications: AppNotification[];
 };
 
 const notificationColumns = 'id,user_id,type,title,body,link_path,is_read,created_at,read_at';
@@ -63,7 +70,20 @@ function truncate(value: string, maxLength: number) {
   return trimmed.length > maxLength ? trimmed.slice(0, maxLength) : trimmed;
 }
 
-export async function getMyNotifications(): Promise<AppNotification[]> {
+export function getNotificationErrorMessage(error: unknown, fallback = '通知の取得に失敗しました。') {
+  if (error instanceof Error && /ログイン状態/.test(error.message)) return 'ログイン状態を確認できませんでした。';
+
+  const errorLike = error as { code?: string; message?: string } | null;
+  const message = errorLike?.message ?? (error instanceof Error ? error.message : '');
+  const code = errorLike?.code ?? '';
+  if (code === '42P01' || code === '42883' || /notifications|create_notification|relation .* does not exist|function .* does not exist/i.test(message)) {
+    return notificationSetupMessage;
+  }
+
+  return fallback;
+}
+
+export async function getMyNotifications(limit = 100): Promise<AppNotification[]> {
   if (!supabase) return [];
   const currentUserId = await getCurrentUserId();
 
@@ -72,13 +92,17 @@ export async function getMyNotifications(): Promise<AppNotification[]> {
     .select(notificationColumns)
     .eq('user_id', currentUserId)
     .order('created_at', { ascending: false })
-    .limit(100);
+    .limit(limit);
 
   if (error) throw error;
 
   const notifications = ((data ?? []) as NotificationRow[]).map(mapNotificationRow);
   console.info('[ConnectBloom] notifications fetched', { count: notifications.length });
   return notifications;
+}
+
+export async function getLatestNotifications(limit = 3): Promise<AppNotification[]> {
+  return getMyNotifications(limit);
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {
@@ -94,6 +118,29 @@ export async function getUnreadNotificationCount(): Promise<number> {
 
   if (error) throw error;
   return count ?? 0;
+}
+
+export async function safeGetUnreadNotificationCount(): Promise<number> {
+  try {
+    return await getUnreadNotificationCount();
+  } catch (caughtError) {
+    console.warn('[ConnectBloom] notification unread count fetch failed', {
+      success: false,
+      errorMessage: caughtError instanceof Error ? caughtError.message : undefined,
+      code: (caughtError as { code?: string } | null)?.code,
+    });
+    return 0;
+  }
+}
+
+export async function getNotificationSummary(limit = 3): Promise<NotificationSummary> {
+  if (!supabase) return { unreadCount: 0, latestNotifications: [] };
+  const [unreadCount, latestNotifications] = await Promise.all([
+    getUnreadNotificationCount(),
+    getLatestNotifications(limit),
+  ]);
+
+  return { unreadCount, latestNotifications };
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
@@ -124,6 +171,16 @@ export async function markAllNotificationsRead(): Promise<void> {
   console.info('[ConnectBloom] notifications marked read', { success: true });
 }
 
+function warnNotificationCreation(type: NotificationType, targetUserId: string | null | undefined, success: boolean, error?: unknown) {
+  console.warn('[ConnectBloom] notification creation status', {
+    type,
+    targetUserExists: Boolean(targetUserId),
+    success,
+    errorMessage: error instanceof Error ? error.message : undefined,
+    code: (error as { code?: string } | null)?.code,
+  });
+}
+
 export async function createNotification(input: NotificationCreateInput): Promise<string | null> {
   if (!supabase) return null;
   const currentUserId = await getCurrentUserId({ optional: true });
@@ -143,8 +200,16 @@ export async function createNotification(input: NotificationCreateInput): Promis
     notification_link_path: input.linkPath ?? null,
   });
 
-  if (error) throw error;
-  console.info('[ConnectBloom] notification created', { success: true, type: input.type });
+  if (error) {
+    warnNotificationCreation(input.type, input.targetUserId, false, error);
+    throw error;
+  }
+
+  console.warn('[ConnectBloom] notification creation status', {
+    type: input.type,
+    targetUserExists: Boolean(input.targetUserId),
+    success: true,
+  });
   return typeof data === 'string' ? data : null;
 }
 
