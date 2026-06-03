@@ -172,3 +172,27 @@ export async function getMyInviteCodes(userId: string): Promise<InviteCodeRow[]>
   if (error) throw new Error(formatSupabaseInviteError(error.message));
   return data ?? [];
 }
+
+export async function deleteInviteCode(codeId: string): Promise<void> {
+  const { error } = await requireSupabaseClient()
+    .from('invite_codes')
+    .delete()
+    .eq('id', codeId)
+    .eq('used_count', 0)
+    .select('id')
+    .single();
+
+  if (error) throw new Error(formatSupabaseInviteError(error.message || '招待コードの削除に失敗しました。'));
+}
+
+export async function deactivateInviteCode(codeId: string): Promise<InviteCodeRow> {
+  const { data, error } = await requireSupabaseClient()
+    .from('invite_codes')
+    .update({ is_active: false })
+    .eq('id', codeId)
+    .select(inviteCodeColumns)
+    .single<InviteCodeRow>();
+
+  if (error) throw new Error(formatSupabaseInviteError(error.message));
+  return data;
+}
