@@ -26,6 +26,27 @@ const defaultInviteCodeForm: InviteCodeForm = {
   isActive: true,
 };
 
+const inviteCodePrefixes = ['GOEN', 'BLOOM', 'ENBLOOM', 'MYPACE', 'SAKURA'];
+const inviteCodeCharacters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function randomInt(max: number) {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    return values[0] % max;
+  }
+
+  return Math.floor(Math.random() * max);
+}
+
+function generateInviteCodeCandidate() {
+  const prefix = inviteCodePrefixes[randomInt(inviteCodePrefixes.length)];
+  const suffixLength = 4 + randomInt(3);
+  const suffix = Array.from({ length: suffixLength }, () => inviteCodeCharacters[randomInt(inviteCodeCharacters.length)]).join('');
+
+  return `${prefix}-${suffix}`;
+}
+
 function formatDateTime(value: string | null) {
   if (!value) return '期限なし';
   return new Intl.DateTimeFormat('ja-JP', {
@@ -54,20 +75,6 @@ export function AdminPage() {
     { icon: ShieldAlert, title: '通報管理', count: `${reportedUserIds.length}件`, body: `ブロック ${blockedUserIds.length}件 / 通報 ${reportedUserIds.length}件のローカル集計です。` },
   ];
 
-  async function loadInviteCodes() {
-    if (!isSupabaseMode || !isAuthenticated || !user) return;
-
-    setInviteLoading(true);
-    setInviteError('');
-    try {
-      setInviteCodes(await getMyInviteCodes(user.id));
-    } catch (caughtError) {
-      setInviteError(caughtError instanceof Error ? caughtError.message : '招待コード一覧の取得に失敗しました。');
-    } finally {
-      setInviteLoading(false);
-    }
-  }
-
   useEffect(() => {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
 
@@ -87,6 +94,13 @@ export function AdminPage() {
 
   function updateForm(field: keyof InviteCodeForm, value: string | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleGenerateInviteCodeCandidate() {
+    const nextCode = generateInviteCodeCandidate();
+    setInviteError('');
+    setInviteNotice(`${nextCode} を候補として作成しました。保存するまではDBに登録されません。ご縁のルートが分かるよう、手入力で調整してもOKです。`);
+    setForm((current) => ({ ...current, code: nextCode }));
   }
 
   async function handleCreateInviteCode(event: FormEvent<HTMLFormElement>) {
@@ -141,10 +155,11 @@ export function AdminPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-black">招待コード作成</h2>
-            <p className="mt-1 text-sm leading-6 text-theme-muted">デフォルトは無制限です。MYPACE-2026 のようなコードを作ると、同じコードを何人でも利用できます。</p>
+            <p className="mt-1 text-sm leading-6 text-theme-muted">デフォルトは無制限です。MYPACE-2026 のようなコードを作ると、同じコードを何人でも利用できます。右上のボタンでコード候補を自動生成できます。自分で分かりやすいコードを手入力してもOKです。</p>
           </div>
-          <Button className="shrink-0 px-3" disabled={inviteLoading || !isSupabaseMode || !isAuthenticated} onClick={loadInviteCodes} type="button" variant="secondary">
+          <Button aria-label="招待コード候補を生成" className="shrink-0 px-3" disabled={inviteLoading} onClick={handleGenerateInviteCodeCandidate} title="招待コード候補を生成" type="button" variant="secondary">
             <RefreshCw size={15} />
+            <span className="hidden sm:inline">候補を作る</span>
           </Button>
         </div>
 
@@ -154,7 +169,7 @@ export function AdminPage() {
         {inviteNotice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{inviteNotice}</div> : null}
 
         <form className="space-y-3" onSubmit={handleCreateInviteCode}>
-          <Input helperText="英数字・ハイフン推奨。保存時に大文字化します。" label="code" name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="MYPACE-2026" value={form.code} />
+          <Input helperText="英数字・ハイフン推奨。保存時に大文字化します。自動生成候補は保存ボタンを押すまで登録されません。" label="code" name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="MYPACE-2026" value={form.code} />
           <div className="rounded-[1.15rem] bg-theme-background/70 p-3">
             <label className="flex items-center gap-2 text-sm font-black text-theme-text">
               <input checked={form.unlimited} className="size-4 accent-theme-main" onChange={(event) => updateForm('unlimited', event.target.checked)} type="checkbox" />
