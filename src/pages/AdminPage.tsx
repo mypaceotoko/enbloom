@@ -9,6 +9,8 @@ import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { createInviteCode, deactivateInviteCode, deleteInviteCode, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
+import { getAdminReports } from '../lib/reportApi';
+import type { ReportWithProfiles } from '../types/report';
 
 type InviteCodeForm = {
   code: string;
@@ -59,12 +61,15 @@ export function AdminPage() {
   const { blockedUserIds, reportedUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
+  const [supabaseReports, setSupabaseReports] = useState<ReportWithProfiles[]>([]);
+  const [reportError, setReportError] = useState('');
   const [form, setForm] = useState<InviteCodeForm>(defaultInviteCodeForm);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState('');
   const [inviteNotice, setInviteNotice] = useState('');
   const reportedUsers = mockUsers.filter((mockUser) => reportedUserIds.includes(mockUser.id));
+  const reportCount = isSupabaseMode && isAuthenticated ? supabaseReports.length : reportedUserIds.length;
   const inviteCountLabel = useMemo(() => {
     if (!isSupabaseMode) return 'ローカル';
     if (!isAuthenticated) return '未ログイン';
@@ -73,8 +78,27 @@ export function AdminPage() {
   const adminCards = [
     { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: '紹介者に紐づいた無制限利用コードの発行・利用状況・期限管理です。' },
     { icon: UsersRound, title: 'ユーザー管理', count: `${mockUsers.length}人`, body: 'プロフィール確認とステータス管理のプレースホルダーです。' },
-    { icon: ShieldAlert, title: '通報管理', count: `${reportedUserIds.length}件`, body: `ブロック ${blockedUserIds.length}件 / 通報 ${reportedUserIds.length}件のローカル集計です。` },
+    { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: isSupabaseMode && isAuthenticated ? 'Supabase reports テーブルから通報内容を確認します。' : `ブロック ${blockedUserIds.length}件 / 通報 ${reportedUserIds.length}件のローカル集計です。` },
   ];
+
+
+
+  useEffect(() => {
+    if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
+
+    let ignore = false;
+    getAdminReports()
+      .then((reports) => {
+        if (!ignore) setSupabaseReports(reports);
+      })
+      .catch((caughtError: unknown) => {
+        if (!ignore) setReportError(caughtError instanceof Error ? caughtError.message : '通報一覧の取得に失敗しました。');
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, isSupabaseMode, user]);
 
   useEffect(() => {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
@@ -300,15 +324,44 @@ export function AdminPage() {
       </Card>
 
       <Card className="space-y-2.5">
-        <h2 className="font-black">通報済みユーザー（仮）</h2>
-        {reportedUsers.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたはDM画面の通報ボタンから反映されます。</p> : null}
-        {reportedUsers.map((reportedUser) => (
-          <div className="flex items-center gap-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-2.5" key={reportedUser.id}>
-            <span className={`flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${reportedUser.gradient} font-black text-theme-main-dark`}>{reportedUser.name.slice(0, 1)}</span>
-            <span className="min-w-0 flex-1"><span className="block font-bold">{reportedUser.name}</span><span className="block text-xs text-theme-muted">{reportedUser.location}</span></span>
-            <Badge className="bg-red-50 text-red-600">通報済み</Badge>
-          </div>
-        ))}
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-black">通報済みユーザー</h2>
+          <Badge>{isSupabaseMode && isAuthenticated ? 'Supabase reports' : 'ローカルデモ'}</Badge>
+        </div>
+        {reportError ? <p className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{reportError}</p> : null}
+        {isSupabaseMode && isAuthenticated ? (
+          <>
+            {supabaseReports.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたはDM画面の通報ボタンから reports テーブルへ保存されます。</p> : null}
+            {supabaseReports.map((report) => (
+              <div className="space-y-2 rounded-[1.15rem] bg-theme-accent-soft/45 p-3" key={report.id}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-black text-theme-main-dark">{report.reportedUser?.name ?? report.reported_user_id}</span>
+                  <Badge className="bg-red-50 text-red-600">{report.status}</Badge>
+                </div>
+                <div className="grid gap-1.5 text-xs font-bold leading-5 text-theme-muted">
+                  <span>通報理由: {report.reason}</span>
+                  {report.detail ? <span>補足: {report.detail}</span> : null}
+                  <span>通報日時: {formatDateTime(report.created_at)}</span>
+                  <span>通報者: {report.reporter?.name ?? report.reporter_id}</span>
+                  <span>対象ユーザー: {report.reportedUser?.name ?? report.reported_user_id}</span>
+                  <span>reviewed_at: {formatDateTime(report.reviewed_at)}</span>
+                  {report.admin_note ? <span>admin_note: {report.admin_note}</span> : null}
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            {reportedUsers.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたはDM画面の通報ボタンから反映されます。</p> : null}
+            {reportedUsers.map((reportedUser) => (
+              <div className="flex items-center gap-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-2.5" key={reportedUser.id}>
+                <span className={`flex size-10 items-center justify-center rounded-xl bg-gradient-to-br ${reportedUser.gradient} font-black text-theme-main-dark`}>{reportedUser.name.slice(0, 1)}</span>
+                <span className="min-w-0 flex-1"><span className="block font-bold">{reportedUser.name}</span><span className="block text-xs text-theme-muted">{reportedUser.location}</span></span>
+                <Badge className="bg-red-50 text-red-600">通報済み</Badge>
+              </div>
+            ))}
+          </>
+        )}
       </Card>
     </PageShell>
   );

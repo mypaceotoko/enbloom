@@ -8,18 +8,21 @@ import { PageShell } from '../components/PageShell';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { getMyMatches } from '../lib/matchApi';
 import type { MatchWithProfile } from '../types/match';
 import type { UserProfile } from '../types/user';
 
 export function MatchesPage() {
-  const { matchedUserIds } = useAppState();
+  const { blockedUserIds, matchedUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [supabaseMatches, setSupabaseMatches] = useState<MatchWithProfile[]>([]);
+  const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const useSupabaseMatches = isSupabaseMode && isAuthenticated && Boolean(user);
-  const demoMatchedUsers = mockUsers.filter((matchedUser) => matchedUserIds.includes(matchedUser.id));
+  const demoMatchedUsers = mockUsers.filter((matchedUser) => matchedUserIds.includes(matchedUser.id) && !blockedUserIds.includes(matchedUser.id));
+  const visibleSupabaseMatches = supabaseMatches.filter((match) => !hiddenUserIds.includes(match.otherUserId));
 
   useEffect(() => {
     let mounted = true;
@@ -27,6 +30,7 @@ export function MatchesPage() {
     async function loadMatches() {
       if (!useSupabaseMatches || !user) {
         setSupabaseMatches([]);
+        setHiddenUserIds([]);
         setNotice('');
         return;
       }
@@ -35,12 +39,14 @@ export function MatchesPage() {
       setNotice('');
 
       try {
-        const nextMatches = await getMyMatches(user.id);
+        const [nextMatches, nextHiddenUserIds] = await Promise.all([getMyMatches(user.id), getSafetyHiddenUserIds(user.id)]);
         if (!mounted) return;
         setSupabaseMatches(nextMatches);
+        setHiddenUserIds(nextHiddenUserIds);
       } catch (caughtError) {
         if (!mounted) return;
         setSupabaseMatches([]);
+        setHiddenUserIds([]);
         setNotice(caughtError instanceof Error ? `マッチ一覧の取得に失敗しました: ${caughtError.message}` : 'マッチ一覧の取得に失敗しました。');
       } finally {
         if (mounted) setLoading(false);
@@ -70,8 +76,8 @@ export function MatchesPage() {
 
       {useSupabaseMatches ? (
         <Card className="space-y-2.5">
-          {supabaseMatches.length === 0 ? <EmptyMatches /> : null}
-          {supabaseMatches.map((match) => match.profile ? <MatchRow createdAt={match.created_at} key={match.id} messagePath={`/messages/${match.id}`} user={match.profile} /> : null)}
+          {visibleSupabaseMatches.length === 0 ? <EmptyMatches /> : null}
+          {visibleSupabaseMatches.map((match) => match.profile ? <MatchRow createdAt={match.created_at} key={match.id} messagePath={`/messages/${match.id}`} user={match.profile} /> : null)}
         </Card>
       ) : (
         <Card className="space-y-2.5">

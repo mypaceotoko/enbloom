@@ -151,6 +151,19 @@ export async function getPublicProfiles(currentUserId?: string, limit = 24): Pro
   return (data ?? []) as unknown as ProfileRow[];
 }
 
+
+export async function getPublicProfileById(profileId: string): Promise<ProfileRow | null> {
+  const { data, error } = await requireSupabaseClient()
+    .from('profiles')
+    .select(profileColumns)
+    .eq('id', profileId)
+    .eq('visibility', 'public')
+    .maybeSingle<ProfileRow>();
+
+  if (error) throw error;
+  return data ?? null;
+}
+
 export function profileRowToUserProfile(profile: ProfileRow): UserProfile {
   return {
     id: profile.id,

@@ -8,6 +8,7 @@ import { ProfileCard } from '../components/ProfileCard';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
@@ -19,6 +20,7 @@ export function HomePage() {
   const [supabaseUsers, setSupabaseUsers] = useState<UserProfile[]>([]);
   const [likedUserIds, setLikedUserIds] = useState<string[]>([]);
   const [matchedUserIds, setMatchedUserIds] = useState<string[]>([]);
+  const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const [loadingLikes, setLoadingLikes] = useState(false);
   const location = useLocation();
@@ -27,7 +29,8 @@ export function HomePage() {
   const profileSavedMessage = homeState?.message ?? 'プロフィールを保存しました。今日のご縁を見てみましょう。';
   const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
   const sourceUsers = useSupabaseLikes ? supabaseUsers : mockUsers;
-  const todaysUsers = sourceUsers.filter((profile) => !blockedUserIds.includes(profile.id)).slice(0, 3);
+  const safetyHiddenIds = useSupabaseLikes ? hiddenUserIds : blockedUserIds;
+  const todaysUsers = sourceUsers.filter((profile) => !safetyHiddenIds.includes(profile.id)).slice(0, 3);
 
   useEffect(() => {
     let mounted = true;
@@ -37,6 +40,7 @@ export function HomePage() {
         setSupabaseUsers([]);
         setLikedUserIds([]);
         setMatchedUserIds([]);
+        setHiddenUserIds([]);
         setNotice('');
         return;
       }
@@ -45,21 +49,24 @@ export function HomePage() {
       setNotice('');
 
       try {
-        const [profiles, likedIds, matchedIds] = await Promise.all([
+        const [profiles, likedIds, matchedIds, nextHiddenUserIds] = await Promise.all([
           getPublicProfiles(user.id, 12),
           getLikedUserIds(user.id),
           getMatchedUserIds(user.id),
+          getSafetyHiddenUserIds(user.id),
         ]);
 
         if (!mounted) return;
         setSupabaseUsers(profiles.map(profileRowToUserProfile));
         setLikedUserIds(likedIds);
         setMatchedUserIds(matchedIds);
+        setHiddenUserIds(nextHiddenUserIds);
       } catch (caughtError) {
         if (!mounted) return;
         setSupabaseUsers([]);
         setLikedUserIds([]);
         setMatchedUserIds([]);
+        setHiddenUserIds([]);
         setNotice(caughtError instanceof Error ? `いいね状態の取得に失敗しました: ${caughtError.message}` : 'いいね状態の取得に失敗しました。');
       } finally {
         if (mounted) setLoadingLikes(false);

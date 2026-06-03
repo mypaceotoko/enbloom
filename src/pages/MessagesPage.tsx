@@ -1,6 +1,6 @@
 import { Ban, Flag, Loader2, MessageCircle, Send, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -9,11 +9,16 @@ import { PageShell } from '../components/PageShell';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { blockUser as blockSupabaseUser, hasSafetyBlockBetween } from '../lib/blockApi';
 import { getMessageMatchById, getMessagesByMatchId, sendMessage as sendSupabaseMessage } from '../lib/messageApi';
+import { reportUser as reportSupabaseUser } from '../lib/reportApi';
 import type { Message, MessageMatch } from '../types/message';
+
+const reportReasonOptions = ['不適切なプロフィール', '迷惑行為', 'なりすまし', '不安を感じた', 'その他'];
 
 export function MessagesPage() {
   const { matchId } = useParams();
+  const navigate = useNavigate();
   const demoUser = mockUsers.find((mockUser) => mockUser.id === matchId);
   const { blockUser, ensureMatchMessages, isMatched, messagesByMatchId, reportUser, sendMessage: sendDemoMessage } = useAppState();
   const { isAuthenticated, isSupabaseMode, user: authUser } = useAuth();
@@ -23,6 +28,8 @@ export function MessagesPage() {
   const [sendError, setSendError] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [blockedConversation, setBlockedConversation] = useState(false);
+  const [savingSafety, setSavingSafety] = useState(false);
   const [supabaseMessages, setSupabaseMessages] = useState<Message[]>([]);
   const [messageMatch, setMessageMatch] = useState<MessageMatch | null>(null);
   const useSupabaseMessages = isSupabaseMode && isAuthenticated && Boolean(authUser);
@@ -39,6 +46,7 @@ export function MessagesPage() {
         setSupabaseMessages([]);
         setMessageMatch(null);
         setFetchError('');
+        setBlockedConversation(false);
         return;
       }
 
@@ -62,14 +70,17 @@ export function MessagesPage() {
           return;
         }
 
+        const safetyBlocked = await hasSafetyBlockBetween(nextMatch.otherUserId);
         const nextMessages = await getMessagesByMatchId(matchId);
         if (!mounted) return;
         setMessageMatch(nextMatch);
+        setBlockedConversation(safetyBlocked);
         setSupabaseMessages(nextMessages);
       } catch (caughtError) {
         if (!mounted) return;
         console.info('[EnBloom] messages fetch success', { success: false });
         setMessageMatch(null);
+        setBlockedConversation(false);
         setSupabaseMessages([]);
         setFetchError(caughtError instanceof Error ? `メッセージの取得に失敗しました: ${caughtError.message}` : 'メッセージの取得に失敗しました。');
       } finally {
@@ -87,6 +98,7 @@ export function MessagesPage() {
   const activeMatchId = matchId ?? '';
   const demoMessages = messagesByMatchId[activeMatchId] ?? [];
   const messages = useSupabaseMessages ? supabaseMessages : demoMessages;
+  const safetyTargetUserId = useSupabaseMessages ? messageMatch?.otherUserId : activeMatchId;
   const titleName = useSupabaseMessages ? messageMatch?.otherProfile?.name : demoUser?.name;
   const headerDescription = useSupabaseMessages
     ? 'ご縁が咲いた相手とだけ話せます。焦らず、丁寧にやり取りしましょう。'
@@ -108,7 +120,7 @@ export function MessagesPage() {
   }
 
   async function handleSendMessage() {
-    if (!activeMatchId || sending) return;
+    if (!activeMatchId || sending || blockedConversation) return;
 
     const trimmedDraft = draft.trim();
     if (!trimmedDraft) {
@@ -119,6 +131,10 @@ export function MessagesPage() {
     setSendError('');
 
     if (!useSupabaseMessages) {
+      if (blockedConversation) {
+        setSendError('ブロック済みの相手にはメッセージを送れません。');
+        return;
+      }
       sendDemoMessage(activeMatchId, trimmedDraft);
       setDraft('');
       return;
@@ -139,6 +155,66 @@ export function MessagesPage() {
       setSendError(caughtError instanceof Error ? `メッセージの送信に失敗しました: ${caughtError.message}` : '通信に失敗しました。少し時間を置いてもう一度お試しください。');
     } finally {
       setSending(false);
+    }
+  }
+
+
+
+  async function handleBlock() {
+    if (!safetyTargetUserId || savingSafety) return;
+    const confirmed = window.confirm('この相手をブロックしますか？マッチ一覧へ戻り、DM送信も停止します。');
+    if (!confirmed) return;
+
+    setNotice('');
+    setSendError('');
+    setSavingSafety(true);
+
+    try {
+      if (useSupabaseMessages) {
+        await blockSupabaseUser(safetyTargetUserId);
+      } else {
+        blockUser(safetyTargetUserId);
+      }
+      setBlockedConversation(true);
+      setNotice('ブロックしました。一覧や今日のご縁から非表示になります。');
+      navigate('/matches', { replace: true });
+    } catch (caughtError) {
+      setSendError(caughtError instanceof Error ? `ブロックに失敗しました: ${caughtError.message}` : 'ブロックに失敗しました。通信に失敗しました。少し時間を置いてもう一度お試しください。');
+    } finally {
+      setSavingSafety(false);
+    }
+  }
+
+  async function handleReport() {
+    if (!safetyTargetUserId || savingSafety) return;
+    const reasonText = `${reportReasonOptions.map((reason, index) => `${index + 1}. ${reason}`).join('\n')}\n\n番号または理由を入力してください。`;
+    const reasonInput = window.prompt(reasonText, reportReasonOptions[0]);
+    if (reasonInput === null) return;
+
+    const selectedIndex = Number(reasonInput.trim()) - 1;
+    const reason = reportReasonOptions[selectedIndex] ?? reasonInput.trim();
+    if (!reason) {
+      setSendError('通報理由を選択してください。');
+      return;
+    }
+
+    const detail = window.prompt('補足があれば入力してください（任意）。個人情報は書かなくて大丈夫です。', '') ?? undefined;
+
+    setNotice('');
+    setSendError('');
+    setSavingSafety(true);
+
+    try {
+      if (useSupabaseMessages) {
+        await reportSupabaseUser(safetyTargetUserId, reason, detail);
+      } else {
+        reportUser(safetyTargetUserId);
+      }
+      setNotice('通報を受け付けました。安心して使える場を守るため、運営が確認します。');
+    } catch (caughtError) {
+      setSendError(caughtError instanceof Error ? `通報に失敗しました: ${caughtError.message}` : '通報に失敗しました。通信に失敗しました。少し時間を置いてもう一度お試しください。');
+    } finally {
+      setSavingSafety(false);
     }
   }
 
@@ -190,10 +266,11 @@ export function MessagesPage() {
               );
             })}
           </div>
+          {blockedConversation ? <p className="rounded-xl bg-theme-accent-soft/60 px-3 py-2 text-xs font-bold text-theme-text">ブロック中または相手からブロックされているため、この会話では送信できません。</p> : null}
           {sendError ? <p className="rounded-xl bg-theme-accent-soft/60 px-3 py-2 text-xs font-bold text-theme-text">{sendError}</p> : null}
           <div className="flex items-end gap-2 border-t border-theme-main/10 pt-3">
-            <Input className="min-h-10" disabled={sending || loading} name="message" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleSendMessage(); }} placeholder="焦らず、丁寧にひと言を書く" value={draft} />
-            <Button className="min-h-10 px-4" disabled={sending || loading || !draft.trim()} onClick={() => { void handleSendMessage(); }}>
+            <Input className="min-h-10" disabled={sending || loading || blockedConversation} name="message" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleSendMessage(); }} placeholder="焦らず、丁寧にひと言を書く" value={draft} />
+            <Button className="min-h-10 px-4" disabled={sending || loading || blockedConversation || !draft.trim()} onClick={() => { void handleSendMessage(); }}>
               {sending ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
               <span className="sr-only">送信</span>
             </Button>
@@ -202,8 +279,8 @@ export function MessagesPage() {
       ) : null}
 
       <Card className="grid grid-cols-2 gap-2 bg-theme-background/65 p-3.5 shadow-none">
-        <Button onClick={() => { blockUser(activeMatchId); setNotice('ブロックしました。一覧や今日のご縁から非表示になります。'); }} variant="ghost"><Ban size={15} />ブロック</Button>
-        <Button onClick={() => { reportUser(activeMatchId); setNotice('通報を受け付けました。'); }} variant="danger"><Flag size={15} />通報</Button>
+        <Button disabled={savingSafety || !safetyTargetUserId} onClick={() => { void handleBlock(); }} variant="ghost"><Ban size={15} />ブロック</Button>
+        <Button disabled={savingSafety || !safetyTargetUserId} onClick={() => { void handleReport(); }} variant="danger"><Flag size={15} />通報</Button>
       </Card>
     </PageShell>
   );

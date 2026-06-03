@@ -1,42 +1,190 @@
 import type { ReactNode } from 'react';
-import { Ban, Flag, Heart, Leaf, MapPin, MessageCircleHeart, MessageCircle, ShieldCheck, Sparkles, UserRoundCheck } from 'lucide-react';
+import { Ban, Flag, Heart, Leaf, Loader2, MapPin, MessageCircleHeart, MessageCircle, ShieldCheck, Sparkles, UserRoundCheck } from 'lucide-react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
+import { useAuth } from '../hooks/useAuth';
+import { blockUser as blockSupabaseUser } from '../lib/blockApi';
+import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
+import { getMyMatches } from '../lib/matchApi';
+import { getPublicProfileById, profileRowToUserProfile } from '../lib/profileApi';
+import { reportUser as reportSupabaseUser } from '../lib/reportApi';
+import type { UserProfile } from '../types/user';
+
+const reportReasonOptions = ['不適切なプロフィール', '迷惑行為', 'なりすまし', '不安を感じた', 'その他'];
 
 export function ProfileDetailPage() {
   const { id } = useParams();
-  const user = mockUsers.find((mockUser) => mockUser.id === id);
+  const demoUser = mockUsers.find((mockUser) => mockUser.id === id);
   const { blockUser, isLiked, isMatched, isReported, reportUser, toggleLike } = useAppState();
+  const { isAuthenticated, isSupabaseMode, user: authUser } = useAuth();
+  const [supabaseUser, setSupabaseUser] = useState<UserProfile | null>(null);
+  const [supabaseLiked, setSupabaseLiked] = useState(false);
+  const [supabaseMatchId, setSupabaseMatchId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
+  const [errorNotice, setErrorNotice] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [savingSafety, setSavingSafety] = useState(false);
+  const useSupabaseProfile = isSupabaseMode && isAuthenticated && Boolean(authUser) && Boolean(id);
 
-  if (!user) {
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSupabaseProfile() {
+      if (!useSupabaseProfile || !id || !authUser) {
+        setSupabaseUser(null);
+        setSupabaseLiked(false);
+        setSupabaseMatchId(null);
+        return;
+      }
+
+      setLoading(true);
+      setErrorNotice('');
+
+      try {
+        const [profile, likedIds, matches] = await Promise.all([
+          getPublicProfileById(id),
+          getLikedUserIds(authUser.id),
+          getMyMatches(authUser.id),
+        ]);
+        if (!mounted) return;
+        setSupabaseUser(profile ? profileRowToUserProfile(profile) : null);
+        setSupabaseLiked(likedIds.includes(id));
+        setSupabaseMatchId(matches.find((match) => match.otherUserId === id)?.id ?? null);
+      } catch (caughtError) {
+        if (!mounted) return;
+        setErrorNotice(caughtError instanceof Error ? `プロフィールの取得に失敗しました: ${caughtError.message}` : '通信に失敗しました。少し時間を置いてもう一度お試しください。');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    void loadSupabaseProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [authUser, id, useSupabaseProfile]);
+
+  const profileUser = useSupabaseProfile ? supabaseUser : demoUser;
+
+  if (!id) {
     return <Navigate replace to="/discover" />;
   }
 
-  const profileUser = user;
-  const liked = isLiked(profileUser.id);
-  const matched = isMatched(profileUser.id);
-  const reported = isReported(profileUser.id);
-
-  function handleLike() {
-    const becameMatched = toggleLike(profileUser.id);
-    setNotice(becameMatched ? 'ご縁が咲きました。メッセージを送ってみましょう。' : liked ? 'いいねを取り消しました。' : 'いいねを送りました。');
+  if (!useSupabaseProfile && !demoUser) {
+    return <Navigate replace to="/discover" />;
   }
 
-  function handleBlock() {
-    blockUser(profileUser.id);
-    setNotice(`${profileUser.name}さんをブロックしました。今日のご縁や一覧には表示されません。`);
+  if (useSupabaseProfile && !loading && !profileUser && !errorNotice) {
+    return <Navigate replace to="/discover" />;
   }
 
-  function handleReport() {
-    reportUser(profileUser.id);
-    setNotice('通報を受け付けました。運営確認用の仮一覧に反映されます。');
+  const liked = profileUser ? (useSupabaseProfile ? supabaseLiked : isLiked(profileUser.id)) : false;
+  const matched = profileUser ? (useSupabaseProfile ? Boolean(supabaseMatchId) : isMatched(profileUser.id)) : false;
+  const reported = profileUser ? isReported(profileUser.id) : false;
+
+  async function handleLike() {
+    if (!profileUser) return;
+
+    setNotice('');
+    setErrorNotice('');
+
+    if (!useSupabaseProfile) {
+      const becameMatched = toggleLike(profileUser.id);
+      setNotice(becameMatched ? 'ご縁が咲きました。メッセージを送ってみましょう。' : liked ? 'いいねを取り消しました。' : 'いいねを送りました。');
+      return;
+    }
+
+    try {
+      if (liked) {
+        await deleteLike(profileUser.id);
+        setSupabaseLiked(false);
+        setNotice('いいねを取り消しました。');
+        return;
+      }
+
+      const likeResult = await createLike(profileUser.id);
+      setSupabaseLiked(true);
+      if (likeResult.matched) {
+        setSupabaseMatchId(likeResult.matchId ?? supabaseMatchId);
+        setNotice('ご縁が咲きました。メッセージを送ってみましょう。');
+      } else {
+        setNotice(likeResult.matchCheckError ?? 'いいねを送りました。');
+      }
+    } catch (caughtError) {
+      setErrorNotice(caughtError instanceof Error ? caughtError.message : '通信に失敗しました。少し時間を置いてもう一度お試しください。');
+    }
+  }
+
+  async function handleBlock() {
+    if (!profileUser) return;
+    const confirmed = window.confirm(`${profileUser.name}さんをブロックしますか？一覧やDM導線から非表示になります。`);
+    if (!confirmed) return;
+
+    setNotice('');
+    setErrorNotice('');
+    setSavingSafety(true);
+
+    try {
+      if (useSupabaseProfile) {
+        await blockSupabaseUser(profileUser.id);
+      } else {
+        blockUser(profileUser.id);
+      }
+      setNotice(`${profileUser.name}さんをブロックしました。今日のご縁や一覧には表示されません。`);
+    } catch (caughtError) {
+      setErrorNotice(caughtError instanceof Error ? `ブロックに失敗しました: ${caughtError.message}` : 'ブロックに失敗しました。通信に失敗しました。少し時間を置いてもう一度お試しください。');
+    } finally {
+      setSavingSafety(false);
+    }
+  }
+
+  async function handleReport() {
+    if (!profileUser) return;
+    const reasonText = `${reportReasonOptions.map((reason, index) => `${index + 1}. ${reason}`).join('\n')}\n\n番号または理由を入力してください。`;
+    const reasonInput = window.prompt(reasonText, reportReasonOptions[0]);
+    if (reasonInput === null) return;
+
+    const selectedIndex = Number(reasonInput.trim()) - 1;
+    const reason = reportReasonOptions[selectedIndex] ?? reasonInput.trim();
+    if (!reason) {
+      setErrorNotice('通報理由を選択してください。');
+      return;
+    }
+
+    const detail = window.prompt('補足があれば入力してください（任意）。個人情報は書かなくて大丈夫です。', '') ?? undefined;
+
+    setNotice('');
+    setErrorNotice('');
+    setSavingSafety(true);
+
+    try {
+      if (useSupabaseProfile) {
+        await reportSupabaseUser(profileUser.id, reason, detail);
+      } else {
+        reportUser(profileUser.id);
+      }
+      setNotice('通報を受け付けました。安心して使える場を守るため、運営が確認します。');
+    } catch (caughtError) {
+      setErrorNotice(caughtError instanceof Error ? `通報に失敗しました: ${caughtError.message}` : '通報に失敗しました。通信に失敗しました。少し時間を置いてもう一度お試しください。');
+    } finally {
+      setSavingSafety(false);
+    }
+  }
+
+  if (!profileUser) {
+    return (
+      <PageShell eyebrow="Profile" title="プロフィールを読み込み中">
+        {errorNotice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{errorNotice}</div> : null}
+        <Card className="flex items-center gap-2 text-sm font-bold text-theme-muted"><Loader2 className="animate-spin" size={16} />プロフィールを読み込んでいます。</Card>
+      </PageShell>
+    );
   }
 
   return (
@@ -60,11 +208,8 @@ export function ProfileDetailPage() {
         </div>
 
         <div className="space-y-4 p-4">
-          {notice ? (
-            <div className="rounded-[1.15rem] border border-theme-accent/30 bg-theme-accent-soft/80 p-3 text-center text-sm font-black text-theme-text">
-              {notice}
-            </div>
-          ) : null}
+          {notice ? <div className="rounded-[1.15rem] border border-theme-accent/30 bg-theme-accent-soft/80 p-3 text-center text-sm font-black text-theme-text">{notice}</div> : null}
+          {errorNotice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-center text-sm font-black text-red-600">{errorNotice}</div> : null}
 
           <div className="flex flex-wrap gap-1.5">
             <Badge><UserRoundCheck size={13} />{profileUser.introducedBy} からの紹介</Badge>
@@ -83,18 +228,19 @@ export function ProfileDetailPage() {
           <InfoBlock icon={<Heart size={17} />} title="関係性の希望" body={profileUser.relationshipGoal} />
 
           <div className="sticky bottom-24 z-10 space-y-2 rounded-[1.25rem] border border-white/60 bg-theme-card/88 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
-            <Button className={`w-full ${liked ? 'bg-theme-accent text-white shadow-theme-accent/25 hover:bg-theme-accent/90' : 'bg-theme-accent-soft text-theme-text'}`} onClick={handleLike} variant="secondary">
+            <Button className={`w-full ${liked ? 'bg-theme-accent text-white shadow-theme-accent/25 hover:bg-theme-accent/90' : 'bg-theme-accent-soft text-theme-text'}`} onClick={() => { void handleLike(); }} variant="secondary">
               <Heart fill={liked ? 'currentColor' : 'none'} size={16} />{liked ? 'いいね済み' : 'いいねを送る'}
             </Button>
-            {matched ? <Link to={`/messages/${profileUser.id}`}><Button className="w-full"><MessageCircle size={16} />メッセージを送る</Button></Link> : null}
-            <p className="text-center text-xs font-bold text-theme-muted">ローカルstate / localStorageのみで動くデモです。</p>
+            {matched ? <Link to={`/messages/${useSupabaseProfile ? supabaseMatchId : profileUser.id}`}><Button className="w-full"><MessageCircle size={16} />メッセージを送る</Button></Link> : null}
+            <p className="text-center text-xs font-bold text-theme-muted">{useSupabaseProfile ? 'Supabase likes / blocks / reports 保存中です。' : 'ローカルstate / localStorageのみで動くデモです。'}</p>
           </div>
 
           <Card className="space-y-2.5 bg-theme-background/65 p-3.5 shadow-none">
-            <div className="flex items-center gap-2 text-[13px] font-black text-theme-text"><ShieldCheck size={15} />安全のための操作</div>
+            <div className="flex items-center gap-2 text-[13px] font-black text-theme-text"><ShieldCheck size={15} />安心のための操作</div>
+            <p className="text-xs leading-5 text-theme-muted">ブロック・通報は、ご縁を安心して育てるための安全装置です。相手には通知されません。</p>
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={handleBlock} variant="ghost"><Ban size={15} />ブロック</Button>
-              <Button onClick={handleReport} variant="danger"><Flag size={15} />{reported ? '通報済み' : '通報'}</Button>
+              <Button disabled={savingSafety} onClick={() => { void handleBlock(); }} variant="ghost"><Ban size={15} />ブロック</Button>
+              <Button disabled={savingSafety} onClick={() => { void handleReport(); }} variant="danger"><Flag size={15} />{reported ? '通報済み' : '通報'}</Button>
             </div>
           </Card>
         </div>
