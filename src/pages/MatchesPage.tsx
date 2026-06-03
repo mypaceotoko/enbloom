@@ -71,7 +71,7 @@ export function MatchesPage() {
       {useSupabaseMatches ? (
         <Card className="space-y-2.5">
           {supabaseMatches.length === 0 ? <EmptyMatches /> : null}
-          {supabaseMatches.map((match) => match.profile ? <MatchRow createdAt={match.created_at} key={match.id} user={match.profile} /> : null)}
+          {supabaseMatches.map((match) => match.profile ? <MatchRow createdAt={match.created_at} key={match.id} messagePath={`/messages/${match.id}`} user={match.profile} /> : null)}
         </Card>
       ) : (
         <Card className="space-y-2.5">
@@ -110,7 +110,7 @@ function MatchRow({ createdAt, messagePath, user }: { createdAt?: string; messag
 
       <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-theme-background/70 px-2.5 py-2">
         <span className="flex items-center gap-1 text-xs font-bold text-theme-muted"><HeartHandshake size={14} />まずはゆっくり会話へ</span>
-        {messagePath ? <Link to={messagePath}><Button className="min-h-10 px-3 py-2"><MessageCircle size={16} />メッセージへ</Button></Link> : <Button className="min-h-10 px-3 py-2" disabled><MessageCircle size={16} />メッセージへ</Button>}
+        {messagePath ? <Link to={messagePath}><Button className="min-h-10 px-3 py-2"><MessageCircle size={16} />ゆっくり会話へ</Button></Link> : <Button className="min-h-10 px-3 py-2" disabled><MessageCircle size={16} />ゆっくり会話へ</Button>}
       </div>
     </div>
   );
