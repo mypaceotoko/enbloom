@@ -3,6 +3,7 @@ import type {
   ActivityPost,
   ActivityPostFilters,
   ActivityPostInput,
+  ActivityPostUpdateInput,
   ActivityPostInterest,
   ActivityPostInterestWithProfile,
   ActivityPostStats,
@@ -10,7 +11,7 @@ import type {
   ActivityPostWithStats,
   MyInterestedActivityPost,
 } from '../types/activityBoard';
-import { profileRowToUserProfile, type ProfileRow } from './profileApi';
+import { getMyProfile, profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { requireSupabaseClient } from './supabase';
 
 type ActivityPostRow = ActivityPost & {
@@ -83,6 +84,42 @@ function mapInterest(row: ActivityInterestRow): ActivityPostInterestWithProfile 
     updated_at: row.updated_at,
     profile: profile ? profileRowToUserProfile(profile) : null,
   };
+}
+
+
+function buildActivityPostUpdatePayload(input: ActivityPostUpdateInput) {
+  const payload: Partial<Pick<ActivityPost, 'title' | 'body' | 'category' | 'area' | 'tags' | 'max_participants' | 'scheduled_at' | 'mode' | 'status' | 'closed_at'>> = {};
+
+  if (typeof input.title !== 'undefined') payload.title = input.title.trim();
+  if (typeof input.body !== 'undefined') payload.body = input.body.trim();
+  if (typeof input.category !== 'undefined') payload.category = input.category;
+
+  const hasLocation = typeof input.location !== 'undefined';
+  const hasArea = typeof input.area !== 'undefined';
+  if (hasLocation || hasArea) {
+    const nextArea = hasLocation ? input.location : input.area;
+    payload.area = nextArea?.trim() || null;
+  }
+
+  if (typeof input.tags !== 'undefined') {
+    payload.tags = input.tags.map((tag) => tag.trim()).filter(Boolean);
+  }
+
+  const hasCapacity = typeof input.capacity !== 'undefined';
+  const hasMaxParticipants = typeof input.max_participants !== 'undefined';
+  if (hasCapacity || hasMaxParticipants) {
+    payload.max_participants = hasCapacity ? input.capacity ?? null : input.max_participants ?? null;
+  }
+
+  if (typeof input.scheduled_at !== 'undefined') payload.scheduled_at = input.scheduled_at || null;
+  if (typeof input.mode !== 'undefined') payload.mode = input.mode;
+  if (typeof input.status !== 'undefined') {
+    payload.status = input.status;
+    if (input.status === 'open') payload.closed_at = null;
+    if (input.status === 'closed' || input.status === 'archived') payload.closed_at = new Date().toISOString();
+  }
+
+  return payload;
 }
 
 function mapPost(row: ActivityPostRow, stats: Partial<ActivityPostStats> = {}): ActivityPostWithStats {
@@ -204,7 +241,7 @@ export async function createActivityPost(input: ActivityPostInput): Promise<Acti
     category: input.category,
     area: input.area?.trim() || null,
     tags: input.tags?.map((tag) => tag.trim()).filter(Boolean) ?? [],
-    mode: input.mode ?? 'either',
+    mode: input.mode ?? 'hybrid',
     max_participants: input.max_participants ?? null,
     scheduled_at: input.scheduled_at || null,
     status: input.status ?? 'open',
@@ -219,6 +256,39 @@ export async function createActivityPost(input: ActivityPostInput): Promise<Acti
   if (error) throw error;
   console.info('[ConnectBloom] activity post created', { success: true });
   return mapPost(data, { interest_count: 0, accepted_count: 0 });
+}
+
+
+export async function updateActivityPost(postId: string, input: ActivityPostUpdateInput): Promise<ActivityPostWithAuthor> {
+  const payload = buildActivityPostUpdatePayload(input);
+
+  const { data, error } = await requireSupabaseClient()
+    .from('activity_posts')
+    .update(payload)
+    .eq('id', postId)
+    .select(activityPostWithAuthorColumns)
+    .single<ActivityPostRow>();
+
+  if (error) throw error;
+  console.info('[ConnectBloom] activity post updated', { success: true });
+  return mapPost(data);
+}
+
+export async function canEditActivityPost(postId: string, userId: string): Promise<boolean> {
+  if (!postId || !userId) return false;
+
+  const [{ data: post, error: postError }, profile] = await Promise.all([
+    requireSupabaseClient()
+      .from('activity_posts')
+      .select('id,created_by')
+      .eq('id', postId)
+      .maybeSingle<Pick<ActivityPost, 'id' | 'created_by'>>(),
+    getMyProfile(userId),
+  ]);
+
+  if (postError) throw postError;
+  if (!post) return false;
+  return post.created_by === userId || profile?.role === 'admin';
 }
 
 export async function getMyActivityPosts(userId: string): Promise<ActivityPostWithStats[]> {

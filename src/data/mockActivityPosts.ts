@@ -22,7 +22,7 @@ export const activityPostCategories = [
 export const activityPostModes = [
   { value: 'online', label: 'オンライン' },
   { value: 'offline', label: 'オフライン' },
-  { value: 'either', label: 'どちらでも' },
+  { value: 'hybrid', label: 'ハイブリッド' },
 ] as const;
 
 export const mockActivityPosts: ActivityPostWithAuthor[] = [

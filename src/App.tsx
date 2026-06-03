@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AdminPage } from './pages/AdminPage';
 import { ActivityBoardDetailPage } from './pages/ActivityBoardDetailPage';
+import { ActivityBoardEditPage } from './pages/ActivityBoardEditPage';
 import { ActivityBoardNewPage } from './pages/ActivityBoardNewPage';
 import { ActivityBoardPage } from './pages/ActivityBoardPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -34,6 +35,7 @@ export default function App() {
         <Route element={<DiscoverPage />} path="discover" />
         <Route element={<ActivityBoardPage />} path="board" />
         <Route element={<ActivityBoardNewPage />} path="board/new" />
+        <Route element={<ActivityBoardEditPage />} path="board/:postId/edit" />
         <Route element={<ActivityBoardDetailPage />} path="board/:postId" />
         <Route element={<MyBoardPage />} path="my-board" />
         <Route element={<MyInterestsPage />} path="my-interests" />

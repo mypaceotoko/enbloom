@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, UsersRound, XCircle } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, UsersRound, XCircle } from 'lucide-react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -26,7 +26,7 @@ function formatDate(value: string | null) {
 function getModeLabel(mode: ActivityPostMode) {
   if (mode === 'online') return 'オンライン';
   if (mode === 'offline') return 'オフライン';
-  return 'どちらでも';
+  return 'ハイブリッド';
 }
 
 function getStatusLabel(status: string) {
@@ -51,6 +51,7 @@ function getInterestStatusClass(status: ActivityInterestStatus) {
 
 export function ActivityBoardDetailPage() {
   const { postId = '' } = useParams();
+  const location = useLocation();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [post, setPost] = useState<ActivityPostWithAuthor | null>(null);
   const [interests, setInterests] = useState<ActivityPostInterestWithProfile[]>([]);
@@ -71,10 +72,11 @@ export function ActivityBoardDetailPage() {
       if (!postId) return;
       setInterests([]);
       setInterestError('');
+      setNotice(typeof location.state?.message === 'string' ? location.state.message : '');
 
       if (!useSupabaseBoard) {
         setPost(mockActivityPosts.find((item) => item.id === postId) ?? null);
-        setNotice('Supabaseログイン時に参加希望者を管理できます。');
+        if (!location.state?.message) setNotice('Supabaseログイン時に参加希望者を管理できます。');
         return;
       }
 
@@ -85,7 +87,7 @@ export function ActivityBoardDetailPage() {
       }
 
       setLoading(true);
-      setNotice('');
+      if (!location.state?.message) setNotice('');
       try {
         const [nextPost, interestedIds] = await Promise.all([
           getActivityPostById(postId),
@@ -122,7 +124,7 @@ export function ActivityBoardDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [postId, useSupabaseBoard, user?.id]);
+  }, [location.state, postId, useSupabaseBoard, user?.id]);
 
   async function handleInterest() {
     if (!post) return;
@@ -205,6 +207,9 @@ export function ActivityBoardDetailPage() {
             </div>
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             <div className="rounded-xl bg-theme-accent-soft/60 p-3 text-sm font-black text-theme-main-dark">参加希望 {post.interest_count}件 / 承認済み {post.accepted_count}件</div>
+            {isOwnPost ? (
+              <Link className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-theme-main px-4 py-2 text-[13px] font-bold text-white" to={`/board/${post.id}/edit`}><Pencil size={16} />募集を編集</Link>
+            ) : null}
             {!isOwnPost ? (
               <Button className="w-full" disabled={saving || !useSupabaseBoard || post.status !== 'open'} onClick={handleInterest}>
                 <UsersRound size={16} />{interested ? '参加希望を取り消す' : '参加したい'}
