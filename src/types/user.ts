@@ -2,8 +2,10 @@ import type { ThemeId } from '../context/ThemeProvider';
 
 export type { ThemeId };
 
+export const DEFAULT_DATING_TEMPERATURE = 'ゆっくり会話から始めたい';
+
 export type DatingTemperature =
-  | 'ゆっくり会話から始めたい'
+  | typeof DEFAULT_DATING_TEMPERATURE
   | '安心感があれば会ってみたい'
   | '価値観が合えば前向きに進めたい'
   | 'まずは友達の紹介のように、ゆっくり話したい'

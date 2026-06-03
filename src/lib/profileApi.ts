@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js';
-import type { CurrentUserProfile, ThemeId } from '../types/user';
+import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile, type ThemeId } from '../types/user';
 import { requireSupabaseClient } from './supabase';
 
 export type ProfileRow = {
@@ -94,7 +94,7 @@ export async function ensureProfileForUser(user: User): Promise<ProfileRow> {
     bio: '',
     interests: [],
     relationship_goal: '',
-    dating_temperature: '',
+    dating_temperature: DEFAULT_DATING_TEMPERATURE,
     onboarding_completed: false,
     visibility: 'public',
     role: 'user',
@@ -112,7 +112,7 @@ export function profileRowToCurrentUser(profile: ProfileRow, fallbackTheme: Them
     occupation: profile.occupation ?? '',
     bio: profile.bio,
     interests: profile.interests,
-    datingTemperature: profile.dating_temperature,
+    datingTemperature: profile.dating_temperature || DEFAULT_DATING_TEMPERATURE,
     relationshipGoal: profile.relationship_goal,
     themePreference: fallbackTheme,
   };

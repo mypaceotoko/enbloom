@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { getMyProfile, profileRowToCurrentUser, updateMyProfile } from '../lib/profileApi';
+import { DEFAULT_DATING_TEMPERATURE } from '../types/user';
 
 export function MyProfilePage() {
   const { currentUser, saveCurrentUserProfile } = useAppState();
@@ -19,7 +20,7 @@ export function MyProfilePage() {
     location: currentUser.location,
     occupation: currentUser.occupation,
     bio: currentUser.bio,
-    datingTemperature: currentUser.datingTemperature,
+    datingTemperature: currentUser.datingTemperature || DEFAULT_DATING_TEMPERATURE,
     interestsText: currentUser.interests.join('、'),
   });
   const [notice, setNotice] = useState('');
@@ -41,7 +42,7 @@ export function MyProfilePage() {
           location: syncedProfile.location,
           occupation: syncedProfile.occupation,
           bio: syncedProfile.bio,
-          datingTemperature: syncedProfile.datingTemperature,
+          datingTemperature: syncedProfile.datingTemperature || DEFAULT_DATING_TEMPERATURE,
           interestsText: syncedProfile.interests.join('、'),
         });
       } catch (caughtError) {
@@ -71,7 +72,7 @@ export function MyProfilePage() {
       location: form.location.trim(),
       occupation: form.occupation.trim(),
       bio: form.bio.trim(),
-      datingTemperature: form.datingTemperature,
+      datingTemperature: form.datingTemperature.trim() || DEFAULT_DATING_TEMPERATURE,
       interests: form.interestsText.split(/[、,]/).map((interest) => interest.trim()).filter(Boolean),
       themePreference: themeId,
     };
