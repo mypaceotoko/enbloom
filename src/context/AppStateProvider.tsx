@@ -55,6 +55,7 @@ type AppStateContextValue = AppState & {
   setThemePreference: (themeId: ThemeId) => void;
   toggleLike: (userId: string) => boolean;
   blockUser: (userId: string) => void;
+  unblockUser: (userId: string) => void;
   reportUser: (userId: string) => void;
   sendMessage: (matchId: string, body: string) => void;
   ensureMatchMessages: (matchId: string) => void;
@@ -138,6 +139,13 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }));
     }
 
+    function unblockUser(userId: string) {
+      setAppState((current) => ({
+        ...current,
+        blockedUserIds: current.blockedUserIds.filter((id) => id !== userId),
+      }));
+    }
+
     function reportUser(userId: string) {
       setAppState((current) => ({ ...current, reportedUserIds: withUnique(current.reportedUserIds, userId) }));
     }
@@ -176,6 +184,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setThemePreference,
       toggleLike,
       blockUser,
+      unblockUser,
       reportUser,
       sendMessage,
       ensureMatchMessages,

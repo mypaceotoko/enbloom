@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AdminPage } from './pages/AdminPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { BlockedUsersPage } from './pages/BlockedUsersPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { HomePage } from './pages/HomePage';
 import { LandingPage } from './pages/LandingPage';
@@ -33,6 +34,7 @@ export default function App() {
         <Route element={<MyProfilePage />} path="my-profile" />
         <Route element={<SettingsPage />} path="settings" />
         <Route element={<SafetyPage />} path="safety" />
+        <Route element={<BlockedUsersPage />} path="blocked-users" />
         <Route element={<AdminPage />} path="admin" />
         <Route element={<NotFoundPage />} path="*" />
       </Route>
