@@ -444,7 +444,7 @@ export async function updateActivityPostInterestStatus(interestId: string, statu
 
 export async function acceptActivityPostInterest(interestId: string): Promise<ActivityPostInterest> {
   const updatedInterest = await updateActivityPostInterestStatus(interestId, 'accepted');
-  const conversation = await ensureConversationForActivityInterest(updatedInterest.post_id, updatedInterest.id);
+  const conversation = await ensureConversationForActivityInterest(updatedInterest.post_id, updatedInterest.id, updatedInterest.user_id);
   if (!conversation.success) {
     console.info('[ConnectBloom] accepted activity interest without conversation', { success: false, blocked: conversation.blocked });
   }

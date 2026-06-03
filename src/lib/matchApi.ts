@@ -33,6 +33,23 @@ type DirectConversationRpcRow = {
   message?: string | null;
 };
 
+type SupabaseErrorDetails = {
+  message?: string;
+  details?: string | null;
+  hint?: string | null;
+  code?: string;
+};
+
+type ActivityInterestConversationParams = {
+  postId: string;
+  interestId: string;
+  targetUserId?: string | null;
+};
+
+type ActivityInterestConversationPathResult = DirectConversationResult & {
+  path?: string;
+};
+
 const matchColumns = 'id,user1_id,user2_id,status,created_at,last_message_at';
 const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 const matchWithProfilesColumns = [
@@ -129,13 +146,54 @@ function mapDirectConversationResult(row: DirectConversationRpcRow | null | unde
   };
 }
 
-function mapDirectConversationError(error: unknown, fallback: string) {
-  if (error instanceof Error) {
-    if (/block|blocked|ブロック/i.test(error.message)) return 'ブロック中のため会話を開始できません。';
-    if (/auth|login|ログイン/i.test(error.message)) return 'ログイン状態を確認できませんでした。';
-    return `${fallback}: ${error.message}`;
+function getSupabaseErrorDetails(error: unknown): SupabaseErrorDetails {
+  if (!error || typeof error !== 'object') {
+    return { message: error instanceof Error ? error.message : String(error) };
   }
-  return fallback;
+
+  const maybeError = error as SupabaseErrorDetails;
+  return {
+    message: maybeError.message,
+    details: maybeError.details,
+    hint: maybeError.hint,
+    code: maybeError.code,
+  };
+}
+
+function formatSupabaseDebugError(error: unknown) {
+  const details = getSupabaseErrorDetails(error);
+  return [
+    details.message ? `message: ${details.message}` : null,
+    details.details ? `details: ${details.details}` : null,
+    details.hint ? `hint: ${details.hint}` : null,
+    details.code ? `code: ${details.code}` : null,
+  ].filter(Boolean).join(' / ');
+}
+
+function logDmSupabaseError(phase: string, error: unknown) {
+  const details = getSupabaseErrorDetails(error);
+  console.error('[DM] supabase error', {
+    phase,
+    message: details.message,
+    details: details.details,
+    hint: details.hint,
+    code: details.code,
+  });
+}
+
+function mapDirectConversationError(error: unknown, fallback: string) {
+  const details = getSupabaseErrorDetails(error);
+  const message = details.message ?? (error instanceof Error ? error.message : '');
+  const friendlyMessage = (() => {
+    if (/block|blocked|ブロック/i.test(message)) return 'ブロック中のため会話を開始できません。';
+    if (/auth|login|ログイン/i.test(message)) return 'ログイン状態を確認できませんでした。';
+    return message ? `${fallback}: ${message}` : fallback;
+  })();
+
+  if (!import.meta.env.DEV) return friendlyMessage;
+
+  const debugError = formatSupabaseDebugError(error);
+  return debugError ? `${friendlyMessage}（開発用詳細: ${debugError}）` : friendlyMessage;
 }
 
 function isMissingRpcError(error: { code?: string; message?: string }) {
@@ -264,39 +322,78 @@ export async function getOrCreateMatchForUsers(userAId: string, userBId: string)
   const currentUserId = await getCurrentUserId();
   const targetUserId = currentUserId === userAId ? userBId : userAId;
 
+  console.log('[DM] start', { postId: undefined, interestId: undefined, targetUserId });
+
   if (!targetUserId || targetUserId === currentUserId || (currentUserId !== userAId && currentUserId !== userBId)) {
-    return { success: false, message: '会話の相手を確認できませんでした。' };
+    console.error('[DM] validation failed', { phase: 'validate-direct-target', userAId, userBId, currentUserId, targetUserId });
+    return { success: false, phase: 'validate-direct-target', message: '会話の相手を確認できませんでした。' };
   }
 
+  console.log('[DM] calling rpc ensure_direct_conversation');
   const { data, error } = await requireSupabaseClient()
     .rpc('ensure_direct_conversation', { target_user_id: targetUserId });
+  console.log('[DM] rpc result', { data, error });
 
   if (error) {
+    logDmSupabaseError('ensure_direct_conversation', error);
     console.info('[ConnectBloom] direct conversation ensure success', { success: false });
-    return { success: false, message: mapDirectConversationError(error, '会話の作成に失敗しました') };
+    return {
+      success: false,
+      phase: 'ensure_direct_conversation',
+      message: mapDirectConversationError(error, '会話の作成に失敗しました'),
+      debugError: import.meta.env.DEV ? formatSupabaseDebugError(error) : undefined,
+    };
   }
 
   const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
   console.info('[ConnectBloom] direct conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
-  return result;
+  return { ...result, phase: 'ensure_direct_conversation' };
 }
 
 export async function ensureDirectConversation(userAId: string, userBId: string): Promise<DirectConversationResult> {
   return getOrCreateMatchForUsers(userAId, userBId);
 }
 
-export async function ensureConversationForActivityInterest(postId: string, interestId: string): Promise<DirectConversationResult> {
+export async function ensureConversationForActivityInterest(postId: string, interestId: string, targetUserId?: string | null): Promise<DirectConversationResult> {
+  console.log('[DM] start', { postId, interestId, targetUserId });
+  console.log('[DM] calling rpc ensure_activity_interest_match');
   const { data, error } = await requireSupabaseClient()
     .rpc('ensure_activity_interest_match', { target_post_id: postId, target_interest_id: interestId });
+  console.log('[DM] rpc result', { data, error });
 
   if (error) {
+    logDmSupabaseError('ensure_activity_interest_match', error);
     console.info('[ConnectBloom] activity conversation ensure success', { success: false });
-    return { success: false, message: mapDirectConversationError(error, '会話の作成に失敗しました') };
+    return {
+      success: false,
+      phase: 'ensure_activity_interest_match',
+      message: mapDirectConversationError(error, '会話の作成に失敗しました'),
+      debugError: import.meta.env.DEV ? formatSupabaseDebugError(error) : undefined,
+    };
   }
 
   const result = mapDirectConversationResult(Array.isArray(data) ? data[0] : data);
   console.info('[ConnectBloom] activity conversation ensure success', { success: result.success, alreadyExists: result.alreadyExists, blocked: result.blocked });
-  return result;
+  return { ...result, phase: 'ensure_activity_interest_match' };
+}
+
+export async function getActivityInterestConversationPath({ postId, interestId, targetUserId }: ActivityInterestConversationParams): Promise<ActivityInterestConversationPathResult> {
+  const result = await ensureConversationForActivityInterest(postId, interestId, targetUserId);
+
+  if (!result.success || !result.matchId) {
+    console.error('[DM] conversation creation failed', {
+      phase: result.phase ?? 'ensure_activity_interest_match',
+      postId,
+      interestId,
+      targetUserId,
+      result,
+    });
+    return result;
+  }
+
+  const path = `/messages/${result.matchId}?postId=${encodeURIComponent(postId)}`;
+  console.log('[DM] navigate to messages', { matchId: result.matchId });
+  return { ...result, path };
 }
 
 export async function getConversationPathForUser(targetUserId: string, postId?: string): Promise<string> {

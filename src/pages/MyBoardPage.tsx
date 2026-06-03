@@ -8,7 +8,7 @@ import { PageShell } from '../components/PageShell';
 import { mockActivityPosts } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
 import { archiveActivityPost, closeActivityPost, deleteActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost } from '../lib/activityBoardApi';
-import { ensureConversationForActivityInterest } from '../lib/matchApi';
+import { getActivityInterestConversationPath } from '../lib/matchApi';
 import type { ActivityPostInterestWithProfile, ActivityPostStatus, ActivityPostWithStats } from '../types/activityBoard';
 
 function formatDate(value: string | null) {
@@ -104,12 +104,12 @@ export function MyBoardPage() {
     setOpeningInterestId(interest.id);
     setError('');
     try {
-      const result = await ensureConversationForActivityInterest(postId, interest.id);
-      if (!result.success || !result.matchId) {
+      const result = await getActivityInterestConversationPath({ postId, interestId: interest.id, targetUserId: interest.user_id });
+      if (!result.success || !result.path) {
         setError(result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : '会話の作成に失敗しました。'));
         return;
       }
-      navigate(`/messages/${result.matchId}?postId=${encodeURIComponent(postId)}`);
+      navigate(result.path);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? `会話への移動に失敗しました: ${caughtError.message}` : '会話への移動に失敗しました。');
     } finally {

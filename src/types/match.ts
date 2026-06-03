@@ -31,4 +31,6 @@ export type DirectConversationResult = {
   alreadyExists?: boolean;
   blocked?: boolean;
   message?: string;
+  phase?: string;
+  debugError?: string;
 };
