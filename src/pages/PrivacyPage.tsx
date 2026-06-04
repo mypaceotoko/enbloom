@@ -56,7 +56,7 @@ const privacySections = [
   {
     icon: HelpCircle,
     title: '6. 外部サービス',
-    body: ['Googleログイン、Supabase、Vercel、GitHubなど、開発・認証・保存・公開に関わる外部サービスを利用している可能性があります。'],
+    body: ['Googleログインなど、認証・保存・公開に関わる外部サービスを利用する場合があります。'],
   },
   {
     icon: Trash2,
@@ -77,16 +77,20 @@ export function PrivacyPage() {
   return (
     <PageShell description="ConnectBloomで扱う情報と、その使い方についてまとめています。" eyebrow="PRIVACY" title="プライバシーポリシー">
       <div className="space-y-3">
-        <Card className="border-theme-main/20 bg-theme-main/10 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Beta notice</p>
-          <p className="mt-2 text-sm font-bold leading-6 text-theme-text">
-            このプライバシーポリシーは、β版テスト向けの暫定版です。正式公開前に内容を見直す可能性があります。
+        <Card className="border-theme-main/20 bg-theme-main/10 p-3 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-theme-main-dark">Beta notice</p>
+          <p className="mt-1.5 text-[13px] font-bold leading-5 text-theme-text">
+            このプライバシーポリシーは、β版テスト向けの暫定版です。
+            <br />
+            正式公開前に内容を見直す可能性があります。
           </p>
         </Card>
 
-        <Card className="border-theme-main/15 bg-theme-accent-soft/70 shadow-sm">
-          <p className="text-sm leading-6 text-theme-muted">
-            ConnectBloomは、共通の興味から活動仲間・趣味仲間・制作仲間とつながる紹介制コネクトSNSです。恋愛・交際・婚活・異性交際を主目的としたサービスではありません。
+        <Card className="border-theme-main/15 bg-theme-accent-soft/70 p-3 shadow-sm">
+          <p className="text-[13px] leading-5 text-theme-muted">
+            ConnectBloomは、共通の興味から活動仲間・趣味仲間・制作仲間とつながる紹介制コネクトSNSです。
+            <br />
+            活動や企画を安心して進めるために、必要な情報だけを大切に扱います。
           </p>
         </Card>
 
@@ -94,22 +98,22 @@ export function PrivacyPage() {
           const Icon = section.icon;
 
           return (
-            <Card className="space-y-3 border-theme-main/15 bg-theme-card/90 shadow-sm" key={section.title}>
-              <div className="flex items-start gap-3">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-theme-accent-soft text-theme-main-dark">
-                  <Icon size={22} />
+            <Card className="space-y-2.5 border-theme-main/15 bg-theme-card/90 p-3 shadow-sm" key={section.title}>
+              <div className="flex items-start gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark">
+                  <Icon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-black leading-6 text-theme-text">{section.title}</h2>
+                  <h2 className="text-[15px] font-black leading-5 text-theme-text">{section.title}</h2>
                   {section.body.map((paragraph) => (
-                    <p className="mt-2 text-sm leading-6 text-theme-muted" key={paragraph}>{paragraph}</p>
+                    <p className="mt-1.5 text-[13px] leading-5 text-theme-muted" key={paragraph}>{paragraph}</p>
                   ))}
                 </div>
               </div>
               {section.list ? (
-                <ul className="grid gap-2 rounded-[1.15rem] bg-theme-sky/10 p-3 sm:grid-cols-2">
+                <ul className="grid gap-1.5 rounded-[1rem] bg-theme-sky/10 p-2.5 sm:grid-cols-2">
                   {section.list.map((item) => (
-                    <li className="flex gap-2 text-sm leading-6 text-theme-text" key={item}>
+                    <li className="flex gap-2 text-[13px] leading-5 text-theme-text" key={item}>
                       <span className="mt-2 size-1.5 shrink-0 rounded-full bg-theme-main-dark" />
                       <span>{item}</span>
                     </li>

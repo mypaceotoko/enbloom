@@ -1,4 +1,4 @@
-import { AlertTriangle, ClipboardList, Flag, HeartOff, MessageCircle, RefreshCw, Scale, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ClipboardList, Flag, MessageCircle, RefreshCw, Scale, ShieldCheck } from 'lucide-react';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 
@@ -12,18 +12,17 @@ const termsSections = [
     ],
   },
   {
-    icon: HeartOff,
-    title: '2. 恋愛・異性交際目的ではありません',
+    icon: ShieldCheck,
+    title: '2. 目的に沿った利用',
     body: [
-      'ConnectBloomは、恋愛・交際・婚活・異性交際を主目的としたサービスではありません。',
-      '募集ボードやルーム、DMは、活動や企画、趣味、共創のために利用してください。',
+      'ConnectBloomは、活動・趣味・企画・制作などの仲間づくりを支えるサービスです。',
+      '募集ボードやルーム、DMは、活動内容や進め方を相談するために利用してください。',
     ],
   },
   {
     icon: AlertTriangle,
     title: '3. 禁止事項',
     list: [
-      '恋愛・交際・異性交際のみを目的とした利用',
       '迷惑行為、嫌がらせ、誹謗中傷',
       '個人情報を過度に求める行為',
       '外部SNSや連絡先への強引な誘導',
@@ -77,10 +76,12 @@ export function TermsPage() {
   return (
     <PageShell description="ConnectBloomを安心して使うための基本ルールです。" eyebrow="TERMS" title="利用規約">
       <div className="space-y-3">
-        <Card className="border-theme-main/20 bg-theme-main/10 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Beta notice</p>
-          <p className="mt-2 text-sm font-bold leading-6 text-theme-text">
-            この利用規約は、β版テスト向けの暫定版です。正式公開前に内容を見直す可能性があります。
+        <Card className="border-theme-main/20 bg-theme-main/10 p-3 shadow-sm">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-theme-main-dark">Beta notice</p>
+          <p className="mt-1.5 text-[13px] font-bold leading-5 text-theme-text">
+            この利用規約は、β版テスト向けの暫定版です。
+            <br />
+            正式公開前に内容を見直す可能性があります。
           </p>
         </Card>
 
@@ -88,26 +89,26 @@ export function TermsPage() {
           const Icon = section.icon;
 
           return (
-            <Card className="space-y-3 border-theme-main/15 bg-theme-card/90 shadow-sm" key={section.title}>
-              <div className="flex items-start gap-3">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-theme-accent-soft text-theme-main-dark">
-                  <Icon size={22} />
+            <Card className="space-y-2.5 border-theme-main/15 bg-theme-card/90 p-3 shadow-sm" key={section.title}>
+              <div className="flex items-start gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark">
+                  <Icon size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-black leading-6 text-theme-text">{section.title}</h2>
+                  <h2 className="text-[15px] font-black leading-5 text-theme-text">{section.title}</h2>
                   {section.body ? (
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-1.5 space-y-1.5">
                       {section.body.map((paragraph) => (
-                        <p className="text-sm leading-6 text-theme-muted" key={paragraph}>{paragraph}</p>
+                        <p className="text-[13px] leading-5 text-theme-muted" key={paragraph}>{paragraph}</p>
                       ))}
                     </div>
                   ) : null}
                 </div>
               </div>
               {section.list ? (
-                <ul className="space-y-1.5 rounded-[1.15rem] bg-theme-sky/10 p-3">
+                <ul className="space-y-1 rounded-[1rem] bg-theme-sky/10 p-2.5">
                   {section.list.map((item) => (
-                    <li className="flex gap-2 text-sm leading-6 text-theme-text" key={item}>
+                    <li className="flex gap-2 text-[13px] leading-5 text-theme-text" key={item}>
                       <span className="mt-2 size-1.5 shrink-0 rounded-full bg-theme-main-dark" />
                       <span>{item}</span>
                     </li>

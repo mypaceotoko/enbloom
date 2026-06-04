@@ -133,19 +133,15 @@ export function NotificationsPage() {
     <PageShell description="あなたへの反応や、進行中のつながりを確認できます。" eyebrow="Notifications" title="通知">
       <Card className="flower-gradient border-0 p-1 shadow-sm">
         <div className="rounded-[1.15rem] bg-theme-card/84 p-3.5 backdrop-blur">
-          <div className="flex items-start justify-between gap-3">
+          <div>
             <div className="min-w-0">
               <Badge className="bg-theme-main text-white"><Bell size={13} />通知センター</Badge>
-              <h2 className="mt-2.5 whitespace-nowrap text-lg font-black tracking-[-0.04em] text-theme-text sm:text-xl">つながりの反応を、やさしくキャッチ。</h2>
+              <h2 className="mt-2.5 text-lg font-black tracking-[-0.04em] text-theme-text sm:text-xl">つながりの反応を、やさしくキャッチ。</h2>
               <p className="mt-2 text-[13px] leading-5 text-theme-muted">
                 参加希望・承認・DMの通知を確認できます。
                 <br />
                 大切な反応を見逃さないための場所です。
               </p>
-            </div>
-            <div className="shrink-0 rounded-2xl bg-white/70 px-3 py-2 text-center shadow-sm">
-              <p className="text-2xl font-black text-theme-main-dark">{unreadCount}</p>
-              <p className="text-[11px] font-black text-theme-muted">未読</p>
             </div>
           </div>
         </div>

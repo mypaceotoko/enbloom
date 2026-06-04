@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, ChevronDown, KeyRound, RefreshCw, ShieldAlert, UsersRound } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronDown, KeyRound, RefreshCw, ShieldAlert } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -65,7 +65,7 @@ function formatDateTime(value: string | null, emptyLabel = '期限なし') {
 }
 
 export function AdminPage() {
-  const { blockedUserIds, reportedUserIds } = useAppState();
+  const { reportedUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
   const [supabaseReports, setSupabaseReports] = useState<ReportWithProfiles[]>([]);
@@ -100,9 +100,8 @@ export function AdminPage() {
     return `${inviteCodes.length}件`;
   }, [inviteCodes.length, isAuthenticated, isSupabaseMode]);
   const adminCards = [
-    { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: 'βテスターに共有する招待コードの作成・確認・無効化を行います。' },
-    { icon: UsersRound, title: 'ユーザー管理', count: `${mockUsers.length}人`, body: 'プロフィール確認とステータス管理のプレースホルダーです。' },
-    { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: isSupabaseMode && isAuthenticated ? '安心してご縁を育てるため、通報内容・対応状況・管理メモを落ち着いて確認します。' : `ブロック ${blockedUserIds.length}件 / 通報 ${reportedUserIds.length}件のローカル集計です。` },
+    { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: 'βテスターに共有する招待コードを作成・確認できます。\n招待コードは、紹介経路を記録するために使います。' },
+    { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: '届いた通報を確認し、必要に応じて対応できます。' },
   ];
 
   useEffect(() => {
@@ -149,7 +148,7 @@ export function AdminPage() {
   function handleGenerateInviteCodeCandidate() {
     const nextCode = generateInviteCodeCandidate();
     setInviteError('');
-    setInviteNotice(`${nextCode} を候補として作成しました。保存するまではDBに登録されません。ご縁のルートが分かるよう、手入力で調整してもOKです。`);
+    setInviteNotice(`${nextCode} を候補として作成しました。保存するまでは登録されません。紹介経路が分かるよう、手入力で調整してもOKです。`);
     setForm((current) => ({ ...current, code: nextCode }));
   }
 
@@ -159,7 +158,7 @@ export function AdminPage() {
     setInviteNotice('');
 
     if (!isSupabaseMode) {
-      setInviteNotice('ローカルデモではSupabaseに保存せず、UI確認だけできます。');
+      setInviteNotice('ローカルデモでは保存せず、画面確認だけできます。');
       return;
     }
 
@@ -185,7 +184,7 @@ export function AdminPage() {
         expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
       });
       setInviteCodes((current) => [createdInviteCode, ...current.filter((inviteCode) => inviteCode.id !== createdInviteCode.id)]);
-      setInviteNotice(`${createdInviteCode.code} を作成しました。一覧に反映しました。無制限コードは max_uses = null で保存されます。`);
+      setInviteNotice(`${createdInviteCode.code} を作成しました。一覧に反映しました。`);
       setForm(defaultInviteCodeForm);
     } catch (caughtError) {
       setInviteError(caughtError instanceof Error ? caughtError.message : '招待コードの作成に失敗しました。');
@@ -199,7 +198,7 @@ export function AdminPage() {
     setInviteNotice('');
 
     if (!isSupabaseMode) {
-      setInviteNotice('ローカルデモではSupabaseに保存されていないため、削除操作はUI確認のみです。');
+      setInviteNotice('ローカルデモでは保存されていないため、削除操作は画面確認のみです。');
       return;
     }
 
@@ -261,7 +260,7 @@ export function AdminPage() {
     setReportNotice('');
 
     if (!isSupabaseMode || !isAuthenticated) {
-      setReportError('ステータス更新はSupabase接続時に管理できます。');
+      setReportError('ログイン後に対応状況を更新できます。');
       return;
     }
 
@@ -286,7 +285,7 @@ export function AdminPage() {
     setReportNotice('');
 
     if (!isSupabaseMode || !isAuthenticated) {
-      setReportError('管理メモ保存はSupabase接続時に管理できます。');
+      setReportError('ログイン後に管理メモを保存できます。');
       return;
     }
 
@@ -313,7 +312,7 @@ export function AdminPage() {
     setReportNotice('');
 
     if (!isSupabaseMode || !isAuthenticated) {
-      setReportError('通報の整理はSupabase接続時に管理できます。');
+      setReportError('ログイン後に通報を整理できます。');
       return;
     }
 
@@ -354,7 +353,7 @@ export function AdminPage() {
     setInviteNotice('');
 
     if (!isSupabaseMode) {
-      setInviteNotice('ローカルデモではSupabaseに保存されていないため、無効化操作はUI確認のみです。');
+      setInviteNotice('ローカルデモでは保存されていないため、無効化操作は画面確認のみです。');
       return;
     }
 
@@ -384,17 +383,17 @@ export function AdminPage() {
   }
 
   return (
-    <PageShell description="紹介制・信頼ベースを運用するための管理画面です。βテスター用の招待コードを作成・確認できます。" eyebrow="Admin" title="管理画面">
+    <PageShell description={<>βテスター用の招待コード作成と、届いた通報の確認を行えます。<br />招待コードがなくてもGoogleログインは可能です。</>} eyebrow="Admin" title="管理画面">
       {adminCards.map((item) => {
         const Icon = item.icon;
-        return <Card className="space-y-3" key={item.title}><div className="flex items-center justify-between"><span className="flex items-center gap-3"><span className="flex size-12 items-center justify-center rounded-2xl bg-theme-accent-soft text-theme-main-dark"><Icon size={22} /></span><span className="font-black">{item.title}</span></span><Badge>{item.count}</Badge></div><p className="text-sm leading-6 text-theme-muted">{item.body}</p></Card>;
+        return <Card className="space-y-2.5 p-3 shadow-sm" key={item.title}><div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2.5"><span className="flex size-9 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><Icon size={18} /></span><span className="text-sm font-black">{item.title}</span></span><Badge>{item.count}</Badge></div><p className="whitespace-pre-line text-[13px] leading-5 text-theme-muted">{item.body}</p></Card>;
       })}
 
-      <Card className="space-y-4">
+      <Card className="space-y-3 p-3 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-black">βテスター用の招待コード</h2>
-            <p className="mt-1 text-sm leading-6 text-theme-muted">少人数テスターに共有する招待コードを作成・確認できます。右上のボタンでコード候補を自動生成できます。招待コードは信頼できるテスターにだけ共有してください。</p>
+            <h2 className="text-sm font-black">βテスター用の招待コード</h2>
+            <p className="mt-1 text-[13px] leading-5 text-theme-muted">βテスターに共有する招待コードを作成・確認できます。<br />招待コードは、紹介経路を記録するために使います。</p>
           </div>
           <Button aria-label="招待コード候補を生成" className="shrink-0 px-3" disabled={inviteLoading} onClick={handleGenerateInviteCodeCandidate} title="招待コード候補を生成" type="button" variant="secondary">
             <RefreshCw size={15} />
@@ -402,25 +401,25 @@ export function AdminPage() {
           </Button>
         </div>
 
-        {!isSupabaseMode ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">Supabase未接続のため、招待コードは保存されません。UI確認用として表示しています。</div> : null}
+        {!isSupabaseMode ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは招待コードは保存されません。画面確認用として表示しています。</div> : null}
         {isSupabaseMode && !isAuthenticated ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">招待コードを作成・確認するにはGoogleログインしてください。</div> : null}
         {inviteError ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{inviteError}</div> : null}
         {inviteNotice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{inviteNotice}</div> : null}
 
         <form className="space-y-3" onSubmit={handleCreateInviteCode}>
-          <Input helperText="テスターにそのまま渡す招待コードです。英数字・ハイフン推奨で、保存時に大文字化します。" label="招待コード" name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="MYPACE-2026" value={form.code} />
+          <Input helperText="βテスターに共有する招待コードです。英数字・ハイフン推奨で、保存時に大文字化します。" label="招待コード" name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="MYPACE-2026" value={form.code} />
           <div className="rounded-[1.15rem] bg-theme-background/70 p-3">
             <label className="flex items-center gap-2 text-sm font-black text-theme-text">
               <input checked={form.unlimited} className="size-4 accent-theme-main" onChange={(event) => updateForm('unlimited', event.target.checked)} type="checkbox" />
-              無制限にする（max_uses = null）
+              利用人数を制限しない
             </label>
-            <p className="mt-1.5 text-xs leading-5 text-theme-muted">ONの場合、同じ招待コードを人数制限なしで使えます。used_count は毎回増えます。</p>
+            <p className="mt-1.5 text-xs leading-5 text-theme-muted">ONの場合、同じ招待コードを人数制限なしで使えます。利用回数は自動で記録されます。</p>
           </div>
-          <Input disabled={form.unlimited} helperText="無制限チェックをOFFにした場合のみ有効です。" label="max_uses" min={1} name="maxUses" onChange={(event) => updateForm('maxUses', event.target.value)} placeholder="10" type="number" value={form.maxUses} />
-          <Input helperText="未入力なら期限なしです。" label="expires_at" name="expiresAt" onChange={(event) => updateForm('expiresAt', event.target.value)} type="datetime-local" value={form.expiresAt} />
+          <Input disabled={form.unlimited} helperText="無制限チェックをOFFにした場合のみ有効です。" label="利用上限" min={1} name="maxUses" onChange={(event) => updateForm('maxUses', event.target.value)} placeholder="10" type="number" value={form.maxUses} />
+          <Input helperText="未入力なら期限なしです。" label="有効期限" name="expiresAt" onChange={(event) => updateForm('expiresAt', event.target.value)} type="datetime-local" value={form.expiresAt} />
           <label className="flex items-center gap-2 rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-black text-theme-text">
             <input checked={form.isActive} className="size-4 accent-theme-main" onChange={(event) => updateForm('isActive', event.target.checked)} type="checkbox" />
-            is_active（有効）
+            有効にする
           </label>
           <Button className="w-full" disabled={inviteLoading} type="submit">
             <KeyRound size={16} />
@@ -429,14 +428,14 @@ export function AdminPage() {
         </form>
       </Card>
 
-      <Card className="space-y-2 border-theme-main/15 bg-theme-accent-soft/55 shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">テスターに共有する時の案内</p>
-        <p className="text-sm leading-6 text-theme-muted">「ConnectBloomは、共通の興味から仲間とつながる紹介制コネクトSNSです。まだβ版なので、気づいた点はスクリーンショットで教えてください。」</p>
+      <Card className="space-y-2 border-theme-main/15 bg-theme-accent-soft/55 p-3 shadow-sm">
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-theme-main-dark">招待コードの扱い</p>
+        <p className="text-[13px] leading-5 text-theme-muted">招待コードがなくてもGoogleログインは可能です。<br />招待コードを入力してログインした場合のみ、紹介経路として扱います。</p>
       </Card>
 
-      <Card className="space-y-3">
-        <h2 className="font-black">作成済みの招待コード</h2>
-        <p className="text-sm leading-6 text-theme-muted">有効なコードをテスターに共有してください。利用状況を見ながら、不要になったコードは削除または無効化できます。</p>
+      <Card className="space-y-2.5 p-3 shadow-sm">
+        <h2 className="text-sm font-black">作成済みの招待コード</h2>
+        <p className="text-[13px] leading-5 text-theme-muted">有効な招待コードをβテスターに共有してください。<br />利用状況を見ながら、不要になったコードは削除または無効化できます。</p>
         {inviteCodes.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ招待コードはありません。まずはβテスター向けのコードを1つ作成してください。</p> : null}
         {inviteCodes.map((inviteCode) => {
           const isManaging = managingInviteCodeId === inviteCode.id;
@@ -450,14 +449,12 @@ export function AdminPage() {
                 <Badge className={inviteCode.is_active ? '' : 'bg-red-50 text-red-600'}>{inviteCode.is_active ? '有効' : '無効'}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs font-bold text-theme-muted">
-                <span>used_count: {inviteCode.used_count}</span>
-                <span>max_uses: {inviteCode.max_uses ?? 'null'}</span>
+                <span>利用回数: {inviteCode.used_count}</span>
+                <span>利用上限: {inviteCode.max_uses ?? 'なし'}</span>
                 <span>無制限: {inviteCode.max_uses === null ? 'はい' : 'いいえ'}</span>
-                <span>ステータス: {inviteCode.is_active ? '有効' : '無効'}</span>
-                <span>is_active: {inviteCode.is_active ? 'true' : 'false'}</span>
-                <span>expires_at: {formatDateTime(inviteCode.expires_at)}</span>
-                <span>created_at: {formatDateTime(inviteCode.created_at)}</span>
-                <span className="col-span-2 break-all">created_by: {inviteCode.created_by}</span>
+                <span>状態: {inviteCode.is_active ? '有効' : '無効'}</span>
+                <span>有効期限: {formatDateTime(inviteCode.expires_at)}</span>
+                <span>作成日時: {formatDateTime(inviteCode.created_at)}</span>
               </div>
               <div className="flex justify-end">
                 {canDelete ? (
@@ -475,13 +472,13 @@ export function AdminPage() {
         })}
       </Card>
 
-      <Card className="space-y-3">
+      <Card className="space-y-2.5 p-3 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-black">通報管理</h2>
-            <p className="mt-1 text-sm leading-6 text-theme-muted">通報は責めるためではなく、安心してご縁を育てるための運営メモとして扱います。</p>
+            <h2 className="text-sm font-black">通報管理</h2>
+            <p className="mt-1 text-[13px] leading-5 text-theme-muted">届いた通報を確認し、必要に応じて対応できます。</p>
           </div>
-          <Badge>{isSupabaseMode && isAuthenticated ? 'Supabase reports' : 'ローカルデモ'}</Badge>
+          <Badge>{isSupabaseMode && isAuthenticated ? '届いた通報' : 'ローカルデモ'}</Badge>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -503,7 +500,7 @@ export function AdminPage() {
         {reportNotice ? <p className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{reportNotice}</p> : null}
         {isSupabaseMode && isAuthenticated ? (
           <>
-            {supabaseReports.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたは会話画面の通報ボタンから reports テーブルへ保存されます。</p> : null}
+            {supabaseReports.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたは会話画面の通報ボタンから反映されます。</p> : null}
             {supabaseReports.map((report) => {
               const isUpdatingStatus = updatingReportStatusId === report.id;
               const isSavingNote = savingReportNoteId === report.id;
@@ -551,22 +548,22 @@ export function AdminPage() {
                         <span className="break-words">通報者: {report.reporter?.name ?? report.reporter_id}</span>
                         <span className="break-words">理由: {report.reason}</span>
                         <span className="break-words">補足: {report.detail || '未入力'}</span>
-                        <span>ステータス: {getReportStatusLabel(report.status)}（{report.status}）</span>
+                        <span>対応状況: {getReportStatusLabel(report.status)}</span>
                         <span>通報日時: {formatDateTime(report.created_at)}</span>
-                        <span>reviewed_at: {formatDateTime(report.reviewed_at, '未レビュー')}</span>
-                        <span className="break-words">admin_note: {report.admin_note || '未入力'}</span>
-                        <span>archived_at: {formatDateTime(report.archived_at, '未アーカイブ')}</span>
+                        <span>確認日時: {formatDateTime(report.reviewed_at, '未確認')}</span>
+                        <span className="break-words">管理メモ: {report.admin_note || '未入力'}</span>
+                        <span>整理日時: {formatDateTime(report.archived_at, '未整理')}</span>
                       </div>
 
                       <label className="grid gap-1.5 text-sm font-black text-theme-text">
-                        ステータス変更
+                        対応状況
                         <select
                           className="min-h-11 w-full rounded-[1rem] border border-theme-sky/25 bg-white px-3 text-sm font-bold text-theme-text outline-none transition focus:border-theme-cyan focus:ring-2 focus:ring-theme-cyan/20 disabled:opacity-60"
                           disabled={isUpdatingStatus || isSavingNote || isArchiving}
                           onChange={(event) => handleUpdateReportStatus(report, event.target.value as ReportStatus)}
                           value={report.status}
                         >
-                          {reportStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}（{option.value}）</option>)}
+                          {reportStatusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>
                       </label>
 
@@ -605,7 +602,7 @@ export function AdminPage() {
           </>
         ) : (
           <>
-            <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは通報済みユーザーの仮表示を維持します。ステータス更新・管理メモ保存・アーカイブはSupabase接続時に管理できます。</p>
+            <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは通報済みユーザーの仮表示を維持します。対応状況の更新・管理メモ保存・アーカイブはログイン後に利用できます。</p>
             {reportedUsers.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたは会話画面の通報ボタンから反映されます。</p> : null}
             {reportedUsers.map((reportedUser) => (
               <div className="flex items-center gap-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-2.5" key={reportedUser.id}>
