@@ -1,14 +1,11 @@
-import { ArrowLeft, Palette } from 'lucide-react';
+import { Palette } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme, type ThemeDefinition } from '../context/ThemeProvider';
 
 export function SettingsThemePage() {
-  const navigate = useNavigate();
   const { currentTheme } = useTheme();
   const [notice, setNotice] = useState('');
 
@@ -18,11 +15,6 @@ export function SettingsThemePage() {
 
   return (
     <PageShell description="好きな色合いに切り替えて、ConnectBloomを自分らしく使えます。" eyebrow="Theme Color" title="テーマカラー">
-      <Button className="w-fit px-3" onClick={() => navigate('/settings')} type="button" variant="secondary">
-        <ArrowLeft size={16} />
-        設定に戻る
-      </Button>
-
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
 
       <Card className="space-y-3 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">

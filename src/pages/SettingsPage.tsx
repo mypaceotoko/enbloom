@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import { ArrowRight, Bell, ClipboardCheck, ClipboardList, DoorOpen, FileText, Flag, HeartHandshake, Languages, LockKeyhole, LogOut, MessageCircle, Palette, ShieldCheck, ShieldMinus, Sparkles, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { SETTINGS_SCROLL_STORAGE_KEY } from '../components/BackToSettingsLink';
 import { PageShell } from '../components/PageShell';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
@@ -12,6 +13,7 @@ import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentTheme } = useTheme();
   const { resetDemoState } = useAppState();
   const { isAuthenticated, isSupabaseMode, signOut } = useAuth();
@@ -37,6 +39,36 @@ export function SettingsPage() {
       mounted = false;
     };
   }, [isAuthenticated, isSupabaseMode]);
+
+  useEffect(() => {
+    const state = location.state as { restoreSettingsScroll?: boolean } | null;
+    if (!state?.restoreSettingsScroll) return;
+
+    const savedValue = sessionStorage.getItem(SETTINGS_SCROLL_STORAGE_KEY);
+    if (savedValue === null) return;
+
+    const savedScrollY = Number(savedValue);
+    if (!Number.isFinite(savedScrollY)) return;
+
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        window.scrollTo({ top: savedScrollY, left: 0, behavior: 'auto' });
+        sessionStorage.removeItem(SETTINGS_SCROLL_STORAGE_KEY);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [location.state]);
+
+  function navigateFromSettings(path: string) {
+    const settingsScrollY = window.scrollY;
+    sessionStorage.setItem(SETTINGS_SCROLL_STORAGE_KEY, String(settingsScrollY));
+    navigate(path, { state: { fromSettings: true, settingsScrollY } });
+  }
 
   async function handleSignOut() {
     const confirmed = window.confirm('ConnectBloomからログアウトしますか？');
@@ -75,8 +107,8 @@ export function SettingsPage() {
           <h2 className="text-lg font-black text-theme-text">基本設定</h2>
           <p className="mt-1 text-xs leading-5 text-theme-muted">プロフィールと見た目を整えられます。</p>
         </div>
-        <SettingsLink body="プロフィールを確認・編集できます。" icon={<UserRound size={18} />} onClick={() => navigate('/my-profile')} title="マイプロフィール" />
-        <SettingsLink body={`現在のテーマ: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigate('/settings/theme')} title="テーマカラー" />
+        <SettingsLink body="プロフィールを確認・編集できます。" icon={<UserRound size={18} />} onClick={() => navigateFromSettings('/my-profile')} title="マイプロフィール" />
+        <SettingsLink body={`現在のテーマ: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigateFromSettings('/settings/theme')} title="テーマカラー" />
       </section>
 
       <section className="space-y-3">
@@ -85,12 +117,12 @@ export function SettingsPage() {
           <h2 className="text-lg font-black text-theme-text">活動管理</h2>
           <p className="mt-1 text-xs leading-5 text-theme-muted">募集・参加希望・通知・会話をまとめて確認できます。</p>
         </div>
-        <SettingsLink badge={unreadNotificationCount > 0 ? `未読 ${unreadNotificationCount}件` : '通知はありません'} body="参加希望・承認・メッセージを確認できます。" icon={<Bell size={18} />} onClick={() => navigate('/notifications')} title="通知" />
-        <SettingsLink body="募集・参加希望・通知・会話への導線を1か所で確認できます。" icon={<Sparkles size={18} />} onClick={() => navigate('/my-activity')} title="マイアクティビティ" />
-        <SettingsLink body="投稿した募集と届いた参加希望を管理できます。" icon={<ClipboardList size={18} />} onClick={() => navigate('/my-board')} title="自分の募集" />
-        <SettingsLink body="自分が送った参加希望の状態を確認・取り消しできます。" icon={<HeartHandshake size={18} />} onClick={() => navigate('/my-interests')} title="参加希望した募集" />
-        <SettingsLink body="承認後につながったコネクトとDMを確認できます。" icon={<MessageCircle size={18} />} onClick={() => navigate('/matches')} title="コネクト一覧" />
-        <SettingsLink body="参加中のルームと会話を確認できます。" icon={<DoorOpen size={18} />} onClick={() => navigate('/rooms')} title="ルーム" />
+        <SettingsLink badge={unreadNotificationCount > 0 ? `未読 ${unreadNotificationCount}件` : '通知はありません'} body="参加希望・承認・メッセージを確認できます。" icon={<Bell size={18} />} onClick={() => navigateFromSettings('/notifications')} title="通知" />
+        <SettingsLink body="募集・参加希望・通知・会話への導線を1か所で確認できます。" icon={<Sparkles size={18} />} onClick={() => navigateFromSettings('/my-activity')} title="マイアクティビティ" />
+        <SettingsLink body="投稿した募集と届いた参加希望を管理できます。" icon={<ClipboardList size={18} />} onClick={() => navigateFromSettings('/my-board')} title="自分の募集" />
+        <SettingsLink body="自分が送った参加希望の状態を確認・取り消しできます。" icon={<HeartHandshake size={18} />} onClick={() => navigateFromSettings('/my-interests')} title="参加希望した募集" />
+        <SettingsLink body="承認後につながったコネクトとDMを確認できます。" icon={<MessageCircle size={18} />} onClick={() => navigateFromSettings('/matches')} title="コネクト一覧" />
+        <SettingsLink body="参加中のルームと会話を確認できます。" icon={<DoorOpen size={18} />} onClick={() => navigateFromSettings('/rooms')} title="ルーム" />
       </section>
 
       <section className="space-y-3">
@@ -99,10 +131,10 @@ export function SettingsPage() {
           <h2 className="text-lg font-black text-theme-text">安心・運営</h2>
           <p className="mt-1 text-xs leading-5 text-theme-muted">安心して使うためのガイドや管理機能を確認できます。</p>
         </div>
-        <SettingsLink body="ルールと安心して使うためのヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigate('/safety')} title="安心ガイド" />
-        <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigate('/blocked-users')} title="ブロック中のユーザー" />
-        <SettingsLink body="βテスター向けの招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigate('/admin')} title="招待コード管理" />
-        <SettingsLink body="届いた通報の確認・対応を管理画面で行えます。" icon={<Flag size={18} />} onClick={() => navigate('/admin')} title="通報管理" />
+        <SettingsLink body="ルールと安心して使うためのヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigateFromSettings('/safety')} title="安心ガイド" />
+        <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigateFromSettings('/blocked-users')} title="ブロック中のユーザー" />
+        <SettingsLink body="βテスター向けの招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigateFromSettings('/admin')} title="招待コード管理" />
+        <SettingsLink body="届いた通報の確認・対応を管理画面で行えます。" icon={<Flag size={18} />} onClick={() => navigateFromSettings('/admin')} title="通報管理" />
       </section>
 
       <section className="space-y-3">
@@ -111,9 +143,9 @@ export function SettingsPage() {
           <h2 className="text-lg font-black text-theme-text">ガイド・規約</h2>
           <p className="mt-1 text-xs leading-5 text-theme-muted">使い方と大切なルールを確認できます。</p>
         </div>
-        <SettingsLink body="確認してほしい流れと、フィードバックの送り方をまとめています。" icon={<ClipboardCheck size={18} />} onClick={() => navigate('/test-guide')} title="テスターガイド" />
-        <SettingsLink body="ConnectBloomを使うための基本ルールです。" icon={<FileText size={18} />} onClick={() => navigate('/terms')} title="利用規約" />
-        <SettingsLink body="扱う情報と使い方について確認できます。" icon={<LockKeyhole size={18} />} onClick={() => navigate('/privacy')} title="プライバシーポリシー" />
+        <SettingsLink body="確認してほしい流れと、フィードバックの送り方をまとめています。" icon={<ClipboardCheck size={18} />} onClick={() => navigateFromSettings('/test-guide')} title="テスターガイド" />
+        <SettingsLink body="ConnectBloomを使うための基本ルールです。" icon={<FileText size={18} />} onClick={() => navigateFromSettings('/terms')} title="利用規約" />
+        <SettingsLink body="扱う情報と使い方について確認できます。" icon={<LockKeyhole size={18} />} onClick={() => navigateFromSettings('/privacy')} title="プライバシーポリシー" />
       </section>
 
       <section className="space-y-3">

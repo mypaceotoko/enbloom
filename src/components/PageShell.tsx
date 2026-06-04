@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { BackToSettingsLink } from './BackToSettingsLink';
 
 type PageShellProps = {
   title?: string;
@@ -10,6 +11,7 @@ type PageShellProps = {
 export function PageShell({ title, eyebrow, description, children }: PageShellProps) {
   return (
     <section className="space-y-5 px-4 pb-[calc(var(--bottom-nav-safe-space)+env(safe-area-inset-bottom))] pt-4">
+      <BackToSettingsLink />
       {title ? (
         <div className="space-y-2">
           {eyebrow ? <p className="text-xs font-bold uppercase tracking-[0.22em] text-theme-main">{eyebrow}</p> : null}
