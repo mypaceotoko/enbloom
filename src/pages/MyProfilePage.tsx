@@ -243,35 +243,42 @@ export function MyProfilePage() {
           <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
           <span className="block text-xs font-medium leading-5 text-theme-muted">一緒にやりたいこと、話したいテーマ、探している仲間を書いてみましょう。</span>
         </label>
-        <div ref={datingTemperatureFieldRef} className="space-y-2">
-          <Input
+        <div ref={datingTemperatureFieldRef} className="relative space-y-2 text-sm font-semibold text-theme-text">
+          <span id="myDatingTemperatureLabel">つながり方のスタンス</span>
+          <button
+            aria-controls="dating-temperature-options"
             aria-expanded={showDatingTemperatureSuggestions}
             aria-haspopup="listbox"
-            helperText="どんな距離感で話したいかを選ぶか、自分で入力できます。"
-            label="つながり方のスタンス"
-            name="myDatingTemperature"
-            onChange={(event) => setForm((current) => ({ ...current, datingTemperature: event.target.value }))}
-            onFocus={() => setShowDatingTemperatureSuggestions(true)}
-            onPointerDown={() => setShowDatingTemperatureSuggestions(true)}
-            placeholder="まずはゆっくり話したい"
-            value={form.datingTemperature}
-          />
+            aria-labelledby="myDatingTemperatureLabel"
+            className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-left text-sm text-theme-text outline-none transition focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15 active:scale-[0.99]"
+            id="myDatingTemperature"
+            onClick={() => setShowDatingTemperatureSuggestions((current) => !current)}
+            type="button"
+          >
+            <span className={form.datingTemperature ? 'truncate font-bold' : 'truncate font-medium text-theme-muted'}>
+              {form.datingTemperature || 'つながり方のスタンスを選択'}
+            </span>
+            <span aria-hidden="true" className={`shrink-0 text-base text-theme-main-dark transition-transform ${showDatingTemperatureSuggestions ? 'rotate-180' : ''}`}>
+              ▾
+            </span>
+          </button>
+          <span className="block text-xs font-medium leading-5 text-theme-muted">どんな距離感で話したいかを4つの候補から選べます。</span>
           {showDatingTemperatureSuggestions ? (
-            <div className="rounded-2xl border border-theme-sky/25 bg-theme-card/95 p-2 shadow-sm" role="listbox" aria-label="つながり方のスタンス候補">
-              <p className="px-1 pb-2 text-xs font-bold text-theme-muted">候補を選ぶと入力欄に入ります。自由入力もできます。</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="absolute left-0 right-0 z-30 overflow-hidden rounded-[1.35rem] border border-white/10 bg-neutral-950/95 p-1.5 shadow-2xl shadow-neutral-950/30 backdrop-blur" id="dating-temperature-options" role="listbox" aria-label="つながり方のスタンス候補">
+              <div className="max-h-72 overflow-y-auto py-1">
                 {suggestedDatingTemperatures.map((datingTemperature) => {
                   const selected = form.datingTemperature === datingTemperature;
                   return (
                     <button
                       aria-selected={selected}
-                      className={`min-h-9 rounded-full px-3 py-1.5 text-xs font-bold transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/90 to-theme-sky/55 text-theme-main-dark ring-2 ring-theme-sky/40' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
+                      className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left text-sm font-bold transition active:scale-[0.98] ${selected ? 'bg-white text-neutral-950' : 'text-white hover:bg-white/10'}`}
                       key={datingTemperature}
                       onClick={() => handleSuggestedDatingTemperatureClick(datingTemperature)}
                       role="option"
                       type="button"
                     >
-                      {datingTemperature}
+                      <span>{datingTemperature}</span>
+                      {selected ? <span aria-hidden="true" className="text-base">✓</span> : null}
                     </button>
                   );
                 })}
