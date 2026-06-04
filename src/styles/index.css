@@ -23,6 +23,7 @@
 
 :root,
 [data-theme='natural'] {
+  --bottom-nav-safe-space: 8rem;
   --color-blue-bloom: #40b5ff;
   --color-yellow-bloom: #ffe45c;
   --color-aqua-bloom: #00d4ce;

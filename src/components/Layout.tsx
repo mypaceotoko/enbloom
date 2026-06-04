@@ -20,14 +20,7 @@ export function Layout() {
           ローカルデモ
         </div>
       ) : null}
-      <main
-        className={cn(
-          'mx-auto min-h-screen max-w-md',
-          showChrome
-            ? 'pb-[calc(env(safe-area-inset-bottom)+11rem)]'
-            : 'pb-[calc(env(safe-area-inset-bottom)+4rem)]',
-        )}
-      >
+      <main className={cn('mx-auto min-h-screen max-w-md', !showChrome && 'pb-[calc(env(safe-area-inset-bottom)+4rem)]')}>
         <Outlet />
       </main>
       {showChrome ? <BottomNav /> : null}
