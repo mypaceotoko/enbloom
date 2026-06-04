@@ -85,6 +85,7 @@ export function SettingsPage() {
         <SettingsLink body="投稿した募集と届いた参加希望を管理できます。" icon={<ClipboardList size={18} />} onClick={() => navigate('/my-board')} title="自分の募集" />
         <SettingsLink body="自分が送った参加希望の状態を確認・取り消しできます。" icon={<HeartHandshake size={18} />} onClick={() => navigate('/my-interests')} title="参加希望した募集" />
         <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigate('/blocked-users')} title="ブロック中のユーザー" />
+        <SettingsLink body="ConnectBloomを安心して使うためのルールとヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigate('/safety')} title="安心ガイド" />
         <SettingsLink body="あなたのご縁から参加する人のために、招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigate('/admin')} title="招待コード管理" />
       </section>
 
@@ -104,7 +105,7 @@ export function SettingsPage() {
 
       <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語 / 英語切り替えは将来実装予定です。" />
       <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲をユーザー設定として保存できるようにします。" />
-      <Placeholder icon={<ShieldCheck size={18} />} title="安全設定" body="本人確認・年齢確認は次フェーズ以降の検討項目です。今回はUIのみです。" />
+      <Placeholder icon={<ShieldCheck size={18} />} title="安心サポート設定" body="本人確認・年齢確認は次フェーズ以降の検討項目です。今回はUIのみです。" />
 
       <Card className="space-y-3 border-white/40 bg-theme-card/72 py-3 shadow-sm">
         <div className="flex gap-2.5">
