@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Bell, CalendarHeart, CheckCircle2, ClipboardList, Compass, DoorOpen, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -184,9 +183,9 @@ export function HomePage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Link to="/discover"><Button className="min-h-10 w-full px-3 text-sm"><Compass size={16} />人を探す</Button></Link>
-            <Link to="/board"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary">募集を探す</Button></Link>
-            <Link to="/rooms"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary">ルームに入る</Button></Link>
-            <Link to="/my-activity"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary">活動を確認</Button></Link>
+            <Link to="/board"><Button className="min-h-10 w-full px-3 text-sm"><ClipboardList size={16} />募集を探す</Button></Link>
+            <Link to="/rooms"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><DoorOpen size={16} />ルームに入る</Button></Link>
+            <Link to="/my-activity"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><Sparkles size={16} />活動を確認</Button></Link>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-theme-text">
             <span className="rounded-xl bg-theme-background/80 p-2.5"><Flower2 className="mx-auto mb-1 text-theme-main" size={16} />自然体</span>
@@ -196,27 +195,12 @@ export function HomePage() {
         </div>
       </Card>
 
-      <Card className="space-y-3 border-theme-main/15 bg-theme-card/86 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span>
-            <span className="block text-sm font-black text-theme-text">最近の動き</span>
-            <span className="mt-1 block text-xs leading-5 text-theme-muted">通知・活動・募集ボード・ルームをすぐ確認できます。</span>
-          </span>
-          {unreadNotificationCount > 0 ? <span className="rounded-full bg-theme-main/10 px-2.5 py-1 text-[11px] font-black text-theme-main-dark">未読 {unreadNotificationCount}件</span> : null}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <HomeQuickLink icon={<Bell size={16} />} label="通知を見る" path="/notifications" />
-          <HomeQuickLink icon={<Sparkles size={16} />} label="マイアクティビティ" path="/my-activity" />
-          <HomeQuickLink icon={<ClipboardList size={16} />} label="募集ボードを見る" path="/board" />
-          <HomeQuickLink icon={<DoorOpen size={16} />} label="ルームを見る" path="/rooms" />
-        </div>
-        <div className="flex flex-col gap-2 rounded-[1.1rem] border border-theme-main/10 bg-theme-sky/10 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <span className="min-w-0">
-            <span className="block text-sm font-black text-theme-text">βテスト中です</span>
-            <span className="mt-1 block text-xs leading-5 text-theme-muted">気になる点があれば、テスターガイドを見ながらスクリーンショットで共有してください。</span>
-          </span>
-          <Link className="shrink-0" to="/test-guide"><Button className="min-h-9 w-full px-3 text-xs sm:w-auto" variant="secondary">テスターガイドを見る</Button></Link>
-        </div>
+      <Card className="flex flex-col gap-2 border-theme-main/15 bg-theme-card/86 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <span className="min-w-0">
+          <span className="block text-sm font-black text-theme-text">βテスト中です</span>
+          <span className="mt-1 block text-xs leading-5 text-theme-muted">気になる点があれば、テスターガイドを見ながらスクリーンショットで共有してください。</span>
+        </span>
+        <Link className="shrink-0" to="/test-guide"><Button className="min-h-9 w-full px-3 text-xs sm:w-auto" variant="secondary">テスターガイドを見る</Button></Link>
       </Card>
 
       <div className="flex items-center justify-between rounded-full bg-theme-card/70 px-3.5 py-2.5 shadow-sm backdrop-blur">
@@ -233,13 +217,5 @@ export function HomePage() {
         ))}
       </div>
     </PageShell>
-  );
-}
-function HomeQuickLink({ icon, label, path }: { icon: ReactNode; label: string; path: string }) {
-  return (
-    <Link className="flex items-center gap-2 rounded-2xl bg-theme-accent-soft/55 px-3 py-2 text-xs font-black text-theme-main-dark transition hover:bg-theme-accent-soft active:scale-[0.98]" to={path}>
-      {icon}
-      {label}
-    </Link>
   );
 }
