@@ -158,39 +158,46 @@ export function HomePage() {
         </Card>
       ) : null}
 
+      <Card className="flower-gradient relative overflow-hidden border-0 p-1">
+        <div className="absolute -right-8 -top-8 size-28 rounded-full bg-white/30" />
+        <div className="absolute -bottom-10 left-8 size-24 rounded-full bg-theme-accent-soft/50 blur-2xl" />
+        <div className="relative space-y-3 rounded-[1.25rem] bg-theme-card/78 p-4 backdrop-blur">
+          <div className="flex flex-wrap gap-2">
+            <Badge className="bg-theme-main text-white"><Sparkles size={13} />次にすること</Badge>
+            <Badge className="bg-theme-card/80"><ShieldCheck size={13} />紹介制コネクトSNS</Badge>
+          </div>
+          <div>
+            <h2 className="text-[1.25rem] font-black leading-tight tracking-[-0.03em]">次にすること</h2>
+            <p className="mt-2 text-[13px] leading-6 text-theme-muted">
+              ルームで話す、募集を探す、参加希望を確認する。今の動きに合わせて進めます。
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Link to="/board"><Button className="w-full min-h-11 text-sm">募集を探す</Button></Link>
+            <Link to="/rooms"><Button className="w-full min-h-11 text-sm" variant="secondary">ルームに入る</Button></Link>
+            <Link to="/my-activity"><Button className="w-full min-h-11 text-sm" variant="secondary">活動を確認</Button></Link>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-theme-text">
+            <span className="rounded-xl bg-theme-background/80 p-2.5"><Flower2 className="mx-auto mb-1 text-theme-main" size={16} />自然体</span>
+            <span className="rounded-xl bg-theme-background/80 p-2.5"><HeartHandshake className="mx-auto mb-1 text-theme-main" size={16} />会話</span>
+            <span className="rounded-xl bg-theme-background/80 p-2.5"><UsersRound className="mx-auto mb-1 text-theme-main" size={16} />紹介経由</span>
+          </div>
+        </div>
+      </Card>
+
       <Card className="space-y-3 border-theme-main/15 bg-theme-card/86 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <span>
             <span className="block text-sm font-black text-theme-text">最近の動き</span>
-            <span className="mt-1 block text-xs leading-5 text-theme-muted">通知・募集・参加希望・ルームをまとめて確認できます。</span>
+            <span className="mt-1 block text-xs leading-5 text-theme-muted">通知・活動・募集ボード・ルームをすぐ確認できます。</span>
           </span>
-          <Link to="/my-activity"><Button className="min-h-9 px-3 text-xs" variant="secondary">マイアクティビティ</Button></Link>
+          {unreadNotificationCount > 0 ? <span className="rounded-full bg-theme-main/10 px-2.5 py-1 text-[11px] font-black text-theme-main-dark">未読 {unreadNotificationCount}件</span> : null}
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <HomeQuickLink icon={<Bell size={16} />} label={unreadNotificationCount > 0 ? `未読通知 ${unreadNotificationCount}件` : '通知'} path="/notifications" />
-          <HomeQuickLink icon={<ClipboardList size={16} />} label="募集ボード" path="/board" />
-          <HomeQuickLink icon={<HeartHandshake size={16} />} label="参加希望" path="/my-interests" />
-          <HomeQuickLink icon={<DoorOpen size={16} />} label="ルーム" path="/rooms" />
-        </div>
-      </Card>
-
-      <Card className="flower-gradient relative overflow-hidden border-0 p-1">
-        <div className="absolute -right-8 -top-8 size-28 rounded-full bg-white/30" />
-        <div className="absolute -bottom-10 left-8 size-24 rounded-full bg-theme-accent-soft/50 blur-2xl" />
-        <div className="relative rounded-[1.25rem] bg-theme-card/78 p-4 backdrop-blur">
-          <div className="flex flex-wrap gap-2">
-            <Badge className="bg-theme-main text-white"><Sparkles size={13} />{useSupabaseLikes ? 'Supabase Likes' : 'Phase 2 Local Demo'}</Badge>
-            <Badge className="bg-theme-card/80"><ShieldCheck size={13} />ログイン後ホーム</Badge>
-          </div>
-          <h2 className="mt-3 text-[1.35rem] font-black leading-tight tracking-[-0.03em]">1日数人だけ。<br />花束のように届く、今日のつながり。</h2>
-          <p className="mt-2.5 text-[13px] leading-6 text-theme-muted">
-            紹介経由の安心感、共通点、つながり方のスタンスが伝わるように、プロフィールをゆっくり読める体験にしています。
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-bold text-theme-text">
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><Flower2 className="mx-auto mb-1 text-theme-main" size={16} />自然体</span>
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><HeartHandshake className="mx-auto mb-1 text-theme-main" size={16} />スタンス</span>
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><UsersRound className="mx-auto mb-1 text-theme-main" size={16} />紹介経由</span>
-          </div>
+          <HomeQuickLink icon={<Bell size={16} />} label="通知を見る" path="/notifications" />
+          <HomeQuickLink icon={<Sparkles size={16} />} label="マイアクティビティ" path="/my-activity" />
+          <HomeQuickLink icon={<ClipboardList size={16} />} label="募集ボードを見る" path="/board" />
+          <HomeQuickLink icon={<DoorOpen size={16} />} label="ルームを見る" path="/rooms" />
         </div>
       </Card>
 

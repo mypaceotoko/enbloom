@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Bell, ChevronDown, ChevronUp, ClipboardList, HeartHandshake, Languages, LogOut, Palette, ShieldCheck, ShieldMinus, Sparkles, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
+import { ArrowRight, Bell, ChevronDown, ChevronUp, ClipboardList, DoorOpen, Flag, HeartHandshake, Languages, LogOut, MessageCircle, Palette, ShieldCheck, ShieldMinus, Sparkles, Ticket, UserRound, UserRoundCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
@@ -79,14 +79,26 @@ export function SettingsPage() {
         <div className="px-1">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Activity management</p>
           <h2 className="text-lg font-black text-theme-text">活動管理</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">募集・参加希望・通知・会話をまとめて確認できます。</p>
         </div>
         <SettingsLink badge={unreadNotificationCount > 0 ? `未読 ${unreadNotificationCount}件` : '通知はありません'} body="参加希望・承認・メッセージを確認できます。" icon={<Bell size={18} />} onClick={() => navigate('/notifications')} title="通知" />
         <SettingsLink body="募集・参加希望・通知・会話への導線を1か所で確認できます。" icon={<Sparkles size={18} />} onClick={() => navigate('/my-activity')} title="マイアクティビティ" />
         <SettingsLink body="投稿した募集と届いた参加希望を管理できます。" icon={<ClipboardList size={18} />} onClick={() => navigate('/my-board')} title="自分の募集" />
         <SettingsLink body="自分が送った参加希望の状態を確認・取り消しできます。" icon={<HeartHandshake size={18} />} onClick={() => navigate('/my-interests')} title="参加希望した募集" />
-        <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigate('/blocked-users')} title="ブロック中のユーザー" />
+        <SettingsLink body="承認後につながったコネクトとDMを確認できます。" icon={<MessageCircle size={18} />} onClick={() => navigate('/matches')} title="コネクト一覧" />
+        <SettingsLink body="参加中のルームと会話を確認できます。" icon={<DoorOpen size={18} />} onClick={() => navigate('/rooms')} title="ルーム" />
+      </section>
+
+      <section className="space-y-3">
+        <div className="px-1">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Safety & operations</p>
+          <h2 className="text-lg font-black text-theme-text">安心・運営</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">安心して使うためのガイドや管理機能を確認できます。</p>
+        </div>
         <SettingsLink body="ConnectBloomを安心して使うためのルールとヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigate('/safety')} title="安心ガイド" />
+        <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigate('/blocked-users')} title="ブロック中のユーザー" />
         <SettingsLink body="あなたのご縁から参加する人のために、招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigate('/admin')} title="招待コード管理" />
+        <SettingsLink body="届いた通報の確認・対応を管理画面で行えます。" icon={<Flag size={18} />} onClick={() => navigate('/admin')} title="通報管理" />
       </section>
 
       <Card className="flower-gradient border-0 p-1">
