@@ -30,6 +30,13 @@ function getInterestStatusClass(status: ActivityInterestStatus) {
   return 'bg-theme-main text-white';
 }
 
+function getInterestStatusMessage(status: ActivityInterestStatus) {
+  if (status === 'accepted') return '承認済み。投稿者と会話できます';
+  if (status === 'declined') return '今回は見送りになりました';
+  if (status === 'cancelled') return '参加希望を取り消しました';
+  return '参加希望中です';
+}
+
 export function MyInterestsPage() {
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
@@ -136,14 +143,14 @@ export function MyInterestsPage() {
   }
 
   return (
-    <PageShell description="自分が「参加したい」を送った募集を確認できます。" eyebrow="My Interests" title="参加希望した募集">
+    <PageShell description="送った参加希望と、その後の状態を確認できます。" eyebrow="My Interests" title="参加希望した募集">
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
       {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-700">{error}</div> : null}
 
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/82 p-4 backdrop-blur">
           <Badge className="bg-theme-main text-white"><UsersRound size={13} />一緒にやりたいこと</Badge>
-          <p className="mt-2 text-sm leading-6 text-theme-muted">参加希望中、承認済み、見送り、取り消し済みの状態をここで確認できます。承認済みの募集は、投稿者と1対1の会話を始められます。</p>
+          <p className="mt-2 text-sm leading-6 text-theme-muted">送った参加希望と、その後の状態を確認できます。承認された募集は、投稿者と会話できます。</p>
         </div>
       </Card>
 
@@ -167,15 +174,15 @@ export function MyInterestsPage() {
               <Badge className={getInterestStatusClass(interest.status)}>{getInterestStatusLabel(interest.status)}</Badge>
             </div>
             <div className="flex flex-wrap gap-2 text-xs font-bold text-theme-muted">
-              <span className="inline-flex items-center gap-1"><UserRound size={14} />投稿者名 {interest.post?.author?.name ?? 'ConnectBloomユーザー'}</span>
-              <span className="inline-flex items-center gap-1"><MapPin size={14} />{interest.post?.area || '活動エリア未設定'}</span>
-              <span className="inline-flex items-center gap-1"><CalendarDays size={14} />参加希望日時 {formatDate(interest.created_at)}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UserRound size={14} />投稿者 {interest.post?.author?.name ?? 'ConnectBloomユーザー'}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><MapPin size={14} />{interest.post?.area || '活動エリア未設定'}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><CalendarDays size={14} />参加希望 {formatDate(interest.created_at)}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">{interest.post?.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/60 pt-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Link className="text-sm font-black text-theme-main-dark" to={`/board/${interest.post_id}`}>詳細を見る</Link>
-                {interest.status === 'accepted' ? <span className="text-xs font-bold text-cyan-700">承認済み。会話を始められます</span> : null}
+                <span className={`text-xs font-bold ${interest.status === 'accepted' ? 'text-cyan-700' : 'text-theme-muted'}`}>{getInterestStatusMessage(interest.status)}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {interest.status === 'accepted' ? <Button className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 text-theme-main-dark shadow-sm shadow-theme-sky/20" disabled={!useSupabaseBoard || openingInterestId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />{openingInterestId === interest.id ? '会話を準備中…' : '投稿者と会話する'}</Button> : null}

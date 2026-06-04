@@ -15,7 +15,7 @@ import {
   expressInterest,
   getActivityPostById,
   getActivityPostInterestsForOwner,
-  getMyInterestedPostIds,
+  getMyActivityPostInterest,
 } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
@@ -54,6 +54,14 @@ function getInterestStatusClass(status: ActivityInterestStatus) {
   return 'bg-theme-main text-white';
 }
 
+function getParticipantStatusMessage(status: ActivityInterestStatus | null) {
+  if (status === 'interested') return '参加希望を送信済みです';
+  if (status === 'accepted') return '承認済みです。会話で進め方を相談できます';
+  if (status === 'declined') return '今回は見送りになりました';
+  if (status === 'cancelled') return '参加希望を取り消しました';
+  return 'この募集に参加したい';
+}
+
 function getNotificationDisplayName(user: { user_metadata?: Record<string, unknown>; email?: string } | null | undefined) {
   const metadataName = user?.user_metadata?.full_name ?? user?.user_metadata?.name;
   if (typeof metadataName === 'string' && metadataName.trim()) return metadataName.trim();
@@ -68,7 +76,7 @@ export function ActivityBoardDetailPage() {
   const [post, setPost] = useState<ActivityPostWithAuthor | null>(null);
   const [sourceRoomName, setSourceRoomName] = useState('');
   const [interests, setInterests] = useState<ActivityPostInterestWithProfile[]>([]);
-  const [interested, setInterested] = useState(false);
+  const [myInterest, setMyInterest] = useState<ActivityPostInterestWithProfile | null>(null);
   const [notice, setNotice] = useState('');
   const [interestError, setInterestError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -85,6 +93,7 @@ export function ActivityBoardDetailPage() {
     async function loadPost() {
       if (!postId) return;
       setInterests([]);
+      setMyInterest(null);
       setSourceRoomName('');
       setInterestError('');
       setNotice(typeof location.state?.message === 'string' ? location.state.message : '');
@@ -107,13 +116,13 @@ export function ActivityBoardDetailPage() {
       setLoading(true);
       if (!location.state?.message) setNotice('');
       try {
-        const [nextPost, interestedIds] = await Promise.all([
+        const [nextPost, nextMyInterest] = await Promise.all([
           getActivityPostById(postId),
-          getMyInterestedPostIds(user.id),
+          getMyActivityPostInterest(postId, user.id),
         ]);
         if (!mounted) return;
         setPost(nextPost);
-        setInterested(interestedIds.includes(postId));
+        setMyInterest(nextMyInterest ? { ...nextMyInterest, profile: null } : null);
 
         if (nextPost?.room_id) {
           const demoRoom = demoChatRooms.find((room) => room.slug === nextPost.room_id || room.id === nextPost.room_id);
@@ -172,22 +181,22 @@ export function ActivityBoardDetailPage() {
     setSaving(true);
     setNotice('');
     try {
-      if (interested) {
-        await cancelActivityPostInterest(post.id);
-        setInterested(false);
-        setPost({ ...post, interest_count: Math.max(0, post.interest_count - 1) });
+      if (myInterest?.status === 'interested' || myInterest?.status === 'accepted') {
+        const updatedInterest = await cancelActivityPostInterest(post.id);
+        setMyInterest({ ...updatedInterest, profile: null });
+        setPost({ ...post, interest_count: Math.max(0, post.interest_count - 1), accepted_count: myInterest.status === 'accepted' ? Math.max(0, post.accepted_count - 1) : post.accepted_count });
         setNotice('参加希望を取り消しました。');
       } else {
-        await expressInterest(post.id);
+        const nextInterest = await expressInterest(post.id);
         void notifyActivityInterestReceived(post.id, post.title, post.created_by, getNotificationDisplayName(user)).catch((caughtError) => {
           console.warn('[ConnectBloom] notification creation failed', { type: 'activity_interest_received', ...getSafeErrorLog(caughtError, 'notification_creation_failed') });
         });
-        setInterested(true);
+        setMyInterest({ ...nextInterest, profile: null });
         setPost({ ...post, interest_count: post.interest_count + 1 });
-        setNotice('参加したいを送りました。');
+        setNotice('参加希望を送りました。');
       }
     } catch (caughtError) {
-      const fallback = interested ? '参加希望の取り消しに失敗しました' : '参加したいの保存に失敗しました';
+      const fallback = myInterest?.status === 'interested' || myInterest?.status === 'accepted' ? '参加希望の取り消しに失敗しました' : '参加希望の保存に失敗しました';
       setNotice(getShortErrorMessage(caughtError, `${fallback}。時間を置いてもう一度お試しください。`));
     } finally {
       setSaving(false);
@@ -252,6 +261,29 @@ export function ActivityBoardDetailPage() {
     }
   }
 
+  async function handleOpenMyConversation() {
+    if (!post || !myInterest) return;
+    if (myInterest.status !== 'accepted') return;
+    setSaving(true);
+    setNotice('');
+    try {
+      const result = await getActivityInterestConversationPath({ postId: post.id, interestId: myInterest.id, targetUserId: post.created_by });
+      if (!result.success || !result.path) {
+        const phase = result.phase ?? (!result.success ? 'rpc_failed' : 'match_id_missing');
+        const message = result.message ?? (result.blocked ? 'ブロック中のため会話を開始できません。' : 'matchIdを取得できませんでした。');
+        setNotice(message.startsWith('会話の作成に失敗しました。') ? message : formatConversationFailureMessage(phase, message, result.debugError));
+        return;
+      }
+      navigate(result.path);
+    } catch (caughtError) {
+      const message = caughtError instanceof Error ? caughtError.message : 'unknown';
+      console.error('[ConnectBloom] messages navigation failed', getSafeErrorLog(caughtError, 'navigation_failed'));
+      setNotice(formatConversationFailureMessage('navigation_failed', message));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <PageShell description="活動・興味・共創を軸にした募集の詳細です。" eyebrow="Activity Detail" title="募集詳細">
       <Link className="inline-flex items-center gap-1 text-sm font-black text-theme-main-dark" to="/board"><ArrowLeft size={16} />募集ボードへ戻る</Link>
@@ -271,9 +303,9 @@ export function ActivityBoardDetailPage() {
                 <Badge>{post.category}</Badge>
                 <h1 className="text-2xl font-black leading-tight text-theme-text">{post.title}</h1>
               </div>
-              <Badge className="bg-theme-main text-white">{getStatusLabel(post.status)}</Badge>
+              <div className="flex flex-wrap gap-2"><Badge className="bg-theme-main text-white">{getStatusLabel(post.status)}</Badge>{isOwnPost ? <Badge className="bg-theme-card text-theme-main-dark">自分が投稿者</Badge> : null}{!isOwnPost && myInterest ? <Badge className={getInterestStatusClass(myInterest.status)}>{getInterestStatusLabel(myInterest.status)}</Badge> : null}</div>
             </div>
-            {sourceRoomName ? <div className="rounded-xl bg-theme-accent-soft/70 p-3 text-sm font-black text-theme-main-dark">この募集は{sourceRoomName}から生まれました。</div> : null}
+            {sourceRoomName ? <div className="rounded-xl bg-theme-accent-soft/70 p-3 text-sm font-black text-theme-main-dark">{sourceRoomName}ルームから生まれた募集</div> : null}
             <p className="whitespace-pre-wrap text-sm leading-7 text-theme-text">{post.body}</p>
             <div className="grid gap-2 text-sm font-bold text-theme-muted sm:grid-cols-2">
               <span className="inline-flex items-center gap-1"><MapPin size={16} />活動エリア: {post.area || '未設定'}</span>
@@ -287,9 +319,26 @@ export function ActivityBoardDetailPage() {
               <Link className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-theme-main px-4 py-2 text-[13px] font-bold text-white" to={`/board/${post.id}/edit`}><Pencil size={16} />募集を編集</Link>
             ) : null}
             {!isOwnPost ? (
-              <Button className="w-full" disabled={saving || !useSupabaseBoard || post.status !== 'open'} onClick={handleInterest}>
-                <UsersRound size={16} />{interested ? '参加希望を取り消す' : '参加したい'}
-              </Button>
+              <div className="space-y-2 rounded-2xl border border-theme-sky/20 bg-theme-card/70 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className={myInterest ? getInterestStatusClass(myInterest.status) : 'bg-theme-card text-theme-main-dark'}>{myInterest ? getInterestStatusLabel(myInterest.status) : '未参加'}</Badge>
+                  <p className="text-sm font-black text-theme-text">{getParticipantStatusMessage(myInterest?.status ?? null)}</p>
+                </div>
+                {myInterest?.status === 'accepted' ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 text-theme-main-dark shadow-sm shadow-theme-sky/20" disabled={saving || !useSupabaseBoard} onClick={() => void handleOpenMyConversation()} variant="secondary">
+                      <MessageSquareText size={16} />投稿者と会話する
+                    </Button>
+                    <Button disabled={saving || !useSupabaseBoard} onClick={handleInterest} variant="secondary">
+                      <UsersRound size={16} />参加希望を取り消す
+                    </Button>
+                  </div>
+                ) : (
+                  <Button className="w-full" disabled={saving || !useSupabaseBoard || post.status !== 'open'} onClick={handleInterest}>
+                    <UsersRound size={16} />{myInterest?.status === 'interested' ? '参加希望を取り消す' : 'この募集に参加したい'}
+                  </Button>
+                )}
+              </div>
             ) : null}
             {!useSupabaseBoard ? <p className="text-xs font-bold text-theme-muted">Supabaseログイン時に参加希望者を管理できます。</p> : null}
             {isOwnPost ? <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認済みになると、参加者と1対1の会話を始められます。</p> : null}
