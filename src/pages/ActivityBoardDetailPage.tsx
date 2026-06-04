@@ -291,7 +291,7 @@ export function ActivityBoardDetailPage() {
               </Button>
             ) : null}
             {!useSupabaseBoard ? <p className="text-xs font-bold text-theme-muted">Supabaseログイン時に参加希望者を管理できます。</p> : null}
-            {isOwnPost ? <p className="text-xs font-bold text-theme-muted">会話導線は次フェーズで整理します。</p> : null}
+            {isOwnPost ? <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認済みになると、参加者と1対1の会話を始められます。</p> : null}
           </Card>
 
           {isOwnPost ? (
@@ -335,7 +335,7 @@ export function ActivityBoardDetailPage() {
                         {interest.status === 'accepted' ? (
                           <>
                             <span className="inline-flex min-h-11 items-center rounded-xl bg-cyan-50 px-4 py-2 text-[13px] font-black text-cyan-700">承認済み</span>
-                            <Button disabled={openingConversationId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />会話へ</Button>
+                            <Button className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 text-theme-main-dark shadow-sm shadow-theme-sky/20" disabled={openingConversationId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />{openingConversationId === interest.id ? '会話を準備中…' : '会話へ'}</Button>
                           </>
                         ) : null}
                         {interest.status === 'declined' ? <span className="inline-flex min-h-11 items-center rounded-xl bg-slate-100 px-4 py-2 text-[13px] font-black text-slate-600">見送り</span> : null}

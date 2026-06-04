@@ -142,7 +142,7 @@ export function MyInterestsPage() {
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/82 p-4 backdrop-blur">
           <Badge className="bg-theme-main text-white"><UsersRound size={13} />一緒にやりたいこと</Badge>
-          <p className="mt-2 text-sm leading-6 text-theme-muted">参加希望中、承認済み、見送り、取り消し済みの状態をここで確認できます。</p>
+          <p className="mt-2 text-sm leading-6 text-theme-muted">参加希望中、承認済み、見送り、取り消し済みの状態をここで確認できます。承認済みの募集は、投稿者と1対1の会話を始められます。</p>
         </div>
       </Card>
 
@@ -177,7 +177,7 @@ export function MyInterestsPage() {
                 {interest.status === 'accepted' ? <span className="text-xs font-bold text-cyan-700">承認済み。会話を始められます</span> : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                {interest.status === 'accepted' ? <Button disabled={!useSupabaseBoard || openingInterestId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />投稿者と会話する</Button> : null}
+                {interest.status === 'accepted' ? <Button className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 text-theme-main-dark shadow-sm shadow-theme-sky/20" disabled={!useSupabaseBoard || openingInterestId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />{openingInterestId === interest.id ? '会話を準備中…' : '投稿者と会話する'}</Button> : null}
                 <Button disabled={!useSupabaseBoard || cancellingPostId === interest.post_id || interest.status === 'cancelled'} onClick={() => void handleCancel(interest)} variant="secondary"><Undo2 size={16} />参加希望を取り消す</Button>
               </div>
             </div>

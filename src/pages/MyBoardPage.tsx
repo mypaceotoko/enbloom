@@ -227,7 +227,7 @@ export function MyBoardPage() {
                 <p className="text-xs font-black text-cyan-700">承認済み。会話を始められます</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {acceptedInterestsByPostId[post.id].map((interest) => (
-                    <Button disabled={openingInterestId === interest.id} key={interest.id} onClick={() => void handleOpenConversation(post.id, interest)} variant="secondary"><MessageSquareText size={16} />{interest.profile?.name ?? '参加者'}さんと会話へ</Button>
+                    <Button className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 text-theme-main-dark shadow-sm shadow-theme-sky/20" disabled={openingInterestId === interest.id} key={interest.id} onClick={() => void handleOpenConversation(post.id, interest)} variant="secondary"><MessageSquareText size={16} />{openingInterestId === interest.id ? '会話を準備中…' : `${interest.profile?.name ?? '参加者'}さんと会話へ`}</Button>
                   ))}
                 </div>
               </div>

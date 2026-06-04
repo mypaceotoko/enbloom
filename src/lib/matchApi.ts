@@ -22,6 +22,7 @@ type MatchRpcRow = {
   matched?: boolean;
   match_id?: string | null;
   already_exists?: boolean;
+  phase?: string | null;
   message?: string | null;
 };
 
@@ -33,6 +34,7 @@ type DirectConversationRpcRow = {
   already_exists?: boolean;
   alreadyExists?: boolean;
   blocked?: boolean;
+  phase?: string | null;
   message?: string | null;
 };
 
@@ -171,6 +173,7 @@ function mapDirectConversationResult(data: unknown): DirectConversationResult {
     matchId,
     alreadyExists: Boolean(objectRow?.already_exists ?? objectRow?.alreadyExists),
     blocked: Boolean(objectRow?.blocked),
+    phase: objectRow?.phase ?? undefined,
     message: objectRow?.message ?? undefined,
   };
 }
@@ -201,9 +204,12 @@ export function formatSupabaseDebugError(error: unknown) {
 
 export function formatConversationFailureMessage(phase: string, message: string, debugError?: string) {
   const safeMessage = message || 'unknown';
-  const suffix = [`phase=${phase}`, `message=${safeMessage}`];
-  if (debugError) suffix.push(debugError);
-  return `会話の作成に失敗しました。${suffix.join(' / ')}`;
+  const friendlyMessage = /ブロック/.test(safeMessage)
+    ? 'ブロック中のため会話を開始できません。'
+    : '会話の作成に失敗しました。時間を置いてもう一度お試しください。';
+  const details = [`phase=${phase}`, `message=${safeMessage}`];
+  if (debugError) details.push(debugError);
+  return `${friendlyMessage}（詳細: ${details.join(' / ')}）`;
 }
 
 function logDmSupabaseError(phase: string, error: unknown) {
@@ -223,7 +229,7 @@ function mapDirectConversationError(error: unknown, fallback: string) {
   const friendlyMessage = (() => {
     if (/block|blocked|ブロック/i.test(message)) return 'ブロック中のため会話を開始できません。';
     if (/auth|login|ログイン/i.test(message)) return 'ログイン状態を確認できませんでした。';
-    return message ? `${fallback}: ${message}` : fallback;
+    return message ? fallback : fallback;
   })();
 
   const debugError = formatSupabaseDebugError(error);
@@ -400,7 +406,7 @@ export async function ensureConversationForActivityInterest(postId: string, inte
   }
 
   const result = mapDirectConversationResult(data);
-  const phase = result.success && result.matchId ? 'ensure_activity_interest_match' : 'match_id_missing';
+  const phase = result.phase ?? (result.success && result.matchId ? 'ensure_activity_interest_match' : 'match_id_missing');
   const debugError = phase === 'match_id_missing' ? `rpc data: ${safeStringifyRpcData(data)}` : result.debugError;
   return { ...result, phase, debugError };
 }

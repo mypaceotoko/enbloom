@@ -115,7 +115,7 @@ export function MessagesPage() {
   const safetyTargetUserId = useSupabaseMessages ? messageMatch?.otherUserId : activeMatchId;
   const titleName = useSupabaseMessages ? messageMatch?.otherProfile?.name : demoUser?.name;
   const headerDescription = useSupabaseMessages
-    ? 'ご縁がつながった相手とだけ話せます。焦らず、丁寧にやり取りしましょう。'
+    ? '相互の話してみたい、または承認済みの募集参加から始まった相手と話せます。焦らず、丁寧にやり取りしましょう。'
     : '送信内容はlocalStorageに保存され、リロード後も残るデモです。';
   useEffect(() => {
     let mounted = true;
