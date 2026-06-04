@@ -117,7 +117,7 @@ export function MessagesPage() {
   const titleName = useSupabaseMessages ? messageMatch?.otherProfile?.name : demoUser?.name;
   const headerDescription = useSupabaseMessages
     ? '相互の話してみたい、または承認済みの募集参加から始まった相手と話せます。焦らず、丁寧にやり取りしましょう。'
-    : '送信内容はlocalStorageに保存され、リロード後も残るデモです。';
+    : '送信内容はデモ用に保存され、リロード後も残ります。';
   useEffect(() => {
     let mounted = true;
 
@@ -265,7 +265,7 @@ export function MessagesPage() {
       <Card className="space-y-2.5 bg-theme-accent-soft/45 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-black text-theme-text">{useSupabaseMessages ? 'Supabase messages 保存中' : 'ローカルデモ'}</p>
+            <p className="text-sm font-black text-theme-text">{useSupabaseMessages ? 'メッセージ保存中' : 'デモ表示'}</p>
             <p className="mt-1 text-xs font-bold leading-5 text-theme-muted">会話は軽い連絡先交換ではなく、ご縁がつながった相手とゆっくり会話を始める場所です。</p>
           </div>
           <Badge>{loading ? '取得中' : <><Sparkles size={12} />ご縁</>}</Badge>

@@ -147,7 +147,7 @@ export function BlockedUsersPage() {
 
       {!useSupabaseBlocks ? (
         <div className="rounded-full border border-theme-main/15 bg-theme-card/80 px-3 py-1.5 text-center text-[11px] font-black text-theme-main-dark shadow-sm">
-          ローカルデモ / Supabase未ログイン
+          デモ表示 / ログイン前
         </div>
       ) : null}
 

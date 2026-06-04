@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, ChevronDown, KeyRound, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronDown, Copy, KeyRound, RefreshCw, ShieldAlert } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -80,6 +80,7 @@ export function AdminPage() {
   const [form, setForm] = useState<InviteCodeForm>(defaultInviteCodeForm);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
+  const [copiedInviteCodeId, setCopiedInviteCodeId] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState('');
   const [inviteNotice, setInviteNotice] = useState('');
   const reportedUsers = mockUsers.filter((mockUser) => reportedUserIds.includes(mockUser.id));
@@ -95,7 +96,7 @@ export function AdminPage() {
     ? reportStats
     : { total: reportedUserIds.length, open: reportedUserIds.length, reviewing: 0, resolved: 0, dismissed: 0 };
   const inviteCountLabel = useMemo(() => {
-    if (!isSupabaseMode) return 'ローカル';
+    if (!isSupabaseMode) return 'デモ表示';
     if (!isAuthenticated) return '未ログイン';
     return `${inviteCodes.length}件`;
   }, [inviteCodes.length, isAuthenticated, isSupabaseMode]);
@@ -145,6 +146,18 @@ export function AdminPage() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  async function handleCopyInviteCode(inviteCode: InviteCodeRow) {
+    setInviteError('');
+
+    try {
+      await navigator.clipboard.writeText(inviteCode.code);
+      setCopiedInviteCodeId(inviteCode.id);
+      window.setTimeout(() => setCopiedInviteCodeId((current) => (current === inviteCode.id ? null : current)), 1800);
+    } catch {
+      setInviteError('コピーできませんでした。招待コードを選択してコピーしてください。');
+    }
+  }
+
   function handleGenerateInviteCodeCandidate() {
     const nextCode = generateInviteCodeCandidate();
     setInviteError('');
@@ -158,7 +171,7 @@ export function AdminPage() {
     setInviteNotice('');
 
     if (!isSupabaseMode) {
-      setInviteNotice('ローカルデモでは保存せず、画面確認だけできます。');
+      setInviteNotice('デモ表示では保存せず、画面確認だけできます。');
       return;
     }
 
@@ -198,7 +211,7 @@ export function AdminPage() {
     setInviteNotice('');
 
     if (!isSupabaseMode) {
-      setInviteNotice('ローカルデモでは保存されていないため、削除操作は画面確認のみです。');
+      setInviteNotice('デモ表示では保存されていないため、削除操作は画面確認のみです。');
       return;
     }
 
@@ -353,7 +366,7 @@ export function AdminPage() {
     setInviteNotice('');
 
     if (!isSupabaseMode) {
-      setInviteNotice('ローカルデモでは保存されていないため、無効化操作は画面確認のみです。');
+      setInviteNotice('デモ表示では保存されていないため、無効化操作は画面確認のみです。');
       return;
     }
 
@@ -401,7 +414,7 @@ export function AdminPage() {
           </Button>
         </div>
 
-        {!isSupabaseMode ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは招待コードは保存されません。画面確認用として表示しています。</div> : null}
+        {!isSupabaseMode ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">デモ表示では招待コードは保存されません。画面確認用として表示しています。</div> : null}
         {isSupabaseMode && !isAuthenticated ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">招待コードを作成・確認するにはGoogleログインしてください。</div> : null}
         {inviteError ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{inviteError}</div> : null}
         {inviteNotice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{inviteNotice}</div> : null}
@@ -443,16 +456,22 @@ export function AdminPage() {
           const actionDisabled = inviteLoading || isManaging || !inviteCode.is_active;
 
           return (
-            <div className={`space-y-3 rounded-[1.15rem] bg-theme-accent-soft/45 p-3 ${inviteCode.is_active ? '' : 'opacity-70'}`} key={inviteCode.id}>
+            <div className={`space-y-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-3 ${inviteCode.is_active ? '' : 'opacity-70'}`} key={inviteCode.id}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-black text-theme-main-dark">{inviteCode.code}</span>
-                <Badge className={inviteCode.is_active ? '' : 'bg-red-50 text-red-600'}>{inviteCode.is_active ? '有効' : '無効'}</Badge>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button className="min-h-8 px-2.5 py-1 text-xs" onClick={() => void handleCopyInviteCode(inviteCode)} type="button" variant="secondary">
+                    <Copy size={14} />
+                    {copiedInviteCodeId === inviteCode.id ? 'コピー済み' : 'コピー'}
+                  </Button>
+                  <Badge className={inviteCode.is_active ? '' : 'bg-red-50 text-red-600'}>{inviteCode.is_active ? '有効' : '無効'}</Badge>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs font-bold text-theme-muted">
-                <span>利用回数: {inviteCode.used_count}</span>
-                <span>利用上限: {inviteCode.max_uses ?? 'なし'}</span>
-                <span>無制限: {inviteCode.max_uses === null ? 'はい' : 'いいえ'}</span>
-                <span>状態: {inviteCode.is_active ? '有効' : '無効'}</span>
+              <div className="grid gap-2 text-xs font-bold text-theme-muted sm:grid-cols-2">
+                <span>使用状況: {inviteCode.used_count} / {inviteCode.max_uses ?? '上限なし'}</span>
+                <span>紹介経路: {inviteCode.code.split('-')[0] || '未設定'}</span>
+                <span>発行者: ログイン中の管理者</span>
+                <span>状態: {inviteCode.is_active ? '共有できます' : '停止中'}</span>
                 <span>有効期限: {formatDateTime(inviteCode.expires_at)}</span>
                 <span>作成日時: {formatDateTime(inviteCode.created_at)}</span>
               </div>
@@ -478,7 +497,7 @@ export function AdminPage() {
             <h2 className="text-sm font-black">通報管理</h2>
             <p className="mt-1 text-[13px] leading-5 text-theme-muted">届いた通報を確認し、必要に応じて対応できます。</p>
           </div>
-          <Badge>{isSupabaseMode && isAuthenticated ? '届いた通報' : 'ローカルデモ'}</Badge>
+          <Badge>{isSupabaseMode && isAuthenticated ? '届いた通報' : 'デモ表示'}</Badge>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -514,7 +533,7 @@ export function AdminPage() {
                 <article className={`overflow-hidden rounded-[1.25rem] border border-theme-main/10 bg-theme-accent-soft/35 ${isExpanded ? 'shadow-sm shadow-theme-main/10' : ''}`} key={report.id}>
                   <button
                     aria-expanded={isExpanded}
-                    className="grid w-full gap-3 p-3 text-left transition hover:bg-white/35"
+                    className="grid w-full gap-2.5 p-3 text-left transition hover:bg-white/35"
                     onClick={() => toggleReport(report.id)}
                     type="button"
                   >
@@ -543,7 +562,7 @@ export function AdminPage() {
 
                   {isExpanded ? (
                     <div className="space-y-3 border-t border-white/70 p-3 pt-3">
-                      <div className="grid gap-2 rounded-[1rem] bg-white/60 p-3 text-xs font-bold leading-5 text-theme-muted">
+                      <div className="grid gap-2 rounded-[1rem] bg-white/60 p-3 text-xs font-bold leading-5 text-theme-muted sm:grid-cols-2">
                         <span className="break-words">通報された相手: {report.reportedUser?.name ?? report.reported_user_id}</span>
                         <span className="break-words">通報者: {report.reporter?.name ?? report.reporter_id}</span>
                         <span className="break-words">理由: {report.reason}</span>
@@ -586,7 +605,7 @@ export function AdminPage() {
                       </div>
 
                       <div className="rounded-[1rem] bg-theme-background/70 p-3">
-                        <p className="text-xs font-bold leading-5 text-theme-muted">対応済み・対応不要の通報だけアーカイブできます。履歴は残しながら通常の一覧から整理します。</p>
+                        <p className="text-xs font-bold leading-5 text-theme-muted">対応済み・対応不要の通報だけアーカイブできます。<br />履歴は残しながら通常の一覧から整理します。</p>
                         <div className="mt-2 flex flex-wrap justify-end gap-2">
                           <Button disabled={isUpdatingStatus || isSavingNote || isArchiving || !archiveAllowed} onClick={() => handleToggleReportArchive(report)} type="button" variant={isArchived ? 'secondary' : 'ghost'}>
                             {isArchived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
@@ -602,7 +621,7 @@ export function AdminPage() {
           </>
         ) : (
           <>
-            <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">ローカルデモでは通報済みユーザーの仮表示を維持します。対応状況の更新・管理メモ保存・アーカイブはログイン後に利用できます。</p>
+            <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">デモ表示では通報済みユーザーの仮表示を維持します。<br />対応状況の更新・管理メモ保存・アーカイブはログイン後に利用できます。</p>
             {reportedUsers.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ通報はありません。プロフィールまたは会話画面の通報ボタンから反映されます。</p> : null}
             {reportedUsers.map((reportedUser) => (
               <div className="flex items-center gap-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-2.5" key={reportedUser.id}>

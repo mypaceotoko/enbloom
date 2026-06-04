@@ -403,7 +403,7 @@ export function OnboardingPage() {
         <Card className="space-y-4">
           <SectionTitle icon={<Ticket size={18} />} label="Step 4" title="招待コード" />
           <Input
-            helperText={isSupabaseMode ? '紹介者から受け取った招待コードを入力してください。正式参加には必須です。入力値は保存前に大文字化します。' : 'ローカルデモでは任意です。MYPACE-2026 のようなサンプルコードも入力できます。'}
+            helperText={isSupabaseMode ? '紹介者から受け取った招待コードを入力してください。正式参加には必須です。入力値は保存前に大文字化します。' : 'デモ表示では任意です。MYPACE-2026 のようなサンプルコードも入力できます。'}
             label="招待コード"
             name="inviteCode"
             onChange={(event) => updateField('inviteCode', event.target.value.toUpperCase())}
@@ -461,4 +461,3 @@ function ValidationSummary({ compact = false, message, missingMessages }: { comp
     </div>
   );
 }
-

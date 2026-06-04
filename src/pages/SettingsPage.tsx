@@ -63,14 +63,21 @@ export function SettingsPage() {
     <PageShell description="通知・活動管理・テーマをまとめて確認できます。" eyebrow="Settings" title="設定">
       {!isSupabaseMode || !isAuthenticated ? (
         <div className="rounded-full border border-theme-main/15 bg-theme-card/80 px-3 py-1.5 text-center text-[11px] font-black text-theme-main-dark shadow-sm">
-          ローカルデモ
+          デモ表示
         </div>
       ) : null}
 
       {notice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{notice}</div> : null}
 
-      <SettingsLink body="登録したプロフィールを確認・編集できます。" icon={<UserRound size={18} />} onClick={() => navigate('/my-profile')} title="マイプロフィール" />
-      <SettingsLink body={`現在のテーマ: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigate('/settings/theme')} title="テーマカラー" />
+      <section className="space-y-3">
+        <div className="px-1">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Profile & theme</p>
+          <h2 className="text-lg font-black text-theme-text">基本設定</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">プロフィールと見た目を整えられます。</p>
+        </div>
+        <SettingsLink body="プロフィールを確認・編集できます。" icon={<UserRound size={18} />} onClick={() => navigate('/my-profile')} title="マイプロフィール" />
+        <SettingsLink body={`現在のテーマ: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigate('/settings/theme')} title="テーマカラー" />
+      </section>
 
       <section className="space-y-3">
         <div className="px-1">
@@ -92,18 +99,33 @@ export function SettingsPage() {
           <h2 className="text-lg font-black text-theme-text">安心・運営</h2>
           <p className="mt-1 text-xs leading-5 text-theme-muted">安心して使うためのガイドや管理機能を確認できます。</p>
         </div>
-        <SettingsLink body="ConnectBloomを安心して使うためのルールとヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigate('/safety')} title="安心ガイド" />
-        <SettingsLink body="テスト時に確認してほしい流れと、フィードバックの送り方をまとめています。" icon={<ClipboardCheck size={18} />} onClick={() => navigate('/test-guide')} title="テスターガイド" />
-        <SettingsLink body="ConnectBloomを使うための基本ルールを確認できます。" icon={<FileText size={18} />} onClick={() => navigate('/terms')} title="利用規約" />
-        <SettingsLink body="扱う情報と使い方について確認できます。" icon={<LockKeyhole size={18} />} onClick={() => navigate('/privacy')} title="プライバシーポリシー" />
+        <SettingsLink body="ルールと安心して使うためのヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigate('/safety')} title="安心ガイド" />
         <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigate('/blocked-users')} title="ブロック中のユーザー" />
         <SettingsLink body="βテスター向けの招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigate('/admin')} title="招待コード管理" />
         <SettingsLink body="届いた通報の確認・対応を管理画面で行えます。" icon={<Flag size={18} />} onClick={() => navigate('/admin')} title="通報管理" />
       </section>
 
-      <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語以外の表示は今後対応予定です。" />
-      <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲は今後対応予定です。" />
-      <Placeholder icon={<ShieldCheck size={18} />} title="安心サポート設定" body="困った時のサポート導線は今後対応予定です。" />
+      <section className="space-y-3">
+        <div className="px-1">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Guide & policy</p>
+          <h2 className="text-lg font-black text-theme-text">ガイド・規約</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">使い方と大切なルールを確認できます。</p>
+        </div>
+        <SettingsLink body="確認してほしい流れとフィードバック方法をまとめています。" icon={<ClipboardCheck size={18} />} onClick={() => navigate('/test-guide')} title="テスターガイド" />
+        <SettingsLink body="ConnectBloomを使うための基本ルールです。" icon={<FileText size={18} />} onClick={() => navigate('/terms')} title="利用規約" />
+        <SettingsLink body="扱う情報と使い方について確認できます。" icon={<LockKeyhole size={18} />} onClick={() => navigate('/privacy')} title="プライバシーポリシー" />
+      </section>
+
+      <section className="space-y-3">
+        <div className="px-1">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Coming soon</p>
+          <h2 className="text-lg font-black text-theme-text">今後対応予定</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">β版では表示のみで、現在は変更できません。</p>
+        </div>
+        <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語で表示しています。英語切り替えは今後対応予定です。" />
+        <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介経路の見せ方は今後調整予定です。" />
+        <Placeholder icon={<ShieldCheck size={18} />} title="安心サポート設定" body="ブロック・通報・安心ガイドを中心に運用しています。詳細設定は今後対応予定です。" />
+      </section>
 
       <Card className="space-y-3 border-white/40 bg-theme-card/72 py-3 shadow-sm">
         <div className="flex gap-2.5">

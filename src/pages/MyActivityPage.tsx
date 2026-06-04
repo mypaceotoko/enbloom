@@ -116,7 +116,7 @@ export function MyActivityPage() {
           <div className="flex items-start gap-3">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-theme-main text-white"><Sparkles size={20} /></span>
             <div>
-              <Badge className="bg-theme-main text-white">通知センター Phase 1.5</Badge>
+              <Badge className="bg-theme-main text-white">通知センター</Badge>
               <h2 className="mt-2 text-xl font-black tracking-[-0.03em] text-theme-text">最近の動き</h2>
               <p className="mt-1 text-[13px] leading-6 text-theme-muted">通知・募集・参加希望・会話導線を、スマホで迷わず確認できる場所です。</p>
             </div>
@@ -127,7 +127,7 @@ export function MyActivityPage() {
       {!canUseSupabaseActivity ? (
         <Card className="space-y-3 border-theme-main/10 bg-theme-card/84 shadow-sm">
           <p className="text-sm font-black text-theme-text">ログインするとマイアクティビティを確認できます</p>
-          <p className="text-xs leading-5 text-theme-muted">localStorageデモ中、またはSupabase未接続時はデモ用カードとして件数0で表示します。</p>
+          <p className="text-xs leading-5 text-theme-muted">ログイン前は、デモ表示として件数0で表示します。</p>
           <Button className="w-full" onClick={() => navigate('/login')} variant="secondary">ログインへ</Button>
         </Card>
       ) : null}

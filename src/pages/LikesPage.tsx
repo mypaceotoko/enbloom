@@ -79,14 +79,14 @@ export function LikesPage() {
   }, [useSupabaseLikes, user]);
 
   return (
-    <PageShell description={useSupabaseLikes ? 'Supabase likes テーブルから、送った「話してみたい」と届いた「話してみたい」を表示します。' : '送った「話してみたい」と、相手から届いている風のダミー話してみたいをlocalStorage状態で表示します。'} eyebrow="Talk" title="話してみたい">
+    <PageShell description={useSupabaseLikes ? '送った「話してみたい」と届いた「話してみたい」を表示します。' : '送った「話してみたい」と、相手から届いているサンプル表示を確認できます。'} eyebrow="Talk" title="話してみたい">
       <Card className="space-y-2.5 bg-theme-accent-soft/45 shadow-sm">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-black text-theme-text">{useSupabaseLikes ? 'Supabase保存中' : 'ローカルデモ'}</p>
+          <p className="text-sm font-black text-theme-text">{useSupabaseLikes ? '送信済み' : 'デモ表示'}</p>
           {loading ? <Badge>取得中</Badge> : <Badge><Heart size={12} />送信</Badge>}
         </div>
         <p className="text-xs font-bold leading-5 text-theme-muted">
-          {useSupabaseLikes ? '送受信した話してみたいはログイン中のアカウントに紐づいて保存され、リロード後も残ります。コネクト済みのご縁は会話へ進めます。' : 'Supabase未接続・未ログインの場合は従来通りlocalStorageデモを表示します。'}
+          {useSupabaseLikes ? '送受信した話してみたいはログイン中のアカウントに保存され、リロード後も残ります。コネクト済みのご縁は会話へ進めます。' : 'ログイン前はデモ表示で動きを確認できます。'}
         </p>
       </Card>
 

@@ -71,7 +71,7 @@ export function RoomsPage() {
 
       {!canUseSupabaseRooms ? (
         <Card className="space-y-2">
-          <Badge>ローカルデモ</Badge>
+          <Badge>デモ表示</Badge>
           <p className="text-sm font-bold text-theme-text">ログインするとルームで会話できます。</p>
           <p className="text-sm leading-6 text-theme-muted">ログイン前でも、公式2ルームの一覧を確認できます。</p>
         </Card>

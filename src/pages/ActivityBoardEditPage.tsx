@@ -173,9 +173,9 @@ export function ActivityBoardEditPage() {
 
       {!useSupabaseBoard ? (
         <Card className="space-y-2">
-          <Badge>ローカルデモ</Badge>
+          <Badge>デモ表示</Badge>
           <p className="text-sm font-bold text-theme-text">ログインすると自分の募集を編集できます</p>
-          <p className="text-sm leading-6 text-theme-muted">Supabase未接続・未ログイン時は、募集編集の保存は行いません。</p>
+          <p className="text-sm leading-6 text-theme-muted">ログイン前は、募集編集の保存は行いません。</p>
         </Card>
       ) : null}
 

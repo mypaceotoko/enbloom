@@ -72,9 +72,9 @@ export function ActivityBoardNewPage() {
 
       {!canCreate ? (
         <Card className="space-y-2">
-          <Badge>ローカルデモ</Badge>
+          <Badge>デモ表示</Badge>
           <p className="text-sm font-bold text-theme-text">ログインすると募集を投稿できます。</p>
-          <p className="text-sm leading-6 text-theme-muted">Supabase未接続・未ログイン時は、デモ募集の一覧と詳細を見られます。</p>
+          <p className="text-sm leading-6 text-theme-muted">ログイン前は、デモ募集の一覧と詳細を見られます。</p>
         </Card>
       ) : null}
 
@@ -82,7 +82,7 @@ export function ActivityBoardNewPage() {
         <Card className="space-y-2">
           <Badge>ルームから作成</Badge>
           <p className="text-sm font-bold text-theme-text">{sourceRoom.name}の会話から募集を作成しています。</p>
-          <p className="text-sm leading-6 text-theme-muted">作成後の募集には room_id={sourceRoom.slug} を保存し、詳細ページでルーム由来の案内を表示します。</p>
+          <p className="text-sm leading-6 text-theme-muted">作成後の募集にはルーム由来の案内を表示します。</p>
         </Card>
       ) : null}
 

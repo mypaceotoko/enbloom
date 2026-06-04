@@ -182,7 +182,7 @@ export function RoomDetailPage() {
 
       {!canUseSupabaseRooms ? (
         <Card className="space-y-2">
-          <Badge>ローカルデモ</Badge>
+          <Badge>デモ表示</Badge>
           <p className="text-sm font-bold text-theme-text">ログインするとルームで会話できます。</p>
           <p className="text-sm leading-6 text-theme-muted">未ログイン時はルームの雰囲気を確認できます。</p>
         </Card>

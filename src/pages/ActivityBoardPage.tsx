@@ -49,7 +49,7 @@ export function ActivityBoardPage() {
     async function loadPosts() {
       if (!useSupabaseBoard) {
         setPosts(mockActivityPosts);
-        setNotice('ローカルデモでは募集の一覧・詳細を確認できます。ログインすると募集を投稿できます。');
+        setNotice('デモ表示では募集の一覧・詳細を確認できます。ログインすると募集を投稿できます。');
         return;
       }
 

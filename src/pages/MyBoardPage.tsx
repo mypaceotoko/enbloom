@@ -44,7 +44,7 @@ export function MyBoardPage() {
 
       if (!useSupabaseBoard) {
         setPosts(mockActivityPosts.slice(0, 1).map((post) => ({ ...post, post_id: post.id })));
-        setNotice('ローカルデモではサンプル募集を表示しています。ログインすると自分の募集を管理できます。');
+        setNotice('デモ表示ではサンプル募集を表示しています。ログインすると自分の募集を管理できます。');
         return;
       }
 

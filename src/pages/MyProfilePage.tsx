@@ -132,7 +132,7 @@ export function MyProfilePage() {
 
   async function handlePhotoUpload() {
     if (!isSupabaseMode || !isAuthenticated) {
-      setPhotoNotice('プロフィール画像アップロードはSupabase接続時に利用できます。');
+      setPhotoNotice('プロフィール画像アップロードはログイン後に利用できます。');
       return;
     }
 
@@ -224,7 +224,7 @@ export function MyProfilePage() {
     <PageShell description={<SentenceLines text="プロフィールを確認・編集できます。一緒にやりたいことや、話してみたいテーマを整えておきましょう。" />} eyebrow="My Profile" title="マイプロフィール">
       <Card className="space-y-3.5">
         {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
-        {!isSupabaseMode || !isAuthenticated ? <Badge className="w-fit">ローカルデモ</Badge> : null}
+        {!isSupabaseMode || !isAuthenticated ? <Badge className="w-fit">デモ表示</Badge> : null}
         <div className="flower-gradient rounded-[1.15rem] p-3">
           <div className="rounded-[1rem] bg-white/66 p-3 shadow-sm backdrop-blur">
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center">
@@ -234,7 +234,7 @@ export function MyProfilePage() {
                   <p className="text-sm font-black text-theme-text">プロフィール画像</p>
                   <p className="mt-1 text-xs font-bold leading-5 text-theme-muted">安心して雰囲気が伝わる、上品で自然な1枚を登録できます。</p>
                 </div>
-                {!isSupabaseMode || !isAuthenticated ? <Badge className="w-fit">Supabase接続時に利用できます</Badge> : null}
+                {!isSupabaseMode || !isAuthenticated ? <Badge className="w-fit">ログイン後に利用できます</Badge> : null}
                 {photoNotice ? <p className="rounded-xl bg-theme-accent-soft/70 px-3 py-2 text-xs font-bold text-theme-text">{photoNotice}</p> : null}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <label className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-theme-sky/30 bg-theme-card px-4 py-2 text-sm font-black text-theme-main-dark shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
