@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
+import { clearPendingInviteCode, getPendingInviteCode } from '../lib/inviteSession';
 import { upsertMyProfile } from '../lib/profileApi';
 import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile } from '../types/user';
 
@@ -66,7 +67,7 @@ export function OnboardingPage() {
     bio: currentUser.bio,
     datingTemperature: currentUser.datingTemperature || DEFAULT_DATING_TEMPERATURE,
     interests: currentUser.interests,
-    inviteCode: '',
+    inviteCode: getPendingInviteCode(),
   });
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -280,6 +281,12 @@ export function OnboardingPage() {
           scrollToStep('inviteCode');
           return;
         }
+        await upsertMyProfile({
+          id: user.id,
+          invited_by: inviteUse.introducerId,
+          invite_code_used: inviteUse.code,
+        });
+        clearPendingInviteCode();
         setStatusMessage('紹介情報を保存しました。今日のつながりへ進みます。');
       }
 
@@ -305,7 +312,7 @@ export function OnboardingPage() {
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/78 p-3.5 backdrop-blur">
           <div className="flex items-center gap-1.5 text-sm font-black text-theme-main-dark"><Flower2 size={18} />まずは、あなたのプロフィールを作りましょう</div>
-          <p className="mt-2 text-[13px] leading-6 text-theme-muted">ここで入力した内容は、あなたのマイプロフィールに保存されます。まだ公開前のため、今はテスト入力でOKです。</p>
+          <p className="mt-2 text-[13px] leading-6 text-theme-muted">ここで入力した内容は、あなたのマイプロフィールに保存されます。正式参加のプロフィールとして保存されます。</p>
           <p className="mt-1 text-[13px] leading-6 text-theme-muted">登録後は今日のつながりへ進みます。プロフィールは、あとから設定やマイプロフィールで確認・編集できます。</p>
           <div className="mt-3 grid grid-cols-4 gap-2">
             {steps.map((step, index) => (
@@ -389,7 +396,7 @@ export function OnboardingPage() {
           <SectionTitle icon={<Ticket size={18} />} label="Step 4" title="招待コード" />
           <StepErrors errors={[validationErrors.inviteCode]} />
           <Input
-            helperText={isSupabaseMode ? '紹介者から受け取った招待コードを入力してください。Supabase接続時は必須です。入力値は保存前に大文字化します。' : 'ローカルデモでは任意です。MYPACE-2026 のようなテストコードも入力できます。'}
+            helperText={isSupabaseMode ? '紹介者から受け取った招待コードを入力してください。正式参加には必須です。入力値は保存前に大文字化します。' : 'ローカルデモでは任意です。MYPACE-2026 のようなサンプルコードも入力できます。'}
             label="招待コード"
             name="inviteCode"
             onChange={(event) => updateField('inviteCode', event.target.value.toUpperCase())}

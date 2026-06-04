@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { RequireOfficialMember } from './components/RequireOfficialMember';
 import { AdminPage } from './pages/AdminPage';
 import { ActivityBoardDetailPage } from './pages/ActivityBoardDetailPage';
 import { ActivityBoardEditPage } from './pages/ActivityBoardEditPage';
@@ -39,30 +40,32 @@ export default function App() {
         <Route element={<LoginPage />} path="login" />
         <Route element={<AuthCallbackPage />} path="auth/callback" />
         <Route element={<OnboardingPage />} path="onboarding" />
-        <Route element={<HomePage />} path="home" />
-        <Route element={<DiscoverPage />} path="discover" />
-        <Route element={<ActivityBoardPage />} path="board" />
-        <Route element={<RoomsPage />} path="rooms" />
-        <Route element={<RoomDetailPage />} path="rooms/:roomId" />
-        <Route element={<ActivityBoardNewPage />} path="board/new" />
-        <Route element={<ActivityBoardEditPage />} path="board/:postId/edit" />
-        <Route element={<ActivityBoardDetailPage />} path="board/:postId" />
-        <Route element={<MyBoardPage />} path="my-board" />
-        <Route element={<MyActivityPage />} path="my-activity" />
-        <Route element={<MyInterestsPage />} path="my-interests" />
-        <Route element={<ProfileDetailPage />} path="profile/:id" />
-        <Route element={<LikesPage />} path="likes" />
-        <Route element={<MatchesPage />} path="matches" />
-        <Route element={<MessagesPage />} path="messages/:matchId" />
-        <Route element={<MyProfilePage />} path="my-profile" />
-        <Route element={<NotificationsPage />} path="notifications" />
-        <Route element={<SettingsPage />} path="settings" />
+        <Route element={<RequireOfficialMember />}>
+          <Route element={<HomePage />} path="home" />
+          <Route element={<DiscoverPage />} path="discover" />
+          <Route element={<ActivityBoardPage />} path="board" />
+          <Route element={<RoomsPage />} path="rooms" />
+          <Route element={<RoomDetailPage />} path="rooms/:roomId" />
+          <Route element={<ActivityBoardNewPage />} path="board/new" />
+          <Route element={<ActivityBoardEditPage />} path="board/:postId/edit" />
+          <Route element={<ActivityBoardDetailPage />} path="board/:postId" />
+          <Route element={<MyBoardPage />} path="my-board" />
+          <Route element={<MyActivityPage />} path="my-activity" />
+          <Route element={<MyInterestsPage />} path="my-interests" />
+          <Route element={<ProfileDetailPage />} path="profile/:id" />
+          <Route element={<LikesPage />} path="likes" />
+          <Route element={<MatchesPage />} path="matches" />
+          <Route element={<MessagesPage />} path="messages/:matchId" />
+          <Route element={<MyProfilePage />} path="my-profile" />
+          <Route element={<NotificationsPage />} path="notifications" />
+          <Route element={<BlockedUsersPage />} path="blocked-users" />
+          <Route element={<SettingsPage />} path="settings" />
+        </Route>
         <Route element={<SettingsThemePage />} path="settings/theme" />
         <Route element={<TestGuidePage />} path="test-guide" />
         <Route element={<TermsPage />} path="terms" />
         <Route element={<PrivacyPage />} path="privacy" />
         <Route element={<SafetyPage />} path="safety" />
-        <Route element={<BlockedUsersPage />} path="blocked-users" />
         <Route element={<AdminPage />} path="admin" />
         <Route element={<NotFoundPage />} path="*" />
       </Route>

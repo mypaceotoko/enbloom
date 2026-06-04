@@ -12,9 +12,9 @@ export function LandingPage() {
       <div className="pointer-events-none absolute bottom-12 left-1/2 size-72 -translate-x-1/2 rounded-full bg-theme-cyan/10 blur-3xl" />
 
       <div className="relative mx-auto flex max-w-md flex-col gap-4">
-        <header className="flex items-center justify-between rounded-full border border-white/60 bg-theme-card/72 px-3.5 py-2.5 shadow-lg shadow-theme-sky/10 backdrop-blur">
-          <BrandLogo className="max-w-[210px]" imageClassName="max-h-12" variant="default" />
-          <span className="rounded-full bg-theme-accent-soft px-3 py-1 text-[11px] font-black text-theme-main-dark">招待制</span>
+        <header className="flex items-center justify-center gap-2 rounded-full border border-white/60 bg-theme-card/72 px-3 py-2.5 shadow-lg shadow-theme-sky/10 backdrop-blur">
+          <BrandLogo className="min-w-0 max-w-[250px] flex-1 justify-center" imageClassName="max-h-[3.75rem] w-full" variant="default" />
+          <span className="shrink-0 rounded-full bg-theme-accent-soft px-2.5 py-1 text-[10px] font-black text-theme-main-dark sm:px-3 sm:text-[11px]">招待制</span>
         </header>
 
         <div className="flower-gradient soft-shadow relative overflow-hidden rounded-[1.7rem] p-1">
@@ -38,15 +38,15 @@ export function LandingPage() {
               <span className="flex items-center gap-2"><LockKeyhole className="text-theme-main-dark" size={17} />活動・共創を軸にしたつながり体験</span>
             </div>
             <div className="grid gap-2">
-              <Link to="/home">
-                <Button className="w-full">
-                  デモで見る
+              <Link to="/login">
+                <Button className="min-h-12 w-full text-sm">
+                  招待コードで始める
                   <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link to="/login">
-                <Button className="w-full bg-gradient-to-r from-theme-yellow/90 via-theme-cyan/55 to-theme-sky/70 text-theme-main-dark shadow-theme-sky/20 hover:saturate-110" variant="secondary">
-                  招待コードで始める
+              <Link to="/home">
+                <Button className="w-full bg-theme-card/85 text-theme-main-dark ring-1 ring-theme-sky/20" variant="ghost">
+                  デモで雰囲気を見る
                 </Button>
               </Link>
             </div>
