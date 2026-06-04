@@ -5,6 +5,8 @@ import { Card } from '../components/Card';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { clearDemoMode } from '../lib/demoSession';
+import { getPendingInviteCode } from '../lib/inviteSession';
 import { ensureProfileForUser, profileRowToCurrentUser } from '../lib/profileApi';
 
 export function AuthCallbackPage() {
@@ -29,8 +31,16 @@ export function AuthCallbackPage() {
           throw new Error('ログインセッションを確認できませんでした。');
         }
 
+        clearDemoMode();
         const profile = await ensureProfileForUser(session.user);
         const currentUserProfile = profileRowToCurrentUser(profile, themeId);
+        const hasOfficialMemberAccess = Boolean(profile.onboarding_completed && (profile.invited_by || profile.invite_code_used));
+        if (getPendingInviteCode() && !hasOfficialMemberAccess) {
+          saveCurrentUserProfile(currentUserProfile);
+          navigate('/onboarding', { replace: true });
+          return;
+        }
+
         if (profile.onboarding_completed) {
           completeOnboarding(currentUserProfile);
           navigate('/home', { replace: true });

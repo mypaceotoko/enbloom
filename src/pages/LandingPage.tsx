@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { BrandLogo } from '../components/BrandLogo';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { enableDemoMode } from '../lib/demoSession';
 
 export function LandingPage() {
   return (
@@ -44,7 +45,7 @@ export function LandingPage() {
                   <ArrowRight size={18} />
                 </Button>
               </Link>
-              <Link to="/home">
+              <Link onClick={enableDemoMode} to="/home">
                 <Button className="w-full bg-theme-card/85 text-theme-main-dark ring-1 ring-theme-sky/20" variant="ghost">
                   デモで雰囲気を見る
                 </Button>
