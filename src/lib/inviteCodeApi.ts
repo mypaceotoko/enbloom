@@ -69,7 +69,7 @@ function pickRpcResult(data: unknown): InviteCodeRpcResult | null {
 }
 
 function formatSupabaseInviteError(message: string) {
-  if (message.includes('INVITE_CODE_NOT_FOUND')) return '招待コードが見つかりません。コードを確認してもう一度お試しください。';
+  if (message.includes('INVITE_CODE_NOT_FOUND')) return '招待コードを確認できませんでした。入力内容をもう一度お確かめください。';
   if (message.includes('INVITE_CODE_INACTIVE')) return 'この招待コードは現在利用できません。紹介者に確認してください。';
   if (message.includes('INVITE_CODE_EXPIRED')) return 'この招待コードは期限切れです。新しいコードを紹介者に確認してください。';
   if (message.includes('INVITE_CODE_LIMIT_REACHED')) return 'この招待コードは利用上限に達しています。紹介者に確認してください。';
@@ -77,7 +77,7 @@ function formatSupabaseInviteError(message: string) {
   if (message.includes('INVITE_CODE_SELF_USE_NOT_ALLOWED')) return '自分で作成した招待コードは利用できません。別の紹介者のコードを入力してください。';
   if (message.includes('INVITE_CODE_AUTH_REQUIRED')) return 'ログイン後に招待コードを利用してください。';
   if (message.includes('duplicate key')) return '紹介情報はすでに保存されています。画面を更新してもう一度お試しください。';
-  return message || '招待コードの確認に失敗しました。少し時間を置いてもう一度お試しください。';
+  return message || '招待コードを確認できませんでした。入力内容をもう一度お確かめください。';
 }
 
 function inviteErrorFromRpc(result: InviteCodeRpcResult | null, fallback: string) {
@@ -93,12 +93,12 @@ export async function validateInviteCode(code: string): Promise<InviteCodeValida
     invite_code: normalizedCode,
   });
 
-  if (error) return { ok: false, error: `招待コードの確認に失敗しました。${formatSupabaseInviteError(error.message)}` };
+  if (error) return { ok: false, error: formatSupabaseInviteError(error.message) };
 
   const result = pickRpcResult(data);
   const isSuccess = result?.success === true || result?.ok === true;
   if (!isSuccess || !result?.invite_code) {
-    return { ok: false, error: `招待コードの確認に失敗しました。${inviteErrorFromRpc(result, 'コードを確認してもう一度お試しください。')}` };
+    return { ok: false, error: inviteErrorFromRpc(result, '招待コードを確認できませんでした。入力内容をもう一度お確かめください。') };
   }
 
   const inviteCode = result.invite_code;

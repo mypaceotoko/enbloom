@@ -45,7 +45,7 @@ export function LoginPage() {
             <h1 className="text-xl font-black">招待されたご縁から始める</h1>
             <p className="text-[13px] leading-5 text-theme-muted">
               {isSupabaseMode
-                ? 'GoogleログインでConnectBloomを始めます。招待コードは次フェーズで本検証します。'
+                ? 'ConnectBloomは現在β版です。招待コードを受け取った方のみ利用できます。'
                 : 'Supabase未接続のため、今まで通りlocalStorageのデモ体験で始められます。'}
             </p>
           </div>
@@ -54,7 +54,7 @@ export function LoginPage() {
             <span className="flex size-5 items-center justify-center rounded-full bg-theme-main text-white text-xs font-black">G</span>
             {submitting ? 'Googleログインへ移動中...' : isSupabaseMode ? 'Googleでログイン' : 'Googleでログイン（デモ）'}
           </Button>
-          <Input label="招待コード" name="inviteCode" onChange={(event) => setInviteCode(event.target.value)} placeholder="CONNECTBLOOM-XXXX" value={inviteCode} />
+          <Input helperText="招待コードを入力して、β版のConnectBloomに参加できます。" label="招待コード" name="inviteCode" onChange={(event) => setInviteCode(event.target.value)} placeholder="招待コードを入力" value={inviteCode} />
           <Button className="w-full" onClick={() => navigate('/onboarding')}>
             デモで始める
           </Button>

@@ -100,7 +100,7 @@ export function AdminPage() {
     return `${inviteCodes.length}件`;
   }, [inviteCodes.length, isAuthenticated, isSupabaseMode]);
   const adminCards = [
-    { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: '紹介者に紐づいた無制限利用コードの発行・利用状況・期限管理です。' },
+    { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: 'βテスターに共有する招待コードの作成・確認・無効化を行います。' },
     { icon: UsersRound, title: 'ユーザー管理', count: `${mockUsers.length}人`, body: 'プロフィール確認とステータス管理のプレースホルダーです。' },
     { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: isSupabaseMode && isAuthenticated ? '安心してご縁を育てるため、通報内容・対応状況・管理メモを落ち着いて確認します。' : `ブロック ${blockedUserIds.length}件 / 通報 ${reportedUserIds.length}件のローカル集計です。` },
   ];
@@ -384,7 +384,7 @@ export function AdminPage() {
   }
 
   return (
-    <PageShell description="紹介制・信頼ベースを運用するための管理画面です。ログイン中ユーザーは自分用の招待コードを発行できます。" eyebrow="Admin" title="管理画面">
+    <PageShell description="紹介制・信頼ベースを運用するための管理画面です。βテスター用の招待コードを作成・確認できます。" eyebrow="Admin" title="管理画面">
       {adminCards.map((item) => {
         const Icon = item.icon;
         return <Card className="space-y-3" key={item.title}><div className="flex items-center justify-between"><span className="flex items-center gap-3"><span className="flex size-12 items-center justify-center rounded-2xl bg-theme-accent-soft text-theme-main-dark"><Icon size={22} /></span><span className="font-black">{item.title}</span></span><Badge>{item.count}</Badge></div><p className="text-sm leading-6 text-theme-muted">{item.body}</p></Card>;
@@ -393,8 +393,8 @@ export function AdminPage() {
       <Card className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-black">招待コード作成</h2>
-            <p className="mt-1 text-sm leading-6 text-theme-muted">デフォルトは無制限です。MYPACE-2026 のようなコードを作ると、同じコードを何人でも利用できます。右上のボタンでコード候補を自動生成できます。自分で分かりやすいコードを手入力してもOKです。</p>
+            <h2 className="font-black">βテスター用の招待コード</h2>
+            <p className="mt-1 text-sm leading-6 text-theme-muted">少人数テスターに共有する招待コードを作成・確認できます。右上のボタンでコード候補を自動生成できます。招待コードは信頼できるテスターにだけ共有してください。</p>
           </div>
           <Button aria-label="招待コード候補を生成" className="shrink-0 px-3" disabled={inviteLoading} onClick={handleGenerateInviteCodeCandidate} title="招待コード候補を生成" type="button" variant="secondary">
             <RefreshCw size={15} />
@@ -408,7 +408,7 @@ export function AdminPage() {
         {inviteNotice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{inviteNotice}</div> : null}
 
         <form className="space-y-3" onSubmit={handleCreateInviteCode}>
-          <Input helperText="英数字・ハイフン推奨。保存時に大文字化します。自動生成候補は保存ボタンを押すまで登録されません。" label="code" name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="MYPACE-2026" value={form.code} />
+          <Input helperText="テスターにそのまま渡す招待コードです。英数字・ハイフン推奨で、保存時に大文字化します。" label="招待コード" name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="MYPACE-2026" value={form.code} />
           <div className="rounded-[1.15rem] bg-theme-background/70 p-3">
             <label className="flex items-center gap-2 text-sm font-black text-theme-text">
               <input checked={form.unlimited} className="size-4 accent-theme-main" onChange={(event) => updateForm('unlimited', event.target.checked)} type="checkbox" />
@@ -429,9 +429,15 @@ export function AdminPage() {
         </form>
       </Card>
 
+      <Card className="space-y-2 border-theme-main/15 bg-theme-accent-soft/55 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">テスターに共有する時の案内</p>
+        <p className="text-sm leading-6 text-theme-muted">「ConnectBloomは、共通の興味から仲間とつながる紹介制コネクトSNSです。まだβ版なので、気づいた点はスクリーンショットで教えてください。」</p>
+      </Card>
+
       <Card className="space-y-3">
-        <h2 className="font-black">自分が作成した招待コード</h2>
-        {inviteCodes.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ招待コードはありません。まずは MYPACE-2026 を無制限で作成して、紹介ルートを用意してください。</p> : null}
+        <h2 className="font-black">作成済みの招待コード</h2>
+        <p className="text-sm leading-6 text-theme-muted">有効なコードをテスターに共有してください。利用状況を見ながら、不要になったコードは削除または無効化できます。</p>
+        {inviteCodes.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ招待コードはありません。まずはβテスター向けのコードを1つ作成してください。</p> : null}
         {inviteCodes.map((inviteCode) => {
           const isManaging = managingInviteCodeId === inviteCode.id;
           const canDelete = inviteCode.is_active && inviteCode.used_count === 0;
