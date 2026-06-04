@@ -49,9 +49,9 @@ export function BrandLogo({ variant = 'default', showText = true, className = ''
         )}
         decoding="async"
         draggable={false}
-        height={627}
+        height={asset.height}
         src={asset.sources[0]}
-        width={2508}
+        width={asset.width}
       />
     </span>
   );
