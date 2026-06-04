@@ -20,6 +20,18 @@ function parseInterestTags(text: string) {
   return Array.from(new Set(text.split(/[、,]/).map((interest) => interest.trim()).filter(Boolean)));
 }
 
+function SentenceLines({ text }: { text: string }) {
+  const lines = text.split(/(?<=。)/).map((line) => line.trim()).filter(Boolean);
+
+  return (
+    <>
+      {lines.map((line) => (
+        <span className="block" key={line}>{line}</span>
+      ))}
+    </>
+  );
+}
+
 export function MyProfilePage() {
   const { currentUser, saveCurrentUserProfile } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
@@ -209,7 +221,7 @@ export function MyProfilePage() {
   }
 
   return (
-    <PageShell description={isSupabaseMode && isAuthenticated ? 'Googleログイン後に作成したプロフィールを確認・編集できます。変更内容はSupabase profilesに保存され、表示安定のためlocalStorageにも反映します。' : '初回プロフィール登録や編集で保存した内容を確認・編集できます。変更内容はlocalStorageに保存されます。'} eyebrow="My Profile" title="マイプロフィール">
+    <PageShell description={<SentenceLines text="プロフィールを確認・編集できます。一緒にやりたいことや、話してみたいテーマを整えておきましょう。" />} eyebrow="My Profile" title="マイプロフィール">
       <Card className="space-y-3.5">
         {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
         {!isSupabaseMode || !isAuthenticated ? <Badge className="w-fit">ローカルデモ</Badge> : null}
@@ -264,14 +276,14 @@ export function MyProfilePage() {
           </button>
           <span className="block text-xs font-medium leading-5 text-theme-muted">どんな距離感で話したいかを4つの候補から選べます。</span>
           {showDatingTemperatureSuggestions ? (
-            <div className="absolute left-0 right-0 z-30 overflow-hidden rounded-[1.35rem] border border-white/10 bg-neutral-950/95 p-1.5 shadow-2xl shadow-neutral-950/30 backdrop-blur" id="dating-temperature-options" role="listbox" aria-label="つながり方のスタンス候補">
+            <div className="absolute left-0 right-0 z-30 overflow-hidden rounded-[1.35rem] border border-white/15 bg-neutral-900/82 p-1.5 shadow-2xl shadow-neutral-950/20 backdrop-blur-md" id="dating-temperature-options" role="listbox" aria-label="つながり方のスタンス候補">
               <div className="max-h-72 overflow-y-auto py-1">
                 {suggestedDatingTemperatures.map((datingTemperature) => {
                   const selected = form.datingTemperature === datingTemperature;
                   return (
                     <button
                       aria-selected={selected}
-                      className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-3 text-left text-sm font-bold transition active:scale-[0.98] ${selected ? 'bg-white text-neutral-950' : 'text-white hover:bg-white/10'}`}
+                      className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-left text-sm font-bold transition active:scale-[0.98] ${selected ? 'bg-white/95 text-neutral-950 shadow-sm' : 'text-white hover:bg-white/15'}`}
                       key={datingTemperature}
                       onClick={() => handleSuggestedDatingTemperatureClick(datingTemperature)}
                       role="option"
@@ -287,13 +299,13 @@ export function MyProfilePage() {
           ) : null}
         </div>
         <Input helperText="興味のあることを読点やカンマで入力できます。候補タグをタップして追加もできます。" label="活動ジャンル / 興味タグ（読点区切り）" name="myInterests" onChange={(event) => setForm((current) => ({ ...current, interestsText: event.target.value }))} placeholder="AI、ブログ、音声配信、ゲーム制作、作業仲間" value={form.interestsText} />
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {suggestedInterestTags.map((tag) => {
             const selected = selectedInterests.includes(tag);
             return (
               <button
                 aria-label={`${tag}を活動ジャンル / 興味タグに追加`}
-                className={`min-h-8 rounded-full px-3 py-1 text-xs font-bold transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark ring-1 ring-theme-sky/30' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
+                className={`min-h-7 rounded-full px-2.5 py-0.5 text-[11px] font-bold leading-5 transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark ring-1 ring-theme-sky/30' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
                 key={tag}
                 onClick={() => handleSuggestedInterestClick(tag)}
                 type="button"
