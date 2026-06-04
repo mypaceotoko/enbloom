@@ -408,6 +408,19 @@ export async function getMyInterestedPostIds(userId: string): Promise<string[]> 
   return (data ?? []).map((row) => row.post_id as string);
 }
 
+
+export async function getMyActivityPostInterest(postId: string, userId: string): Promise<ActivityPostInterest | null> {
+  const { data, error } = await requireSupabaseClient()
+    .from('activity_post_interests')
+    .select(activityInterestColumns)
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+    .maybeSingle<ActivityPostInterest>();
+
+  if (error) throw error;
+  return data ?? null;
+}
+
 export async function getPostInterestCount(postId: string): Promise<number> {
   const counts = await getInterestCounts([postId]);
   return counts.get(postId) ?? 0;

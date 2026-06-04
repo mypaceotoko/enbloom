@@ -186,14 +186,14 @@ export function MyBoardPage() {
   }
 
   return (
-    <PageShell description="自分が投稿した募集と、届いた参加希望を管理できます。" eyebrow="My Activity Board" title="自分の募集">
+    <PageShell description="作成した募集を管理できます。" eyebrow="My Activity Board" title="自分の募集">
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
       {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-700">{error}</div> : null}
 
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/82 p-4 backdrop-blur">
           <Badge className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark"><UsersRound size={13} />紹介から広がるつながり</Badge>
-          <p className="mt-2 text-sm leading-6 text-theme-muted">小さく始める活動、共創テーマ、探している仲間を、募集単位で整理できます。</p>
+          <p className="mt-2 text-sm leading-6 text-theme-muted">参加希望が届いたら、詳細ページで承認できます。</p>
         </div>
       </Card>
 
@@ -217,10 +217,10 @@ export function MyBoardPage() {
               <Badge className="bg-theme-card shadow-sm">{getStatusLabel(post.status)}</Badge>
             </div>
             <div className="flex flex-wrap gap-2 text-xs font-bold text-theme-muted">
-              <span className="inline-flex items-center gap-1"><MapPin size={14} />{post.area || '活動エリア未設定'}</span>
-              <span className="inline-flex items-center gap-1"><CalendarDays size={14} />作成 {formatDate(post.created_at)}</span>
-              <span className="inline-flex items-center gap-1"><UsersRound size={14} />参加希望数 {post.interest_count}</span>
-              <span className="inline-flex items-center gap-1"><UsersRound size={14} />承認済み数 {post.accepted_count}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><MapPin size={14} />{post.area || '活動エリア未設定'}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><CalendarDays size={14} />作成 {formatDate(post.created_at)}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UsersRound size={14} />参加希望 {post.interest_count}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UsersRound size={14} />承認済み {post.accepted_count}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             {acceptedInterestsByPostId[post.id]?.length ? (
@@ -237,9 +237,9 @@ export function MyBoardPage() {
               <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-4 py-2 text-[13px] font-bold text-theme-text" to={`/board/${post.id}`}><Eye size={16} />詳細を見る</Link>
               <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-4 py-2 text-[13px] font-bold text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />管理する</Link>
               <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-4 py-2 text-[13px] font-bold text-theme-text" to={`/board/${post.id}/edit`}><Pencil size={16} />編集する</Link>
-              <Button disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={16} />募集を締め切る</Button>
-              <Button disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'open'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={16} />再開する</Button>
-              <Button disabled={!useSupabaseBoard || updatingPostId === post.id} onClick={() => void handleDelete(post)} variant="danger">{post.interest_count > 0 || post.accepted_count > 0 ? <Archive size={16} /> : <Trash2 size={16} />}削除する</Button>
+              <Button disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={16} />締切</Button>
+              <Button disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'open'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={16} />再開</Button>
+              <Button disabled={!useSupabaseBoard || updatingPostId === post.id} onClick={() => void handleDelete(post)} variant="danger">{post.interest_count > 0 || post.accepted_count > 0 ? <Archive size={16} /> : <Trash2 size={16} />}{post.interest_count > 0 || post.accepted_count > 0 ? 'アーカイブ' : '削除'}</Button>
             </div>
           </Card>
         ))}

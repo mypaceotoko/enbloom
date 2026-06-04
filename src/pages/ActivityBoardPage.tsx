@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Filter, MapPin, Plus, UsersRound } from 'lucide-react';
+import { CalendarDays, Eye, Filter, MapPin, Monitor, Plus, UsersRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { activityPostCategories, mockActivityPosts } from '../data/mockActivityPosts';
@@ -17,9 +16,21 @@ function formatDate(value: string | null) {
 }
 
 function getStatusLabel(status: string) {
-  if (status === 'closed') return '締切';
+  if (status === 'closed') return '締切済み';
   if (status === 'archived') return 'アーカイブ';
   return '募集中';
+}
+
+function getStatusClass(status: string) {
+  if (status === 'closed') return 'bg-slate-100 text-slate-600';
+  if (status === 'archived') return 'bg-orange-50 text-orange-700';
+  return 'bg-theme-main text-white';
+}
+
+function getModeLabel(mode: ActivityPostWithAuthor['mode']) {
+  if (mode === 'online') return 'オンライン';
+  if (mode === 'offline') return 'オフライン';
+  return 'ハイブリッド';
 }
 
 export function ActivityBoardPage() {
@@ -72,25 +83,26 @@ export function ActivityBoardPage() {
   }
 
   return (
-    <PageShell description="一緒にやりたいこと、話したいテーマ、探している仲間を投稿できます。" eyebrow="Activity Board" title="募集ボード">
+    <PageShell description="一緒にやりたいこと、話したいテーマ、探している仲間を見つけられます。" eyebrow="Activity Board" title="募集ボード">
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/82 p-4 backdrop-blur">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-2">
               <Badge className="bg-theme-main text-white"><UsersRound size={13} />紹介から広がるつながり</Badge>
-              <p className="text-sm leading-6 text-theme-muted">小さく始める活動、興味タグ、共創テーマから仲間を探せます。</p>
+              <p className="text-sm leading-6 text-theme-muted">活動仲間・趣味仲間・制作仲間を見つけて、気になる募集には参加希望を送れます。</p>
             </div>
-            <Button className="shrink-0" disabled={!useSupabaseBoard} onClick={() => { if (useSupabaseBoard) window.location.href = '/board/new'; }}>
-              <Plus size={16} />募集作成
-            </Button>
+            <Link className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/90 via-theme-cyan/55 to-theme-sky/70 px-4 py-2 text-[13px] font-black text-theme-main-dark shadow-lg shadow-theme-sky/20 transition active:scale-[0.98] ${useSupabaseBoard ? '' : 'pointer-events-none opacity-50'}`} to="/board/new">
+              <Plus size={16} />募集を作る
+            </Link>
           </div>
           {!useSupabaseBoard ? <p className="mt-3 text-xs font-bold text-theme-main-dark">ログインすると募集を投稿できます。</p> : null}
         </div>
       </Card>
 
-      <div className="flex flex-wrap justify-end gap-2 text-xs font-black">
-        <Link className="rounded-full bg-theme-card/86 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-board">自分の募集を見る</Link>
-        <Link className="rounded-full bg-theme-card/86 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-interests">参加希望した募集を見る</Link>
+      <div className="grid gap-2 text-xs font-black sm:grid-cols-3">
+        <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-card/90 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/board/new"><Plus size={15} />募集を作る</Link>
+        <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-card/90 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-board"><UsersRound size={15} />自分の募集</Link>
+        <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-card/90 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-interests"><Eye size={15} />参加希望した募集</Link>
       </div>
 
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
@@ -130,13 +142,15 @@ export function ActivityBoardPage() {
                 <Badge>{post.category}</Badge>
                 <h2 className="mt-2 text-lg font-black leading-tight text-theme-text">{post.title}</h2>
               </div>
-              <Badge className="bg-theme-card shadow-sm">{getStatusLabel(post.status)}</Badge>
+              <Badge className={getStatusClass(post.status)}>{getStatusLabel(post.status)}</Badge>
             </div>
             <div className="flex flex-wrap gap-2 text-xs font-bold text-theme-muted">
-              <span className="inline-flex items-center gap-1"><MapPin size={14} />{post.area || '活動エリア未設定'}</span>
-              <span className="inline-flex items-center gap-1"><CalendarDays size={14} />作成 {formatDate(post.created_at)}</span>
-              <span className="inline-flex items-center gap-1"><UsersRound size={14} />参加希望 {post.interest_count}件</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><MapPin size={14} />{post.area || '活動エリア未設定'}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><Monitor size={14} />{getModeLabel(post.mode)}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UsersRound size={14} />参加希望 {post.interest_count}件</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><CalendarDays size={14} />作成 {formatDate(post.created_at)}</span>
             </div>
+            {post.room_id ? <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-black text-theme-main-dark">ルームから生まれた募集</p> : null}
             {isOwnPost(post) ? (
               <div className="flex flex-wrap items-center gap-2 rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-black text-theme-main-dark">
                 <Badge className="bg-theme-main text-white">自分の募集</Badge>
@@ -147,7 +161,7 @@ export function ActivityBoardPage() {
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             <div className="flex items-center justify-between gap-3 border-t border-white/60 pt-3">
               <span className="text-xs font-bold text-theme-muted">投稿者: {post.author?.name ?? 'ConnectBloomユーザー'}</span>
-              <Link className="text-sm font-black text-theme-main-dark" to={`/board/${post.id}`}>詳細を見る</Link>
+              <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-4 py-2 text-sm font-black text-theme-main-dark" to={`/board/${post.id}`}>詳細を見る</Link>
             </div>
           </Card>
         ))}
