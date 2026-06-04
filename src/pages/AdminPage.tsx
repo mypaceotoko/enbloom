@@ -37,6 +37,7 @@ const reportStatusOptions: Array<{ value: ReportStatus; label: string }> = [
   { value: 'dismissed', label: '対応不要' },
 ];
 const inviteCodeCharacters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const connectBloomShareUrl = (import.meta.env.VITE_CONNECTBLOOM_URL ?? 'https://connect-bloom.vercel.app/').replace(/\/?$/, '/');
 
 function randomInt(max: number) {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
@@ -81,6 +82,7 @@ export function AdminPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
   const [copiedInviteCodeId, setCopiedInviteCodeId] = useState<string | null>(null);
+  const [copiedInviteMessageId, setCopiedInviteMessageId] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState('');
   const [inviteNotice, setInviteNotice] = useState('');
   const reportedUsers = mockUsers.filter((mockUser) => reportedUserIds.includes(mockUser.id));
@@ -146,6 +148,20 @@ export function AdminPage() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function buildInviteMessage(inviteCode: InviteCodeRow) {
+    return [
+      'ConnectBloomのβテスト招待コードです。',
+      '',
+      `招待コード: ${inviteCode.code}`,
+      '',
+      '以下のページから参加できます。',
+      connectBloomShareUrl,
+      '',
+      'ConnectBloomは、紹介から始まる招待制コネクトSNSです。',
+      '気づいた点があれば、スクリーンショットと一緒に共有してもらえると助かります。',
+    ].join('\n');
+  }
+
   async function handleCopyInviteCode(inviteCode: InviteCodeRow) {
     setInviteError('');
 
@@ -155,6 +171,18 @@ export function AdminPage() {
       window.setTimeout(() => setCopiedInviteCodeId((current) => (current === inviteCode.id ? null : current)), 1800);
     } catch {
       setInviteError('コピーできませんでした。招待コードを選択してコピーしてください。');
+    }
+  }
+
+  async function handleCopyInviteMessage(inviteCode: InviteCodeRow) {
+    setInviteError('');
+
+    try {
+      await navigator.clipboard.writeText(buildInviteMessage(inviteCode));
+      setCopiedInviteMessageId(inviteCode.id);
+      window.setTimeout(() => setCopiedInviteMessageId((current) => (current === inviteCode.id ? null : current)), 1800);
+    } catch {
+      setInviteError('コピーできませんでした。招待文を選択してコピーしてください。');
     }
   }
 
@@ -396,7 +424,7 @@ export function AdminPage() {
   }
 
   return (
-    <PageShell description={<>βテスター用の招待コード作成と、届いた通報の確認を行えます。<br />招待コードがなくてもGoogleログインは可能です。</>} eyebrow="Admin" title="管理画面">
+    <PageShell description={<>βテスター用の招待コード作成と、届いた通報の確認を行えます。<br />作成済みコードは、コードだけでも招待文でもコピーできます。</>} eyebrow="Admin" title="管理画面">
       {adminCards.map((item) => {
         const Icon = item.icon;
         return <Card className="space-y-2.5 p-3 shadow-sm" key={item.title}><div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2.5"><span className="flex size-9 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><Icon size={18} /></span><span className="text-sm font-black">{item.title}</span></span><Badge>{item.count}</Badge></div><p className="whitespace-pre-line text-[13px] leading-5 text-theme-muted">{item.body}</p></Card>;
@@ -443,12 +471,12 @@ export function AdminPage() {
 
       <Card className="space-y-2 border-theme-main/15 bg-theme-accent-soft/55 p-3 shadow-sm">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-theme-main-dark">招待コードの扱い</p>
-        <p className="text-[13px] leading-5 text-theme-muted">招待コードがなくてもGoogleログインは可能です。<br />招待コードを入力してログインした場合のみ、紹介経路として扱います。</p>
+        <p className="text-[13px] leading-5 text-theme-muted">正式参加の配布時は、作成済みの招待コードを共有してください。<br />コード入力後のGoogleログインで、紹介経路として記録されます。</p>
       </Card>
 
       <Card className="space-y-2.5 p-3 shadow-sm">
         <h2 className="text-sm font-black">作成済みの招待コード</h2>
-        <p className="text-[13px] leading-5 text-theme-muted">有効な招待コードをβテスターに共有してください。<br />利用状況を見ながら、不要になったコードは削除または無効化できます。</p>
+        <p className="text-[13px] leading-5 text-theme-muted">有効な招待コードをβテスターに共有してください。<br />各コードから、コード単体または参加ページ付きの招待文をコピーできます。</p>
         {inviteCodes.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ招待コードはありません。まずはβテスター向けのコードを1つ作成してください。</p> : null}
         {inviteCodes.map((inviteCode) => {
           const isManaging = managingInviteCodeId === inviteCode.id;
@@ -462,11 +490,21 @@ export function AdminPage() {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Button className="min-h-8 px-2.5 py-1 text-xs" onClick={() => void handleCopyInviteCode(inviteCode)} type="button" variant="secondary">
                     <Copy size={14} />
-                    {copiedInviteCodeId === inviteCode.id ? 'コピー済み' : 'コピー'}
+                    コードをコピー
+                  </Button>
+                  <Button className="min-h-8 px-2.5 py-1 text-xs" onClick={() => void handleCopyInviteMessage(inviteCode)} type="button" variant="secondary">
+                    <Copy size={14} />
+                    招待文をコピー
                   </Button>
                   <Badge className={inviteCode.is_active ? '' : 'bg-red-50 text-red-600'}>{inviteCode.is_active ? '有効' : '無効'}</Badge>
                 </div>
               </div>
+              {(copiedInviteCodeId === inviteCode.id || copiedInviteMessageId === inviteCode.id) ? (
+                <div className="flex flex-wrap gap-2 text-xs font-black text-theme-main-dark">
+                  {copiedInviteCodeId === inviteCode.id ? <span className="rounded-full bg-white/70 px-2.5 py-1">招待コードをコピーしました</span> : null}
+                  {copiedInviteMessageId === inviteCode.id ? <span className="rounded-full bg-white/70 px-2.5 py-1">招待文をコピーしました</span> : null}
+                </div>
+              ) : null}
               <div className="grid gap-2 text-xs font-bold text-theme-muted sm:grid-cols-2">
                 <span>使用状況: {inviteCode.used_count} / {inviteCode.max_uses ?? '上限なし'}</span>
                 <span>紹介経路: {inviteCode.code.split('-')[0] || '未設定'}</span>

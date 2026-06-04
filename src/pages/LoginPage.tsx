@@ -48,7 +48,7 @@ export function LoginPage() {
         }
         setPendingInviteCode(inviteValidation.inviteCode.code);
         clearDemoMode();
-        setStatusMessage('紹介コードを確認しました。Googleログイン後、紹介経路として記録されます。');
+        setStatusMessage('招待コードを確認しました。Googleログイン後、紹介経路として記録されます。');
       } else {
         clearPendingInviteCode();
         clearDemoMode();
@@ -77,13 +77,19 @@ export function LoginPage() {
             <div className="space-y-1 text-[13px] leading-5 text-theme-muted">
               <p>ConnectBloomは現在、招待制のβ版です。</p>
               <p>正式参加には招待コードが必要です。</p>
-              <p>招待コードを入力すると、紹介経路として記録されます。</p>
+              <p>コードを入力してから、Googleログインへ進んでください。</p>
             </div>
           </div>
           {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{error}</div> : null}
           {statusMessage ? <div className="rounded-[1.15rem] bg-theme-accent-soft/60 p-3 text-xs font-bold leading-5 text-theme-main-dark">{statusMessage}</div> : null}
+          <div className="grid gap-2 rounded-[1.15rem] bg-theme-background/70 p-3 text-xs font-bold leading-5 text-theme-muted">
+            <p>1. 招待コードを入力する</p>
+            <p>2. Googleでログインする</p>
+            <p>3. プロフィールを整える</p>
+            <p>4. 今日のつながりへ進む</p>
+          </div>
           <Input
-            helperText="招待コードを受け取った方は、コードを入力してからGoogleログインしてください。"
+            helperText="招待コードは、紹介経路として記録されます。"
             label="招待コード"
             name="inviteCode"
             onChange={(event) => handleInviteCodeChange(event.target.value)}

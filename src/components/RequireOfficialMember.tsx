@@ -34,7 +34,7 @@ function canBrowseDemoPath(pathname: string) {
 function InviteRequiredMessage({ detail }: { detail?: string }) {
   return (
     <PageShell
-      description="ログイン済みの方も、主要機能を使う正式参加には紹介経路として招待コードの確認が必要です。"
+      description="ConnectBloomは、信頼できる紹介から始まる招待制コネクトSNSです。正式参加には招待コードが必要です。"
       eyebrow="Invite required"
       title="招待コードが必要です"
     >
@@ -45,12 +45,15 @@ function InviteRequiredMessage({ detail }: { detail?: string }) {
               <HeartHandshake size={22} />
             </span>
             <div className="space-y-2">
-              <h2 className="text-lg font-black text-theme-text">紹介から入るConnectBloomへ</h2>
+              <h2 className="text-lg font-black text-theme-text">招待コードが必要です</h2>
               <p className="text-sm font-bold leading-6 text-theme-muted">
                 ConnectBloomは、信頼できる紹介から始まる招待制コネクトSNSです。正式参加するには、招待コードを入力してください。
               </p>
             </div>
           </div>
+          <p className="rounded-[1.15rem] bg-theme-background/75 p-3 text-xs font-bold leading-5 text-theme-main-dark">
+            招待コードを受け取った方は、コード入力後にGoogleログインへ進めます。
+          </p>
           {detail ? (
             <div className="flex gap-2 rounded-[1.15rem] bg-theme-background/75 p-3 text-xs font-bold leading-5 text-theme-muted">
               <AlertCircle className="mt-0.5 text-theme-main-dark" size={16} />
