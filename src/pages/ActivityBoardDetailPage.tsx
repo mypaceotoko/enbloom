@@ -385,7 +385,7 @@ export function ActivityBoardDetailPage() {
                         {interest.status === 'accepted' ? (
                           <>
                             <span className="inline-flex min-h-11 items-center rounded-xl bg-cyan-50 px-4 py-2 text-[13px] font-black text-cyan-700">承認済み</span>
-                            <Button className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 text-theme-main-dark shadow-sm shadow-theme-sky/20" disabled={openingConversationId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={16} />{openingConversationId === interest.id ? '会話を準備中…' : '会話へ'}</Button>
+                            <Button className="!min-h-9 !rounded-full border-theme-sky/25 bg-gradient-to-r from-theme-yellow/65 to-theme-sky/35 !px-3 !py-1.5 !text-xs text-theme-main-dark shadow-sm shadow-theme-sky/10" disabled={openingConversationId === interest.id} onClick={() => void handleOpenConversation(interest)} variant="secondary"><MessageSquareText size={15} />{openingConversationId === interest.id ? '会話を準備中…' : `${interest.profile?.name ?? '参加者'}さんと会話`}</Button>
                           </>
                         ) : null}
                         {interest.status === 'declined' ? <span className="inline-flex min-h-11 items-center rounded-xl bg-slate-100 px-4 py-2 text-[13px] font-black text-slate-600">見送り</span> : null}
