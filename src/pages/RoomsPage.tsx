@@ -1,4 +1,4 @@
-import { ArrowRight, MessageCircle, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, Coffee, Lightbulb, MessageCircle, Sparkles, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '../components/Badge';
@@ -13,6 +13,27 @@ import type { ChatRoomWithStats } from '../types/chatRoom';
 function formatLatest(value: string | null) {
   if (!value) return 'まだ投稿はありません';
   return `最新 ${new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))}`;
+}
+
+function getRoomVisual(room: ChatRoomWithStats) {
+  if (room.slug === 'creative') {
+    return {
+      Icon: Lightbulb,
+      className: 'from-theme-yellow/85 via-theme-cyan/30 to-theme-sky/35 text-theme-main-dark shadow-theme-yellow/20',
+    };
+  }
+
+  if (room.slug === 'casual') {
+    return {
+      Icon: Coffee,
+      className: 'from-amber-100 via-theme-yellow/35 to-theme-cyan/25 text-amber-700 shadow-amber-100/40',
+    };
+  }
+
+  return {
+    Icon: MessageCircle,
+    className: 'from-theme-yellow/80 via-theme-sky/25 to-theme-cyan/30 text-theme-main-dark shadow-theme-sky/15',
+  };
 }
 
 function getRoomShortDescription(room: ChatRoomWithStats) {
@@ -80,27 +101,31 @@ export function RoomsPage() {
       {loading ? <Card className="text-sm font-bold text-theme-muted">ルームを読み込んでいます...</Card> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {rooms.map((room) => (
-          <Card className="flex h-full flex-col gap-3 p-3" key={room.slug}>
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-theme-yellow/80 via-theme-sky/25 to-theme-cyan/30 text-theme-main-dark shadow-sm shadow-theme-sky/15">
-                <MessageCircle size={20} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-lg font-black leading-tight text-theme-text">{room.name}</h2>
-                  <Badge className="bg-theme-card shadow-sm"><UsersRound size={13} />{room.message_count}件</Badge>
+        {rooms.map((room) => {
+          const { Icon, className } = getRoomVisual(room);
+
+          return (
+            <Card className="flex h-full flex-col gap-3 p-3" key={room.slug}>
+              <div className="flex items-start gap-3">
+                <div className={`flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br shadow-sm ${className}`}>
+                  <Icon size={20} />
                 </div>
-                <p className="mt-1 text-sm leading-6 text-theme-muted">{getRoomShortDescription(room)}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-lg font-black leading-tight text-theme-text">{room.name}</h2>
+                    <Badge className="bg-theme-card shadow-sm"><UsersRound size={13} />{room.message_count}件</Badge>
+                  </div>
+                  <p className="mt-1 text-sm leading-6 text-theme-muted">{getRoomShortDescription(room)}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap gap-1.5">{(roomTags[room.slug] ?? ['公式']).slice(0, 3).map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
-            <div className="mt-auto flex items-center justify-between gap-3 border-t border-white/60 pt-3 text-xs font-bold text-theme-muted">
-              <span>{formatLatest(room.latest_message_at)}</span>
-              <Link className="shrink-0" to={`/rooms/${room.slug}`}><Button className="min-h-10 px-4" type="button">入る<ArrowRight size={15} /></Button></Link>
-            </div>
-          </Card>
-        ))}
+              <div className="flex flex-wrap gap-1.5">{(roomTags[room.slug] ?? ['公式']).slice(0, 3).map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
+              <div className="mt-auto flex items-center justify-between gap-3 border-t border-white/60 pt-3 text-xs font-bold text-theme-muted">
+                <span>{formatLatest(room.latest_message_at)}</span>
+                <Link className="shrink-0" to={`/rooms/${room.slug}`}><Button className="min-h-10 px-4" type="button">入る<ArrowRight size={15} /></Button></Link>
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </PageShell>
   );

@@ -61,15 +61,24 @@ const testerGuideItems = [
 
 const feedbackPoints = ['どの画面で起きたか', '何を押した時に起きたか', '期待していた動き', '実際に起きたこと', 'エラー文言', 'スクリーンショット'];
 
+const testerGuideIntro = [
+  'ConnectBloomは現在、招待制のβ版です。',
+  '招待コードを受け取ったテスター向けに、確認してほしい流れをまとめています。',
+  '予期しないエラーや表示崩れが起きる可能性があります。',
+  '気づいた点はスクリーンショットで共有してください。',
+  '上から順番に、ログインから安心機能まで確認してください。',
+  '実際のチェック保存は不要です。',
+];
+
 export function TestGuidePage() {
   return (
     <PageShell description="ConnectBloomを試すときに、確認してほしい流れをまとめています。" eyebrow="TEST GUIDE" title="テスターガイド">
       <div className="space-y-3">
         <Card className="space-y-2 border-theme-main/15 bg-theme-accent-soft/70 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">試してほしい流れ</p>
-          <p className="text-sm leading-6 text-theme-muted">ConnectBloomは現在、招待制のβ版です。招待コードを受け取ったテスター向けに、確認してほしい流れをまとめています。</p>
-          <p className="text-sm leading-6 text-theme-muted">予期しないエラーや表示崩れが起きる可能性があります。気づいた点はスクリーンショットで共有してください。</p>
-          <p className="text-sm leading-6 text-theme-muted">上から順番に、ログインから安心機能まで確認してください。実際のチェック保存は不要です。</p>
+          <div className="space-y-1.5 text-sm leading-6 text-theme-muted">
+            {testerGuideIntro.map((sentence) => <p key={sentence}>{sentence}</p>)}
+          </div>
         </Card>
 
         <Card className="border-theme-main/15 bg-theme-card/90 shadow-sm">
