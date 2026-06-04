@@ -1,4 +1,4 @@
-import { ArrowRight, MessageCircle, Sparkles, UsersRound } from 'lucide-react';
+import { ArrowRight, ClipboardList, MessageCircle, Sparkles, UsersRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '../components/Badge';
@@ -13,6 +13,12 @@ import type { ChatRoomWithStats } from '../types/chatRoom';
 function formatLatest(value: string | null) {
   if (!value) return 'まだ投稿はありません';
   return `最新 ${new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))}`;
+}
+
+function getRoomConversationHint(slug: string) {
+  if (slug === 'creative') return '制作や発信のアイデアを出し合う場所';
+  if (slug === 'casual') return '趣味や日常をゆるく話す場所';
+  return '会話とアイデア出しをする場所';
 }
 
 export function RoomsPage() {
@@ -54,11 +60,12 @@ export function RoomsPage() {
   }, [canUseSupabaseRooms]);
 
   return (
-    <PageShell description="まずは気軽に話して、面白そうな流れが生まれたら募集ボードにつなげられます。" eyebrow="Rooms" title="ルーム">
+    <PageShell description="雑談やアイデア出しから、小さな企画の種を見つけられます。会話が盛り上がったら、募集ボードにつなげられます。" eyebrow="Rooms" title="ルーム">
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.3rem] bg-theme-card/84 p-5 backdrop-blur">
-          <Badge className="bg-theme-main text-white"><Sparkles size={13} />会話から、企画が生まれる場所。</Badge>
-          <p className="mt-3 text-sm leading-7 text-theme-muted">ConnectBloomのルームは、まだ形になる前のアイデアや日常の話題を安心して置ける場所です。企画の種が見つかったら、そのまま募集ボードで仲間を募れます。</p>
+          <Badge className="bg-theme-main text-white"><Sparkles size={13} />会話とアイデア出しの場所</Badge>
+          <p className="mt-3 text-sm leading-7 text-theme-muted">ルームでは、雑談や情報交換から一緒にやりたいことを見つけられます。</p>
+          <p className="mt-3 rounded-2xl bg-theme-accent-soft/70 px-3 py-2 text-sm font-bold leading-6 text-theme-main-dark"><ClipboardList size={14} className="mr-1 inline" />会話が盛り上がったら、募集ボードで仲間を募れます。</p>
         </div>
       </Card>
 
@@ -66,7 +73,7 @@ export function RoomsPage() {
         <Card className="space-y-2">
           <Badge>ローカルデモ</Badge>
           <p className="text-sm font-bold text-theme-text">ログインするとルームで会話できます。</p>
-          <p className="text-sm leading-6 text-theme-muted">Supabase未接続・未ログイン時も、公式2ルームの一覧はデモ表示されます。</p>
+          <p className="text-sm leading-6 text-theme-muted">Supabase未接続・未ログイン時も、公式2ルームの一覧を確認できます。</p>
         </Card>
       ) : null}
 
@@ -88,11 +95,14 @@ export function RoomsPage() {
                 <p className="mt-2 text-sm leading-7 text-theme-muted">{room.description}</p>
               </div>
             </div>
+            <div className="rounded-2xl bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark">
+              {getRoomConversationHint(room.slug)}
+            </div>
             <div className="mt-auto space-y-3 border-t border-white/60 pt-3">
               <div className="flex flex-wrap gap-1.5">{(roomTags[room.slug] ?? ['公式']).map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
-              <div className="flex items-center justify-between gap-3 text-xs font-bold text-theme-muted">
+              <div className="flex flex-col gap-3 text-xs font-bold text-theme-muted sm:flex-row sm:items-center sm:justify-between">
                 <span>{formatLatest(room.latest_message_at)}</span>
-                <Link to={`/rooms/${room.slug}`}><Button className="min-h-10 px-4" type="button">入る<ArrowRight size={15} /></Button></Link>
+                <Link className="w-full sm:w-auto" to={`/rooms/${room.slug}`}><Button className="min-h-11 w-full px-4 sm:w-auto" type="button">入る<ArrowRight size={15} /></Button></Link>
               </div>
             </div>
           </Card>

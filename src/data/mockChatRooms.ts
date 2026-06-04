@@ -3,8 +3,8 @@ import type { ChatRoomMessageWithProfile, ChatRoomWithStats } from '../types/cha
 const now = '2026-06-03T09:00:00.000Z';
 
 export const officialRoomDescriptions = {
-  creative: 'AI、発信、動画、音声、ゲーム制作、イベント企画など、一緒に何かを作りたい人が集まる部屋です。会話の中で企画の種が見つかったら、募集ボードで仲間を募れます。',
-  casual: '趣味、日常、映画、音楽、旅、ゲーム、ちょっとした近況など、気軽に話せる部屋です。雑談の中で「一緒にやってみたい」が生まれたら、募集ボードにつなげられます。',
+  creative: '制作、AI、動画、音声、イベントなど、何かを一緒に作りたい人のアイデア出しルームです。',
+  casual: 'ゆるく話しながら、趣味や日常の話から小さなきっかけを見つけるルームです。',
 } as const;
 
 export const demoChatRooms: ChatRoomWithStats[] = [

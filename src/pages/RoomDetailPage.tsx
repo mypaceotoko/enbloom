@@ -1,4 +1,4 @@
-import { ArrowLeft, ClipboardList, MessageCircle, Send, ShieldAlert, Trash2 } from 'lucide-react';
+import { ArrowLeft, ClipboardList, MessageCircle, Send, ShieldAlert, Trash2, UsersRound } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
@@ -13,6 +13,12 @@ import type { ChatRoom, ChatRoomMessageWithProfile } from '../types/chatRoom';
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
+
+function getRoomConversationHint(slug: string) {
+  if (slug === 'creative') return '制作、AI、動画、音声、イベントなどのアイデアを出し合う場所です。';
+  if (slug === 'casual') return '趣味や日常の話から、小さなきっかけを見つける場所です。';
+  return '会話とアイデア出しをする場所です。';
 }
 
 export function RoomDetailPage() {
@@ -92,7 +98,7 @@ export function RoomDetailPage() {
       setMessages((currentMessages) => [...currentMessages, sentMessage]);
       setMessageBody('');
     } catch (caughtError) {
-      setNotice(getShortErrorMessage(caughtError, '送信に失敗しました。時間を置いてもう一度お試しください。'));
+      setNotice(getShortErrorMessage(caughtError, '送信に失敗しました。'));
     } finally {
       setSending(false);
     }
@@ -104,7 +110,7 @@ export function RoomDetailPage() {
       await deleteChatRoomMessage(messageId);
       setMessages((currentMessages) => currentMessages.filter((message) => message.id !== messageId));
     } catch (caughtError) {
-      setNotice(getShortErrorMessage(caughtError, '削除に失敗しました。時間を置いてもう一度お試しください。'));
+      setNotice(getShortErrorMessage(caughtError, '削除に失敗しました。'));
     }
   }
 
@@ -132,13 +138,20 @@ export function RoomDetailPage() {
         <div className="space-y-4 rounded-[1.3rem] bg-theme-card/84 p-5 backdrop-blur">
           <div className="flex items-start gap-3">
             <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-theme-yellow/80 via-theme-sky/25 to-theme-cyan/30 text-theme-main-dark shadow-sm shadow-theme-sky/15"><MessageCircle size={24} /></div>
-            <div className="space-y-2">
-              <h2 className="text-xl font-black text-theme-text">{room.name}</h2>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-black text-theme-text">{room.name}</h2>
+                <Badge className="bg-theme-card shadow-sm"><UsersRound size={13} />{messages.length}件</Badge>
+              </div>
               <p className="text-sm leading-7 text-theme-muted">{room.description}</p>
               <div className="flex flex-wrap gap-1.5">{(roomTags[room.slug] ?? ['公式']).map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
             </div>
           </div>
-          <Button onClick={handleCreateBoardPost}><ClipboardList size={16} />この会話から募集を作る</Button>
+          <p className="rounded-2xl bg-theme-accent-soft/60 px-3 py-2 text-sm font-bold leading-6 text-theme-main-dark">{getRoomConversationHint(room.slug)}</p>
+          <div className="space-y-3 rounded-2xl bg-white/70 p-3 ring-1 ring-theme-sky/10">
+            <p className="text-sm font-bold leading-6 text-theme-muted">話が盛り上がったら、募集ボードで一緒にやる仲間を募れます。</p>
+            <Button className="w-full sm:w-auto" onClick={handleCreateBoardPost}><ClipboardList size={16} />この会話から募集を作る</Button>
+          </div>
         </div>
       </Card>
 
@@ -146,7 +159,7 @@ export function RoomDetailPage() {
         <Card className="space-y-2">
           <Badge>ローカルデモ</Badge>
           <p className="text-sm font-bold text-theme-text">ログインするとルームで会話できます。</p>
-          <p className="text-sm leading-6 text-theme-muted">未ログイン時はデモメッセージまたは空状態を表示し、送信時にログイン案内を出します。</p>
+          <p className="text-sm leading-6 text-theme-muted">未ログイン時はルームの雰囲気を確認できます。</p>
         </Card>
       ) : null}
 
@@ -170,15 +183,15 @@ export function RoomDetailPage() {
           {messages.map((message) => {
             const isOwnMessage = user?.id === message.sender_id;
             return (
-              <div className="rounded-[1.15rem] bg-white/75 p-3 shadow-sm ring-1 ring-theme-sky/10" key={message.id}>
+              <div className="rounded-[1.15rem] bg-white/80 p-3 shadow-sm ring-1 ring-theme-sky/10" key={message.id}>
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-black text-theme-text">{message.profile?.name ?? 'ConnectBloomユーザー'}</p>
                     <p className="text-[11px] font-bold text-theme-muted">{formatDateTime(message.created_at)}</p>
                   </div>
                   <div className="flex gap-1">
-                    <button className="inline-flex size-8 items-center justify-center rounded-full bg-theme-accent-soft text-theme-muted" title="通報"><ShieldAlert size={14} /></button>
-                    {isOwnMessage ? <button className="inline-flex size-8 items-center justify-center rounded-full bg-rose-50 text-rose-600" title="削除" type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} /></button> : null}
+                    <button className="inline-flex size-8 items-center justify-center rounded-full bg-transparent text-theme-muted/70 transition hover:bg-theme-accent-soft" title="通報" type="button"><ShieldAlert size={14} /></button>
+                    {isOwnMessage ? <button className="inline-flex size-8 items-center justify-center rounded-full bg-transparent text-theme-muted/70 transition hover:bg-rose-50 hover:text-rose-600" title="削除" type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} /></button> : null}
                   </div>
                 </div>
                 <p className="whitespace-pre-wrap text-sm leading-7 text-theme-text">{message.body}</p>
@@ -190,9 +203,12 @@ export function RoomDetailPage() {
         <form className="space-y-3 border-t border-white/60 pt-4" onSubmit={handleSubmit}>
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
             <span>メッセージ入力</span>
-            <textarea className="theme-input min-h-28 w-full rounded-xl border px-3.5 py-3 text-sm outline-none" maxLength={2000} placeholder="気軽に話してみましょう。企画の種が見つかったら募集ボードへ。" value={messageBody} onChange={(event) => setMessageBody(event.target.value)} />
+            <textarea className="theme-input min-h-28 w-full rounded-xl border px-3.5 py-3 text-sm outline-none" maxLength={2000} placeholder="このルームで話してみる" value={messageBody} onChange={(event) => setMessageBody(event.target.value)} />
           </label>
-          <Button disabled={sending} type="submit"><Send size={16} />送信</Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            {!canUseSupabaseRooms ? <p className="text-xs font-bold leading-5 text-theme-muted">ログインするとルームで会話できます。</p> : null}
+            <Button className="w-full sm:w-auto" disabled={sending} type="submit"><Send size={16} />送信</Button>
+          </div>
         </form>
       </Card>
     </PageShell>
