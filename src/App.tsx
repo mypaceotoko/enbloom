@@ -20,6 +20,7 @@ import { MyInterestsPage } from './pages/MyInterestsPage';
 import { MyProfilePage } from './pages/MyProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { ProfileDetailPage } from './pages/ProfileDetailPage';
 import { RoomDetailPage } from './pages/RoomDetailPage';
@@ -27,6 +28,7 @@ import { RoomsPage } from './pages/RoomsPage';
 import { SafetyPage } from './pages/SafetyPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SettingsThemePage } from './pages/SettingsThemePage';
+import { TermsPage } from './pages/TermsPage';
 import { TestGuidePage } from './pages/TestGuidePage';
 
 export default function App() {
@@ -57,6 +59,8 @@ export default function App() {
         <Route element={<SettingsPage />} path="settings" />
         <Route element={<SettingsThemePage />} path="settings/theme" />
         <Route element={<TestGuidePage />} path="test-guide" />
+        <Route element={<TermsPage />} path="terms" />
+        <Route element={<PrivacyPage />} path="privacy" />
         <Route element={<SafetyPage />} path="safety" />
         <Route element={<BlockedUsersPage />} path="blocked-users" />
         <Route element={<AdminPage />} path="admin" />

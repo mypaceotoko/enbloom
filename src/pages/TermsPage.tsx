@@ -1,0 +1,123 @@
+import { AlertTriangle, ClipboardList, Flag, HeartOff, MessageCircle, RefreshCw, Scale, ShieldCheck } from 'lucide-react';
+import { Card } from '../components/Card';
+import { PageShell } from '../components/PageShell';
+
+const termsSections = [
+  {
+    icon: ShieldCheck,
+    title: '1. サービスについて',
+    body: [
+      'ConnectBloomは、共通の興味から仲間とつながる紹介制コネクトSNSです。',
+      '活動、趣味、企画、制作、学習、地域交流、情報交換などを目的としたコミュニティサービスです。',
+    ],
+  },
+  {
+    icon: HeartOff,
+    title: '2. 恋愛・異性交際目的ではありません',
+    body: [
+      'ConnectBloomは、恋愛・交際・婚活・異性交際を主目的としたサービスではありません。',
+      '募集ボードやルーム、DMは、活動や企画、趣味、共創のために利用してください。',
+    ],
+  },
+  {
+    icon: AlertTriangle,
+    title: '3. 禁止事項',
+    list: [
+      '恋愛・交際・異性交際のみを目的とした利用',
+      '迷惑行為、嫌がらせ、誹謗中傷',
+      '個人情報を過度に求める行為',
+      '外部SNSや連絡先への強引な誘導',
+      '金銭トラブルにつながる勧誘',
+      '投資、宗教、ネットワークビジネス等の強引な勧誘',
+      'なりすまし',
+      '不適切な投稿、画像、メッセージ',
+      '法令または公序良俗に反する行為',
+    ],
+  },
+  {
+    icon: ClipboardList,
+    title: '4. 募集ボードの利用',
+    body: [
+      '募集ボードは、一緒にやりたい活動、話したいテーマ、探している仲間を投稿する場所です。',
+      '内容が大きく変わる場合は、参加希望者に誤解がないようにしてください。',
+    ],
+  },
+  {
+    icon: MessageCircle,
+    title: '5. ルームとDMの利用',
+    body: [
+      'ルームは、雑談やアイデア出し、情報交換をする場所です。',
+      'DMは、相互コネクトまたは募集参加承認後に、活動内容や進め方を相談するために利用してください。',
+    ],
+  },
+  {
+    icon: Flag,
+    title: '6. 通報・ブロック',
+    body: [
+      '不安を感じる相手や迷惑行為があった場合は、無理に返信せず、ブロックや通報を利用してください。',
+      '運営は必要に応じて投稿やアカウントの確認・制限を行う場合があります。',
+    ],
+  },
+  {
+    icon: Scale,
+    title: '7. 免責',
+    body: [
+      'β版のため、予期しない不具合や表示崩れが発生する可能性があります。',
+      '重要な連絡や金銭に関わるやり取りには利用しないでください。',
+    ],
+  },
+  {
+    icon: RefreshCw,
+    title: '8. 規約の変更',
+    body: ['本規約は、サービス改善や正式公開に向けて変更される場合があります。'],
+  },
+];
+
+export function TermsPage() {
+  return (
+    <PageShell description="ConnectBloomを安心して使うための基本ルールです。" eyebrow="TERMS" title="利用規約">
+      <div className="space-y-3">
+        <Card className="border-theme-main/20 bg-theme-main/10 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Beta notice</p>
+          <p className="mt-2 text-sm font-bold leading-6 text-theme-text">
+            この利用規約は、β版テスト向けの暫定版です。正式公開前に内容を見直す可能性があります。
+          </p>
+        </Card>
+
+        {termsSections.map((section) => {
+          const Icon = section.icon;
+
+          return (
+            <Card className="space-y-3 border-theme-main/15 bg-theme-card/90 shadow-sm" key={section.title}>
+              <div className="flex items-start gap-3">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-theme-accent-soft text-theme-main-dark">
+                  <Icon size={22} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base font-black leading-6 text-theme-text">{section.title}</h2>
+                  {section.body ? (
+                    <div className="mt-2 space-y-2">
+                      {section.body.map((paragraph) => (
+                        <p className="text-sm leading-6 text-theme-muted" key={paragraph}>{paragraph}</p>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              {section.list ? (
+                <ul className="space-y-1.5 rounded-[1.15rem] bg-theme-sky/10 p-3">
+                  {section.list.map((item) => (
+                    <li className="flex gap-2 text-sm leading-6 text-theme-text" key={item}>
+                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-theme-main-dark" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </Card>
+          );
+        })}
+      </div>
+    </PageShell>
+  );
+}
