@@ -14,6 +14,7 @@ import { getMyProfile, profileRowToCurrentUser, updateMyProfile } from '../lib/p
 import { DEFAULT_DATING_TEMPERATURE } from '../types/user';
 
 const suggestedInterestTags = ['映画', '旅行', 'カフェ', '音楽', '読書', '散歩', 'AI制作'];
+const suggestedDatingTemperatures = ['まずはゆっくり話したい', '価値観が合えば前向きに進めたい', '一緒に企画・制作したい', '気軽に情報交換したい'];
 
 function parseInterestTags(text: string) {
   return Array.from(new Set(text.split(/[、,]/).map((interest) => interest.trim()).filter(Boolean)));
@@ -141,6 +142,10 @@ export function MyProfilePage() {
     });
   }
 
+  function handleSuggestedDatingTemperatureClick(datingTemperature: string) {
+    setForm((current) => ({ ...current, datingTemperature }));
+  }
+
   async function handleSave() {
     const age = Number(form.age);
     if (!form.name.trim() || Number.isNaN(age) || age < 18 || !form.location.trim()) {
@@ -224,6 +229,22 @@ export function MyProfilePage() {
           <span className="block text-xs font-medium leading-5 text-theme-muted">自己紹介には「一緒にやりたいこと」「話したいテーマ」「探している仲間」を書けます。</span>
         </label>
         <Input helperText="つながり方のスタンスです。例：まずはゆっくり話したい / 一緒に企画・制作したい" label="つながり方のスタンス" name="myDatingTemperature" onChange={(event) => setForm((current) => ({ ...current, datingTemperature: event.target.value }))} placeholder="まずはゆっくり話したい" value={form.datingTemperature} />
+        <div className="flex flex-wrap gap-1.5">
+          {suggestedDatingTemperatures.map((datingTemperature) => {
+            const selected = form.datingTemperature === datingTemperature;
+            return (
+              <button
+                aria-pressed={selected}
+                className={`min-h-8 rounded-full px-3 py-1 text-xs font-bold transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/90 to-theme-sky/55 text-theme-main-dark ring-2 ring-theme-sky/40' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
+                key={datingTemperature}
+                onClick={() => handleSuggestedDatingTemperatureClick(datingTemperature)}
+                type="button"
+              >
+                {datingTemperature}
+              </button>
+            );
+          })}
+        </div>
         <Input helperText="活動ジャンル・興味のあること・話したいテーマを読点（、）やカンマで区切って入力します。" label="活動ジャンル / 興味タグ（読点区切り）" name="myInterests" onChange={(event) => setForm((current) => ({ ...current, interestsText: event.target.value }))} placeholder="AI、ブログ、音声配信、ゲーム制作、作業仲間" value={form.interestsText} />
         <div className="flex flex-wrap gap-1.5">
           {suggestedInterestTags.map((tag) => {
