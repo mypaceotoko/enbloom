@@ -11,7 +11,7 @@ import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
-import { validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
+import { isFounderInviteCode, isInviteCodeSelfUseError, validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
 import { clearPendingInviteCode, getPendingInviteCode } from '../lib/inviteSession';
 import { upsertMyProfile } from '../lib/profileApi';
 import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile } from '../types/user';
@@ -236,9 +236,11 @@ export function OnboardingPage() {
 
     try {
       if (isSupabaseMode && isAuthenticated && user) {
+        const usingFounderInviteCode = isFounderInviteCode(normalizedForm.inviteCode);
+
         setStatusMessage('招待コードを確認しています。');
         const inviteValidation = await validateInviteCode(normalizedForm.inviteCode);
-        logOnboardingStep('validateInviteCode success', { success: inviteValidation.ok, inviteCodeExists: Boolean(normalizedForm.inviteCode) });
+        logOnboardingStep('validateInviteCode success', { success: inviteValidation.ok, inviteCodeExists: Boolean(normalizedForm.inviteCode), founderInviteCode: usingFounderInviteCode });
         if (!inviteValidation.ok) {
           setValidationErrors({ inviteCode: inviteValidation.error });
           showError(inviteValidation.error);
@@ -274,14 +276,19 @@ export function OnboardingPage() {
 
         setStatusMessage('プロフィールを仮保存しました。紹介情報を保存しています。');
         const inviteUse = await redeemInviteCode(inviteValidation.inviteCode.code, user.id);
-        logOnboardingStep('useInviteCode success', { success: inviteUse.ok });
-        if (!inviteUse.ok) {
+        const founderSelfInviteFallback = !inviteUse.ok && usingFounderInviteCode && isInviteCodeSelfUseError(inviteUse.error);
+        logOnboardingStep('useInviteCode success', { success: inviteUse.ok, founderInviteCode: usingFounderInviteCode, founderSelfInviteFallback });
+        if (!inviteUse.ok && !founderSelfInviteFallback) {
           setValidationErrors({ inviteCode: inviteUse.error });
           showError(inviteUse.error);
           scrollToStep('inviteCode');
           return;
         }
-        setStatusMessage('紹介情報を確認しました。正式参加としてプロフィールを保存しています。');
+        setStatusMessage(founderSelfInviteFallback
+          ? '創設者コードを確認しました。正式参加を完了します。'
+          : '紹介情報を確認しました。正式参加としてプロフィールを保存しています。');
+        const officialInviteCode = inviteUse.ok ? inviteUse.code : inviteValidation.inviteCode.code;
+        const officialIntroducerId = inviteUse.ok ? inviteUse.introducerId : null;
         await upsertMyProfile({
           id: user.id,
           display_name: profile.name,
@@ -295,11 +302,11 @@ export function OnboardingPage() {
           onboarding_completed: true,
           visibility: 'public',
           role: 'user',
-          invited_by: inviteUse.introducerId,
-          invite_code_used: inviteUse.code,
+          invited_by: officialIntroducerId,
+          invite_code_used: officialInviteCode,
         });
         clearPendingInviteCode();
-        setStatusMessage('紹介情報を保存しました。今日のつながりへ進みます。');
+        setStatusMessage(founderSelfInviteFallback ? '正式参加を完了しました。今日のつながりへ進みます。' : '紹介情報を保存しました。今日のつながりへ進みます。');
       }
 
       completeOnboarding(profile);
@@ -337,23 +344,16 @@ export function OnboardingPage() {
         </div>
       </Card>
 
-      {error ? <ValidationSummary message={error} missingMessages={missingMessages} /> : null}
-      {statusMessage ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark" role="status">{statusMessage}</div> : null}
-
       <div ref={basicStepRef}>
         <Card className="space-y-4">
           <SectionTitle icon={<UserRound size={18} />} label="Step 1" title="基本情報" />
-          <StepErrors errors={[validationErrors.displayName, validationErrors.age, validationErrors.location]} />
           <Input helperText="アプリ内で表示される名前です。あとからマイプロフィールで編集できます。" label="表示名" name="displayName" onChange={(event) => updateField('name', event.target.value)} placeholder="マイペース男" value={form.name} />
-          {validationErrors.displayName ? <FieldError message={validationErrors.displayName} /> : null}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Input helperText="18歳未満は利用できません。" label="年齢" name="age" onChange={(event) => updateField('age', event.target.value)} placeholder="39" type="number" value={form.age} />
-              {validationErrors.age ? <FieldError message={validationErrors.age} /> : null}
             </div>
             <div className="space-y-2">
               <Input helperText="大まかな活動エリアでOKです。前後の空白は保存時に自動で整理します。" label="活動エリア" name="location" onChange={(event) => updateField('location', event.target.value)} placeholder="東京都・世田谷区 / オンライン" value={form.location} />
-              {validationErrors.location ? <FieldError message={validationErrors.location} /> : null}
             </div>
           </div>
           <Input helperText="未入力でも大丈夫です。できること・活動ジャンルの補足としてあとから編集できます。" label="できること" name="occupation" onChange={(event) => updateField('occupation', event.target.value)} placeholder="例：AIアプリ制作 / ブログ作業 / イベント企画" value={form.occupation} />
@@ -368,7 +368,6 @@ export function OnboardingPage() {
       <div ref={temperatureStepRef}>
         <Card className="space-y-4">
           <SectionTitle icon={<MapPin size={18} />} label="Step 2" title="つながり方のスタンス" />
-          <StepErrors errors={[validationErrors.datingTemperature]} />
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
             <span>今の気持ちに近いもの</span>
             <p className="text-xs font-medium leading-5 text-theme-muted">どんなきっかけでつながりたいかに近いものを1つ選んでください。</p>
@@ -381,14 +380,12 @@ export function OnboardingPage() {
               <option>相談・情報交換から始めたい</option>
             </select>
           </label>
-          {validationErrors.datingTemperature ? <FieldError message={validationErrors.datingTemperature} /> : null}
         </Card>
       </div>
 
       <div ref={interestsStepRef}>
         <Card className="space-y-4">
           <SectionTitle icon={<Tags size={18} />} label="Step 3" title="活動ジャンル / 興味タグ" />
-          <StepErrors errors={[validationErrors.interests]} />
           <div className="space-y-2.5">
             <p className="flex items-center gap-1.5 text-sm font-black"><Tags size={16} />活動ジャンル / 興味タグ</p>
             <p className="text-xs leading-5 text-theme-muted">活動ジャンルや興味のあることを1つ以上選んでください。選んだタグはマイプロフィールに保存され、あとから編集できます。</p>
@@ -398,7 +395,6 @@ export function OnboardingPage() {
                 return <button className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected ? 'bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark ring-1 ring-theme-sky/30' : 'bg-theme-background/80 text-theme-text ring-1 ring-theme-sky/15'}`} key={tag} onClick={() => toggleTag(tag)} type="button">{tag}</button>;
               })}
             </div>
-            {validationErrors.interests ? <FieldError message={validationErrors.interests} /> : null}
           </div>
         </Card>
       </div>
@@ -406,7 +402,6 @@ export function OnboardingPage() {
       <div ref={inviteCodeStepRef}>
         <Card className="space-y-4">
           <SectionTitle icon={<Ticket size={18} />} label="Step 4" title="招待コード" />
-          <StepErrors errors={[validationErrors.inviteCode]} />
           <Input
             helperText={isSupabaseMode ? '紹介者から受け取った招待コードを入力してください。正式参加には必須です。入力値は保存前に大文字化します。' : 'ローカルデモでは任意です。MYPACE-2026 のようなサンプルコードも入力できます。'}
             label="招待コード"
@@ -415,7 +410,6 @@ export function OnboardingPage() {
             placeholder="例：MYPACE-2026"
             value={form.inviteCode}
           />
-          {validationErrors.inviteCode ? <FieldError message={validationErrors.inviteCode} /> : null}
           <div className="rounded-[1.15rem] bg-theme-accent-soft/45 p-3 text-xs font-bold leading-5 text-theme-main-dark">
             招待コードは1回限りのチケットではなく、紹介者に紐づいた参加ルートです。同じコードで参加した方は、紹介者からのご縁として記録されます。
           </div>
@@ -468,20 +462,3 @@ function ValidationSummary({ compact = false, message, missingMessages }: { comp
   );
 }
 
-function StepErrors({ errors }: { errors: Array<string | undefined> }) {
-  const visibleErrors = errors.filter((error): error is string => Boolean(error));
-  if (visibleErrors.length === 0) return null;
-
-  return (
-    <div className="rounded-xl bg-red-50 p-3 text-xs font-bold leading-5 text-red-600" role="alert">
-      <p>このSTEPで確認してください。</p>
-      <ul className="mt-1 list-disc space-y-1 pl-4">
-        {visibleErrors.map((error) => <li key={error}>{error}</li>)}
-      </ul>
-    </div>
-  );
-}
-
-function FieldError({ message }: { message: string }) {
-  return <p className="text-xs font-bold leading-5 text-red-600">{message}</p>;
-}

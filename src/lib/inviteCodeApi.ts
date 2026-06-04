@@ -39,6 +39,13 @@ type InviteCodeRpcResult = {
   code?: string;
 };
 
+export const FOUNDER_INVITE_CODE = 'MYPACE-2026';
+
+const selfInviteErrorTokens = [
+  'INVITE_CODE_SELF_USE_NOT_ALLOWED',
+  '自分で作成した招待コードは利用できません',
+];
+
 const inviteCodeColumns = [
   'id',
   'code',
@@ -50,8 +57,16 @@ const inviteCodeColumns = [
   'created_at',
 ].join(',');
 
-function normalizeInviteCode(code: string) {
+export function normalizeInviteCode(code: string) {
   return code.trim().toUpperCase();
+}
+
+export function isFounderInviteCode(code: string) {
+  return normalizeInviteCode(code) === FOUNDER_INVITE_CODE;
+}
+
+export function isInviteCodeSelfUseError(message: string) {
+  return selfInviteErrorTokens.some((token) => message.includes(token));
 }
 
 function isLimitReached(inviteCode: InviteCodeRow) {
@@ -74,7 +89,7 @@ function formatSupabaseInviteError(message: string) {
   if (message.includes('INVITE_CODE_EXPIRED')) return 'この招待コードは期限切れです。新しいコードを紹介者に確認してください。';
   if (message.includes('INVITE_CODE_LIMIT_REACHED')) return 'この招待コードは利用上限に達しています。紹介者に確認してください。';
   if (message.includes('INVITE_CODE_CREATOR_NOT_FOUND')) return 'この招待コードの紹介者を確認できません。紹介者に確認してください。';
-  if (message.includes('INVITE_CODE_SELF_USE_NOT_ALLOWED')) return '自分で作成した招待コードは利用できません。別の紹介者のコードを入力してください。';
+  if (isInviteCodeSelfUseError(message)) return '自分で作成した招待コードは利用できません。別の紹介者のコードを入力してください。';
   if (message.includes('INVITE_CODE_AUTH_REQUIRED')) return 'ログイン後に招待コードを利用してください。';
   if (message.includes('duplicate key')) return '紹介情報はすでに保存されています。画面を更新してもう一度お試しください。';
   return message || '招待コードを確認できませんでした。入力内容をもう一度お確かめください。';
