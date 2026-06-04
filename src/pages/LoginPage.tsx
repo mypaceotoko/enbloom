@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { useAuth } from '../hooks/useAuth';
+import { enableDemoMode, clearDemoMode } from '../lib/demoSession';
 import { validateInviteCode } from '../lib/inviteCodeApi';
 import { clearPendingInviteCode, normalizeInviteCodeInput, setPendingInviteCode } from '../lib/inviteSession';
 
@@ -29,6 +30,7 @@ export function LoginPage() {
 
     if (!isSupabaseMode) {
       if (normalizedInviteCode) setPendingInviteCode(normalizedInviteCode);
+      clearDemoMode();
       navigate('/onboarding');
       return;
     }
@@ -45,9 +47,11 @@ export function LoginPage() {
           return;
         }
         setPendingInviteCode(inviteValidation.inviteCode.code);
+        clearDemoMode();
         setStatusMessage('紹介コードを確認しました。Googleログイン後、紹介経路として記録されます。');
       } else {
         clearPendingInviteCode();
+        clearDemoMode();
         setStatusMessage('Googleログインに進みます。主要機能の利用前に招待コードが必要です。');
       }
       await signInWithGoogle();
@@ -95,7 +99,7 @@ export function LoginPage() {
             <span className="flex size-5 items-center justify-center rounded-full bg-theme-main text-xs font-black text-white">G</span>
             {submitting ? 'Googleログインへ移動中...' : 'Googleでログイン'}
           </Button>
-          <Link className="block" to="/home">
+          <Link className="block" onClick={enableDemoMode} to="/home">
             <Button className="w-full" variant="secondary">
               デモで雰囲気を見る
             </Button>

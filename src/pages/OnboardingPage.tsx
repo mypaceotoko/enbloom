@@ -247,7 +247,7 @@ export function OnboardingPage() {
           return;
         }
 
-        setStatusMessage('招待コードを確認しました。プロフィールを保存しています。');
+        setStatusMessage('招待コードを確認しました。プロフィールを仮保存しています。');
         try {
           await upsertMyProfile({
             id: user.id,
@@ -259,20 +259,20 @@ export function OnboardingPage() {
             interests: profile.interests,
             relationship_goal: profile.relationshipGoal,
             dating_temperature: profile.datingTemperature,
-            onboarding_completed: true,
+            onboarding_completed: false,
             visibility: 'public',
             role: 'user',
           });
-          logOnboardingStep('profile save success', { success: true });
+          logOnboardingStep('profile draft save success', { success: true });
         } catch (profileError) {
           const message = profileError instanceof Error ? profileError.message : '';
           const userMessage = message ? `プロフィール保存に失敗しました。${message}` : 'プロフィール保存に失敗しました。少し時間を置いてもう一度お試しください。';
           showError(userMessage);
-          logOnboardingStep('profile save success', { success: false });
+          logOnboardingStep('profile draft save success', { success: false });
           return;
         }
 
-        setStatusMessage('プロフィールを保存しました。紹介情報を保存しています。');
+        setStatusMessage('プロフィールを仮保存しました。紹介情報を保存しています。');
         const inviteUse = await redeemInviteCode(inviteValidation.inviteCode.code, user.id);
         logOnboardingStep('useInviteCode success', { success: inviteUse.ok });
         if (!inviteUse.ok) {
@@ -281,8 +281,20 @@ export function OnboardingPage() {
           scrollToStep('inviteCode');
           return;
         }
+        setStatusMessage('紹介情報を確認しました。正式参加としてプロフィールを保存しています。');
         await upsertMyProfile({
           id: user.id,
+          display_name: profile.name,
+          age: profile.age,
+          location: profile.location,
+          occupation: profile.occupation,
+          bio: profile.bio,
+          interests: profile.interests,
+          relationship_goal: profile.relationshipGoal,
+          dating_temperature: profile.datingTemperature,
+          onboarding_completed: true,
+          visibility: 'public',
+          role: 'user',
           invited_by: inviteUse.introducerId,
           invite_code_used: inviteUse.code,
         });

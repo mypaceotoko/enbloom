@@ -1,16 +1,34 @@
 import { AlertCircle, BookOpen, HeartHandshake, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { isDemoModeEnabled } from '../lib/demoSession';
+import { getPendingInviteCode } from '../lib/inviteSession';
 import { getMyProfile, type ProfileRow } from '../lib/profileApi';
 import { Button } from './Button';
 import { Card } from './Card';
 import { PageShell } from './PageShell';
 
-type MemberAccessState = 'checking' | 'allowed' | 'inviteRequired' | 'error';
+type MemberAccessState = 'checking' | 'allowed' | 'inviteRequired' | 'pendingInvite' | 'error';
 
 function hasOfficialMemberAccess(profile: ProfileRow | null) {
-  return Boolean(profile?.onboarding_completed && profile.invited_by && profile.invite_code_used);
+  return Boolean(profile?.onboarding_completed && (profile.invited_by || profile.invite_code_used));
+}
+
+const demoAllowedPathPatterns = [
+  /^\/home\/?$/,
+  /^\/discover\/?$/,
+  /^\/board\/?$/,
+  /^\/board\/[^/]+\/?$/,
+  /^\/rooms\/?$/,
+  /^\/rooms\/[^/]+\/?$/,
+  /^\/profile\/[^/]+\/?$/,
+  /^\/likes\/?$/,
+  /^\/matches\/?$/,
+];
+
+function canBrowseDemoPath(pathname: string) {
+  return demoAllowedPathPatterns.some((pattern) => pattern.test(pathname));
 }
 
 function InviteRequiredMessage({ detail }: { detail?: string }) {
@@ -55,6 +73,7 @@ function InviteRequiredMessage({ detail }: { detail?: string }) {
 }
 
 export function RequireOfficialMember() {
+  const location = useLocation();
   const { isAuthenticated, isSupabaseMode, loading, user } = useAuth();
   const [state, setState] = useState<MemberAccessState>(isSupabaseMode ? 'checking' : 'allowed');
   const [detail, setDetail] = useState('');
@@ -64,6 +83,11 @@ export function RequireOfficialMember() {
 
     async function checkAccess() {
       if (!isSupabaseMode) {
+        setState('allowed');
+        return;
+      }
+
+      if (isDemoModeEnabled() && canBrowseDemoPath(location.pathname)) {
         setState('allowed');
         return;
       }
@@ -87,6 +111,10 @@ export function RequireOfficialMember() {
           setState('allowed');
           return;
         }
+        if (getPendingInviteCode()) {
+          setState('pendingInvite');
+          return;
+        }
         setState('inviteRequired');
         setDetail(profile?.onboarding_completed
           ? 'プロフィール作成は確認できましたが、紹介経路の記録がまだ完了していません。招待コードを入力してください。'
@@ -103,7 +131,7 @@ export function RequireOfficialMember() {
     return () => {
       mounted = false;
     };
-  }, [isAuthenticated, isSupabaseMode, loading, user]);
+  }, [isAuthenticated, isSupabaseMode, loading, location.pathname, user]);
 
   if (!isSupabaseMode) return <Outlet />;
   if (loading || state === 'checking') {
@@ -116,5 +144,6 @@ export function RequireOfficialMember() {
     );
   }
   if (state === 'allowed') return <Outlet />;
+  if (state === 'pendingInvite') return <Navigate replace state={{ from: location.pathname }} to="/onboarding" />;
   return <InviteRequiredMessage detail={detail} />;
 }
