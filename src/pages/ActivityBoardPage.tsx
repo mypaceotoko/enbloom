@@ -99,8 +99,7 @@ export function ActivityBoardPage() {
         </div>
       </Card>
 
-      <div className="grid gap-2 text-xs font-black sm:grid-cols-3">
-        <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-card/90 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/board/new"><Plus size={15} />募集を作る</Link>
+      <div className="grid gap-2 text-xs font-black sm:grid-cols-2">
         <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-card/90 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-board"><UsersRound size={15} />自分の募集</Link>
         <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-card/90 px-3 py-2 text-theme-main-dark shadow-sm transition hover:bg-theme-accent-soft" to="/my-interests"><Eye size={15} />参加希望した募集</Link>
       </div>

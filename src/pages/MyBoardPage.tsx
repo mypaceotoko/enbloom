@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Archive, CalendarDays, Eye, MapPin, MessageSquareText, Pencil, RotateCcw, Trash2, UsersRound, XCircle } from 'lucide-react';
+import { Archive, CalendarDays, MapPin, MessageSquareText, Pencil, RotateCcw, UsersRound, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -7,7 +7,7 @@ import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { mockActivityPosts } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
-import { archiveActivityPost, closeActivityPost, deleteActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost } from '../lib/activityBoardApi';
+import { archiveActivityPost, closeActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import type { ActivityPostInterestWithProfile, ActivityPostStatus, ActivityPostWithStats } from '../types/activityBoard';
@@ -158,28 +158,19 @@ export function MyBoardPage() {
     }
   }
 
-  async function handleDelete(post: ActivityPostWithStats) {
+  async function handleArchive(post: ActivityPostWithStats) {
     if (!useSupabaseBoard) return;
-    const hasInterests = post.interest_count > 0 || post.accepted_count > 0;
-    const confirmed = window.confirm(hasInterests
-      ? '参加希望があるため完全削除せず、アーカイブします。よろしいですか？'
-      : '参加希望がない募集を完全削除します。よろしいですか？');
+    const confirmed = window.confirm('この募集をアーカイブしますか？');
     if (!confirmed) return;
 
     setUpdatingPostId(post.id);
     setError('');
     try {
-      if (hasInterests) {
-        const updated = await archiveActivityPost(post.id);
-        applyPostStatus(post.id, updated.status, updated.closed_at);
-        setNotice('募集をアーカイブしました。');
-      } else {
-        await deleteActivityPost(post.id);
-        setPosts((current) => current.filter((item) => item.id !== post.id));
-        setNotice('募集を削除しました。');
-      }
+      const updated = await archiveActivityPost(post.id);
+      applyPostStatus(post.id, updated.status, updated.closed_at);
+      setNotice('募集をアーカイブしました。');
     } catch (caughtError) {
-      setError(getShortErrorMessage(caughtError, '募集の削除に失敗しました。時間を置いてもう一度お試しください。'));
+      setError(getShortErrorMessage(caughtError, '募集のアーカイブに失敗しました。時間を置いてもう一度お試しください。'));
     } finally {
       setUpdatingPostId(null);
     }
@@ -233,13 +224,16 @@ export function MyBoardPage() {
                 </div>
               </div>
             ) : null}
-            <div className="grid gap-2 border-t border-white/60 pt-3 sm:grid-cols-2 lg:grid-cols-6">
-              <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-4 py-2 text-[13px] font-bold text-theme-text" to={`/board/${post.id}`}><Eye size={16} />詳細を見る</Link>
-              <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-4 py-2 text-[13px] font-bold text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />管理する</Link>
-              <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-4 py-2 text-[13px] font-bold text-theme-text" to={`/board/${post.id}/edit`}><Pencil size={16} />編集する</Link>
-              <Button disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={16} />締切</Button>
-              <Button disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'open'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={16} />再開</Button>
-              <Button disabled={!useSupabaseBoard || updatingPostId === post.id} onClick={() => void handleDelete(post)} variant="danger">{post.interest_count > 0 || post.accepted_count > 0 ? <Archive size={16} /> : <Trash2 size={16} />}{post.interest_count > 0 || post.accepted_count > 0 ? 'アーカイブ' : '削除'}</Button>
+            <div className="space-y-2 border-t border-white/60 pt-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-3 py-2 text-[13px] font-black text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />管理する</Link>
+                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-3 py-2 text-[13px] font-black text-theme-text" to={`/board/${post.id}/edit`}><Pencil size={16} />編集する</Link>
+              </div>
+              <div className="grid gap-2 text-xs sm:grid-cols-3">
+                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={15} />締切</Button>
+                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'open'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={15} />再開</Button>
+                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'archived'} onClick={() => void handleArchive(post)} variant="danger"><Archive size={15} />アーカイブ</Button>
+              </div>
             </div>
           </Card>
         ))}
