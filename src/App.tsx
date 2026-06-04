@@ -26,6 +26,7 @@ import { RoomDetailPage } from './pages/RoomDetailPage';
 import { RoomsPage } from './pages/RoomsPage';
 import { SafetyPage } from './pages/SafetyPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SettingsThemePage } from './pages/SettingsThemePage';
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
         <Route element={<MyProfilePage />} path="my-profile" />
         <Route element={<NotificationsPage />} path="notifications" />
         <Route element={<SettingsPage />} path="settings" />
+        <Route element={<SettingsThemePage />} path="settings/theme" />
         <Route element={<SafetyPage />} path="safety" />
         <Route element={<BlockedUsersPage />} path="blocked-users" />
         <Route element={<AdminPage />} path="admin" />

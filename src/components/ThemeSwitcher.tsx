@@ -1,15 +1,22 @@
 import { useState, type ReactNode } from 'react';
 import { Check, ChevronDown, Moon, Palette } from 'lucide-react';
-import { useTheme, type ThemeDefinition, type ThemeId } from '../context/ThemeProvider';
+import { useTheme, type ThemeDefinition } from '../context/ThemeProvider';
 import { cn } from '../lib/utils';
 
-export function ThemeSwitcher() {
-  const { themeId, currentTheme, setThemeId, themes } = useTheme();
-  const [expanded, setExpanded] = useState(false);
+type ThemeSwitcherProps = {
+  collapseOnSelect?: boolean;
+  defaultExpanded?: boolean;
+  onThemeChange?: (theme: ThemeDefinition) => void;
+};
 
-  const chooseTheme = (nextThemeId: ThemeId) => {
-    setThemeId(nextThemeId);
-    setExpanded(false);
+export function ThemeSwitcher({ collapseOnSelect = true, defaultExpanded = false, onThemeChange }: ThemeSwitcherProps = {}) {
+  const { themeId, currentTheme, setThemeId, themes } = useTheme();
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const chooseTheme = (nextTheme: ThemeDefinition) => {
+    setThemeId(nextTheme.id);
+    onThemeChange?.(nextTheme);
+    if (collapseOnSelect) setExpanded(false);
   };
 
   return (
@@ -39,12 +46,13 @@ export function ThemeSwitcher() {
 
             return (
               <button
+                aria-label={`${theme.name}に変更`}
                 className={cn(
-                  'w-full rounded-[1.15rem] border bg-theme-card p-3.5 text-left transition active:scale-[0.99]',
+                  'w-full rounded-[1.15rem] border bg-theme-card p-3.5 text-left transition hover:-translate-y-0.5 active:scale-[0.99]',
                   selected ? 'border-theme-sky shadow-lg shadow-theme-sky/15 ring-2 ring-theme-sky/15' : 'border-theme-sky/25 hover:border-theme-sky/45',
                 )}
                 key={theme.id}
-                onClick={() => chooseTheme(theme.id)}
+                onClick={() => chooseTheme(theme)}
                 type="button"
               >
                 <ThemeCardContent selected={selected} theme={theme} />

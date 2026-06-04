@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
-import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
@@ -74,6 +73,7 @@ export function SettingsPage() {
       {notice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{notice}</div> : null}
 
       <SettingsLink body="登録したプロフィールを確認・編集できます。" icon={<UserRound size={18} />} onClick={() => navigate('/my-profile')} title="マイプロフィール" />
+      <SettingsLink body={`現在のテーマ: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigate('/settings/theme')} title="テーマカラー" />
 
       <section className="space-y-3">
         <div className="px-1">
@@ -100,20 +100,6 @@ export function SettingsPage() {
         <SettingsLink body="あなたのご縁から参加する人のために、招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigate('/admin')} title="招待コード管理" />
         <SettingsLink body="届いた通報の確認・対応を管理画面で行えます。" icon={<Flag size={18} />} onClick={() => navigate('/admin')} title="通報管理" />
       </section>
-
-      <Card className="flower-gradient border-0 p-1">
-        <div className="space-y-3 rounded-[1.25rem] bg-theme-card/78 p-3.5 backdrop-blur">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-theme-main text-white"><Palette size={18} /></span>
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Theme color</p>
-              <h2 className="text-lg font-black text-theme-text">テーマカラー</h2>
-            </div>
-          </div>
-          <p className="text-[13px] leading-5 text-theme-muted">現在のテーマは「{currentTheme.name}」です。Natural / Sakura / Mint / Lavender / Night の5テーマを切り替えられます。</p>
-          <ThemeSwitcher />
-        </div>
-      </Card>
 
       <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語 / 英語切り替えは将来実装予定です。" />
       <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介者名の表示範囲をユーザー設定として保存できるようにします。" />
