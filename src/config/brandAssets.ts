@@ -1,6 +1,6 @@
 export type LogoVariant = 'default' | 'light' | 'dark' | 'icon';
 
-export const officialHorizontalLogo = '/connectbloom-logo-horizontal.png';
+export const officialHorizontalLogo = '/public:assets:brand:connectbloom-logo-horizontal-tagline-transparent.png.jpg';
 
 export type LogoAsset = {
   variant: LogoVariant;
@@ -19,29 +19,29 @@ export const logoAssets: Record<LogoVariant, LogoAsset> = {
     variant: 'default',
     sources: [officialHorizontalLogo],
     alt: 'ConnectBloom',
-    width: 2172,
-    height: 724,
+    width: 1776,
+    height: 472,
   },
   light: {
     variant: 'light',
     sources: [officialHorizontalLogo],
     alt: 'ConnectBloom',
-    width: 2172,
-    height: 724,
+    width: 1776,
+    height: 472,
   },
   dark: {
     variant: 'dark',
     sources: [officialHorizontalLogo],
     alt: 'ConnectBloom',
-    width: 2172,
-    height: 724,
+    width: 1776,
+    height: 472,
   },
   icon: {
     variant: 'icon',
     sources: [officialHorizontalLogo],
     alt: 'ConnectBloom',
-    width: 2172,
-    height: 724,
+    width: 1776,
+    height: 472,
   },
 };
 
