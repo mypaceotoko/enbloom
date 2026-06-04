@@ -199,6 +199,13 @@ export function HomePage() {
           <HomeQuickLink icon={<ClipboardList size={16} />} label="募集ボードを見る" path="/board" />
           <HomeQuickLink icon={<DoorOpen size={16} />} label="ルームを見る" path="/rooms" />
         </div>
+        <div className="flex flex-col gap-2 rounded-[1.1rem] border border-theme-main/10 bg-theme-sky/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="min-w-0">
+            <span className="block text-sm font-black text-theme-text">βテスト中です</span>
+            <span className="mt-1 block text-xs leading-5 text-theme-muted">気になる点があれば、テスターガイドを見ながらスクリーンショットで共有してください。</span>
+          </span>
+          <Link className="shrink-0" to="/test-guide"><Button className="min-h-9 w-full px-3 text-xs sm:w-auto" variant="secondary">テスターガイドを見る</Button></Link>
+        </div>
       </Card>
 
       <div className="flex items-center justify-between rounded-full bg-theme-card/70 px-3.5 py-2.5 shadow-sm backdrop-blur">

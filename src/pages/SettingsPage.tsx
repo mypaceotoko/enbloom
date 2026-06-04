@@ -96,7 +96,7 @@ export function SettingsPage() {
           <p className="mt-1 text-xs leading-5 text-theme-muted">安心して使うためのガイドや管理機能を確認できます。</p>
         </div>
         <SettingsLink body="ConnectBloomを安心して使うためのルールとヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigate('/safety')} title="安心ガイド" />
-        <SettingsLink body="テスト時に確認してほしい流れをまとめています。" icon={<ClipboardCheck size={18} />} onClick={() => navigate('/test-guide')} title="テスターガイド" />
+        <SettingsLink body="テスト時に確認してほしい流れと、フィードバックの送り方をまとめています。" icon={<ClipboardCheck size={18} />} onClick={() => navigate('/test-guide')} title="テスターガイド" />
         <SettingsLink body="ConnectBloomを使うための基本ルールを確認できます。" icon={<FileText size={18} />} onClick={() => navigate('/terms')} title="利用規約" />
         <SettingsLink body="扱う情報と使い方について確認できます。" icon={<LockKeyhole size={18} />} onClick={() => navigate('/privacy')} title="プライバシーポリシー" />
         <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigate('/blocked-users')} title="ブロック中のユーザー" />

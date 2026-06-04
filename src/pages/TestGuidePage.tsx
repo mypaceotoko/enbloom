@@ -59,15 +59,21 @@ const testerGuideItems = [
   },
 ];
 
-const feedbackPoints = ['どの画面で起きたか', '何を押した時に起きたか', 'エラー文言', 'スクリーンショット'];
+const feedbackPoints = ['どの画面で起きたか', '何を押した時に起きたか', '期待していた動き', '実際に起きたこと', 'エラー文言', 'スクリーンショット'];
 
 export function TestGuidePage() {
   return (
     <PageShell description="ConnectBloomを試すときに、確認してほしい流れをまとめています。" eyebrow="TEST GUIDE" title="テスターガイド">
       <div className="space-y-3">
-        <Card className="border-theme-main/15 bg-theme-accent-soft/70 shadow-sm">
+        <Card className="space-y-2 border-theme-main/15 bg-theme-accent-soft/70 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">試してほしい流れ</p>
-          <p className="mt-2 text-sm leading-6 text-theme-muted">上から順番に、ログインから安心機能まで確認してください。実際のチェック保存は不要です。</p>
+          <p className="text-sm leading-6 text-theme-muted">ConnectBloomは現在β版です。予期しないエラーや表示崩れが起きる可能性があります。気づいた点はスクリーンショットで共有してください。</p>
+          <p className="text-sm leading-6 text-theme-muted">上から順番に、ログインから安心機能まで確認してください。実際のチェック保存は不要です。</p>
+        </Card>
+
+        <Card className="border-theme-main/15 bg-theme-card/90 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">テスト時のお願い</p>
+          <p className="mt-2 text-sm leading-6 text-theme-muted">テスト中は、住所・勤務先・電話番号・金融情報などの重要な個人情報を入力しないでください。</p>
         </Card>
 
         {testerGuideItems.map((item, index) => {
@@ -106,14 +112,14 @@ export function TestGuidePage() {
             <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Feedback</p>
             <h2 className="mt-1 text-lg font-black text-theme-text">フィードバックしてほしいこと</h2>
             <p className="mt-2 text-sm leading-6 text-theme-muted">
-              使いづらかったところ、分かりづらかった文言、エラーが出た画面、スマホで見切れた箇所があれば、スクリーンショットで共有してください。
+              バグ、分かりづらい文言、見切れ、操作に迷ったところがあれば、スクリーンショットと一緒に共有してください。
             </p>
           </div>
           <ul className="grid gap-2 sm:grid-cols-2">
             {feedbackPoints.map((point) => (
-              <li className="flex items-center gap-2 rounded-full bg-theme-card/80 px-3 py-2 text-sm font-bold text-theme-text" key={point}>
+              <li className="flex items-center gap-2 rounded-[1rem] bg-theme-card/80 px-3 py-2 text-sm font-bold text-theme-text" key={point}>
                 <CheckCircle2 className="shrink-0 text-theme-main-dark" size={16} />
-                {point}
+                <span>{point}</span>
               </li>
             ))}
           </ul>
