@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -40,6 +40,8 @@ export function MyProfilePage() {
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showDatingTemperatureSuggestions, setShowDatingTemperatureSuggestions] = useState(false);
+  const datingTemperatureFieldRef = useRef<HTMLDivElement>(null);
   const selectedInterests = parseInterestTags(form.interestsText);
 
   useEffect(() => {
@@ -76,6 +78,18 @@ export function MyProfilePage() {
       mounted = false;
     };
   }, [isAuthenticated, isSupabaseMode, themeId, user]);
+
+  useEffect(() => {
+    if (!showDatingTemperatureSuggestions) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (datingTemperatureFieldRef.current?.contains(event.target as Node)) return;
+      setShowDatingTemperatureSuggestions(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [showDatingTemperatureSuggestions]);
 
   function validateSelectedPhoto(file: File | null) {
     console.info('[ConnectBloom] file exists', { exists: Boolean(file) });
@@ -144,6 +158,7 @@ export function MyProfilePage() {
 
   function handleSuggestedDatingTemperatureClick(datingTemperature: string) {
     setForm((current) => ({ ...current, datingTemperature }));
+    setShowDatingTemperatureSuggestions(false);
   }
 
   async function handleSave() {
@@ -185,7 +200,7 @@ export function MyProfilePage() {
       }
 
       saveCurrentUserProfile({ ...nextProfile, photoUrl: photoUrl || currentUser.photoUrl });
-      setNotice(isSupabaseMode && isAuthenticated ? '編集内容をSupabase profilesとlocalStorageに保存しました。' : '編集内容をlocalStorageに保存しました。');
+      setNotice('プロフィールを保存しました。');
     } catch (caughtError) {
       setNotice(getShortErrorMessage(caughtError, '保存に失敗しました。時間を置いてもう一度お試しください。'));
     } finally {
@@ -225,27 +240,46 @@ export function MyProfilePage() {
         <Input helperText="未入力でも保存できます。あなたらしい一言として編集できます。" label="できること" name="myOccupation" onChange={(event) => setForm((current) => ({ ...current, occupation: event.target.value }))} placeholder="例：AIアプリ制作 / ブログ作業 / 音声配信" value={form.occupation} />
         <label className="block space-y-2 text-sm font-semibold text-theme-text">
           <span>自己紹介</span>
-          <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、話したいテーマ、探している活動仲間を書いてください。" value={form.bio} />
-          <span className="block text-xs font-medium leading-5 text-theme-muted">自己紹介には「一緒にやりたいこと」「話したいテーマ」「探している仲間」を書けます。</span>
+          <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
+          <span className="block text-xs font-medium leading-5 text-theme-muted">一緒にやりたいこと、話したいテーマ、探している仲間を書いてみましょう。</span>
         </label>
-        <Input helperText="つながり方のスタンスです。例：まずはゆっくり話したい / 一緒に企画・制作したい" label="つながり方のスタンス" name="myDatingTemperature" onChange={(event) => setForm((current) => ({ ...current, datingTemperature: event.target.value }))} placeholder="まずはゆっくり話したい" value={form.datingTemperature} />
-        <div className="flex flex-wrap gap-1.5">
-          {suggestedDatingTemperatures.map((datingTemperature) => {
-            const selected = form.datingTemperature === datingTemperature;
-            return (
-              <button
-                aria-pressed={selected}
-                className={`min-h-8 rounded-full px-3 py-1 text-xs font-bold transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/90 to-theme-sky/55 text-theme-main-dark ring-2 ring-theme-sky/40' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
-                key={datingTemperature}
-                onClick={() => handleSuggestedDatingTemperatureClick(datingTemperature)}
-                type="button"
-              >
-                {datingTemperature}
-              </button>
-            );
-          })}
+        <div ref={datingTemperatureFieldRef} className="space-y-2">
+          <Input
+            aria-expanded={showDatingTemperatureSuggestions}
+            aria-haspopup="listbox"
+            helperText="どんな距離感で話したいかを選ぶか、自分で入力できます。"
+            label="つながり方のスタンス"
+            name="myDatingTemperature"
+            onChange={(event) => setForm((current) => ({ ...current, datingTemperature: event.target.value }))}
+            onFocus={() => setShowDatingTemperatureSuggestions(true)}
+            onPointerDown={() => setShowDatingTemperatureSuggestions(true)}
+            placeholder="まずはゆっくり話したい"
+            value={form.datingTemperature}
+          />
+          {showDatingTemperatureSuggestions ? (
+            <div className="rounded-2xl border border-theme-sky/25 bg-theme-card/95 p-2 shadow-sm" role="listbox" aria-label="つながり方のスタンス候補">
+              <p className="px-1 pb-2 text-xs font-bold text-theme-muted">候補を選ぶと入力欄に入ります。自由入力もできます。</p>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestedDatingTemperatures.map((datingTemperature) => {
+                  const selected = form.datingTemperature === datingTemperature;
+                  return (
+                    <button
+                      aria-selected={selected}
+                      className={`min-h-9 rounded-full px-3 py-1.5 text-xs font-bold transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/90 to-theme-sky/55 text-theme-main-dark ring-2 ring-theme-sky/40' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
+                      key={datingTemperature}
+                      onClick={() => handleSuggestedDatingTemperatureClick(datingTemperature)}
+                      role="option"
+                      type="button"
+                    >
+                      {datingTemperature}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
-        <Input helperText="活動ジャンル・興味のあること・話したいテーマを読点（、）やカンマで区切って入力します。" label="活動ジャンル / 興味タグ（読点区切り）" name="myInterests" onChange={(event) => setForm((current) => ({ ...current, interestsText: event.target.value }))} placeholder="AI、ブログ、音声配信、ゲーム制作、作業仲間" value={form.interestsText} />
+        <Input helperText="興味のあることを読点やカンマで入力できます。候補タグをタップして追加もできます。" label="活動ジャンル / 興味タグ（読点区切り）" name="myInterests" onChange={(event) => setForm((current) => ({ ...current, interestsText: event.target.value }))} placeholder="AI、ブログ、音声配信、ゲーム制作、作業仲間" value={form.interestsText} />
         <div className="flex flex-wrap gap-1.5">
           {suggestedInterestTags.map((tag) => {
             const selected = selectedInterests.includes(tag);
@@ -262,7 +296,7 @@ export function MyProfilePage() {
             );
           })}
         </div>
-        <p className="text-xs font-medium leading-5 text-theme-muted">変更内容は保存できます。保存後もこの画面で確認・編集できます。</p>
+        <p className="text-xs font-medium leading-5 text-theme-muted">変更内容は保存後もこの画面で確認・編集できます。</p>
         <Button className="w-full" disabled={saving} onClick={handleSave}>{saving ? '保存中...' : '編集内容を保存'}</Button>
       </Card>
     </PageShell>
