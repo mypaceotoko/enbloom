@@ -13,7 +13,7 @@ import { getMyPrimaryProfilePhoto, uploadProfilePhoto } from '../lib/profilePhot
 import { getMyProfile, profileRowToCurrentUser, updateMyProfile } from '../lib/profileApi';
 import { DEFAULT_DATING_TEMPERATURE } from '../types/user';
 
-const suggestedInterestTags = ['映画', '旅行', '読書', 'カフェ', '音楽', '散歩'];
+const suggestedInterestTags = ['映画', '旅行', 'カフェ', '音楽', '読書', '散歩', 'AI制作'];
 
 function parseInterestTags(text: string) {
   return Array.from(new Set(text.split(/[、,]/).map((interest) => interest.trim()).filter(Boolean)));
@@ -225,25 +225,21 @@ export function MyProfilePage() {
         </label>
         <Input helperText="つながり方のスタンスです。例：まずはゆっくり話したい / 一緒に企画・制作したい" label="つながり方のスタンス" name="myDatingTemperature" onChange={(event) => setForm((current) => ({ ...current, datingTemperature: event.target.value }))} placeholder="まずはゆっくり話したい" value={form.datingTemperature} />
         <Input helperText="活動ジャンル・興味のあること・話したいテーマを読点（、）やカンマで区切って入力します。" label="活動ジャンル / 興味タグ（読点区切り）" name="myInterests" onChange={(event) => setForm((current) => ({ ...current, interestsText: event.target.value }))} placeholder="AI、ブログ、音声配信、ゲーム制作、作業仲間" value={form.interestsText} />
-        <div className="flex flex-wrap gap-1.5">{selectedInterests.map((interest) => <Badge key={interest}>{interest}</Badge>)}</div>
-        <div className="space-y-2 rounded-[1.15rem] bg-theme-background/60 p-3">
-          <p className="text-xs font-bold leading-5 text-theme-muted">候補をタップすると追加できます。</p>
-          <div className="flex flex-wrap gap-1.5">
-            {suggestedInterestTags.map((tag) => {
-              const selected = selectedInterests.includes(tag);
-              return (
-                <button
-                  aria-label={`${tag}を活動ジャンル / 興味タグに追加`}
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark ring-1 ring-theme-sky/30' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
-                  key={tag}
-                  onClick={() => handleSuggestedInterestClick(tag)}
-                  type="button"
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {suggestedInterestTags.map((tag) => {
+            const selected = selectedInterests.includes(tag);
+            return (
+              <button
+                aria-label={`${tag}を活動ジャンル / 興味タグに追加`}
+                className={`min-h-8 rounded-full px-3 py-1 text-xs font-bold transition hover:-translate-y-0.5 active:scale-[0.97] ${selected ? 'bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark ring-1 ring-theme-sky/30' : 'bg-theme-card text-theme-text ring-1 ring-theme-sky/20 hover:bg-theme-accent-soft/70'}`}
+                key={tag}
+                onClick={() => handleSuggestedInterestClick(tag)}
+                type="button"
+              >
+                {tag}
+              </button>
+            );
+          })}
         </div>
         <p className="text-xs font-medium leading-5 text-theme-muted">変更内容は保存できます。保存後もこの画面で確認・編集できます。</p>
         <Button className="w-full" disabled={saving} onClick={handleSave}>{saving ? '保存中...' : '編集内容を保存'}</Button>
