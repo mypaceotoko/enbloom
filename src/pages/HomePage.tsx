@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { Bell, CalendarHeart, CheckCircle2, ClipboardList, DoorOpen, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
+import { Bell, CalendarHeart, CheckCircle2, ClipboardList, Compass, DoorOpen, Flower2, HeartHandshake, ShieldCheck, Sparkles, UsersRound } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -138,7 +138,16 @@ export function HomePage() {
   }
 
   return (
-    <PageShell description="共通の興味や紹介から、話してみたい人を見つけましょう。今日は3人だけ、丁寧につながる設計です。" eyebrow="Home" title="今日のつながり">
+    <PageShell
+      description={(
+        <>
+          <span className="block">共通の興味や紹介から、話してみたい人を見つけましょう。</span>
+          <span className="block">今日は3人だけ、丁寧につながる設計です。</span>
+        </>
+      )}
+      eyebrow="Home"
+      title="今日のつながり"
+    >
       {profileSaved ? (
         <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">
           <span className="flex items-center gap-1.5"><CheckCircle2 size={16} />{profileSavedMessage}</span>
@@ -169,13 +178,15 @@ export function HomePage() {
           <div>
             <h2 className="text-[1.25rem] font-black leading-tight tracking-[-0.03em]">次にすること</h2>
             <p className="mt-2 text-[13px] leading-6 text-theme-muted">
-              ルームで話す、募集を探す、参加希望を確認する。今の動きに合わせて進めます。
+              <span className="block">ルームで話す、募集を探す、参加希望を確認する。</span>
+              <span className="block">今の動きに合わせて進めます。</span>
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Link to="/board"><Button className="w-full min-h-11 text-sm">募集を探す</Button></Link>
-            <Link to="/rooms"><Button className="w-full min-h-11 text-sm" variant="secondary">ルームに入る</Button></Link>
-            <Link to="/my-activity"><Button className="w-full min-h-11 text-sm" variant="secondary">活動を確認</Button></Link>
+          <div className="grid grid-cols-2 gap-2">
+            <Link to="/discover"><Button className="min-h-10 w-full px-3 text-sm"><Compass size={16} />人を探す</Button></Link>
+            <Link to="/board"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary">募集を探す</Button></Link>
+            <Link to="/rooms"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary">ルームに入る</Button></Link>
+            <Link to="/my-activity"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary">活動を確認</Button></Link>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-theme-text">
             <span className="rounded-xl bg-theme-background/80 p-2.5"><Flower2 className="mx-auto mb-1 text-theme-main" size={16} />自然体</span>

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 type PageShellProps = {
   title?: string;
   eyebrow?: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 };
 

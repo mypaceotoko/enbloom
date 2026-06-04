@@ -1,6 +1,6 @@
+import type { ChangeEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
-import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { PageShell } from '../components/PageShell';
@@ -25,10 +25,28 @@ export function DiscoverPage() {
   const [matchedUserIds, setMatchedUserIds] = useState<string[]>([]);
   const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
+  const [keyword, setKeyword] = useState('');
   const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
   const sourceUsers = useSupabaseLikes ? supabaseUsers : mockUsers;
   const safetyHiddenIds = useSupabaseLikes ? hiddenUserIds : blockedUserIds;
-  const visibleUsers = sourceUsers.filter((profile) => !safetyHiddenIds.includes(profile.id));
+  const normalizedKeyword = keyword.trim().toLowerCase();
+  const visibleUsers = sourceUsers.filter((profile) => {
+    if (safetyHiddenIds.includes(profile.id)) return false;
+    if (!normalizedKeyword) return true;
+
+    const searchableText = [
+      profile.name,
+      String(profile.age),
+      profile.location,
+      profile.bio,
+      profile.occupation,
+      profile.datingTemperature,
+      profile.introducedBy,
+      ...profile.interests,
+    ].join(' ').toLowerCase();
+
+    return searchableText.includes(normalizedKeyword);
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -78,6 +96,14 @@ export function DiscoverPage() {
     };
   }, [useSupabaseLikes, user]);
 
+  function handleKeywordChange(event: ChangeEvent<HTMLInputElement>) {
+    setKeyword(event.target.value);
+  }
+
+  function handleFilterClick(filter: string) {
+    setKeyword(filter);
+  }
+
   async function handleSupabaseLike(profileId: string, nextLiked: boolean) {
     if (!useSupabaseLikes) return false;
 
@@ -103,16 +129,36 @@ export function DiscoverPage() {
   }
 
   return (
-    <PageShell description="活動ジャンルや興味から、話してみたい人を探せます。検索条件はまだダミーです。" eyebrow="Discover" title="つながりを探す">
+    <PageShell
+      description={(
+        <>
+          <span className="block">活動ジャンルや興味から、話してみたい人を探せます。</span>
+          <span className="block">検索条件は少しずつ整えています。</span>
+        </>
+      )}
+      eyebrow="Discover"
+      title="つながりを探す"
+    >
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
       <Card className="space-y-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <Badge className="w-fit">{useSupabaseLikes ? 'Supabase likes' : 'ローカルデモ'}</Badge>
-          {useSupabaseLikes ? <span className="text-xs font-bold text-theme-muted">話してみたい済み {likedUserIds.length}件</span> : null}
-        </div>
-        <Input label="キーワード" name="search" placeholder="興味・活動エリアで探す" />
+        {useSupabaseLikes ? (
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-xs font-bold text-theme-muted">送信済み {likedUserIds.length}件</span>
+          </div>
+        ) : null}
+        <Input label="キーワード" name="search" onChange={handleKeywordChange} placeholder="興味・活動エリアで探す" value={keyword} />
         <div className="flex flex-wrap gap-1.5">
-          {filters.map((filter) => <Badge key={filter}><Search size={12} />{filter}</Badge>)}
+          {filters.map((filter) => (
+            <button
+              className="inline-flex items-center gap-1 rounded-full border border-theme-sky/30 bg-gradient-to-r from-theme-accent-soft/90 to-theme-yellow/35 px-2.5 py-1 text-[11px] font-bold text-theme-main-dark shadow-sm shadow-theme-sky/10 transition hover:saturate-110 active:scale-[0.97]"
+              key={filter}
+              onClick={() => handleFilterClick(filter)}
+              type="button"
+            >
+              <Search size={12} />
+              {filter}
+            </button>
+          ))}
         </div>
       </Card>
       <div className="space-y-4">

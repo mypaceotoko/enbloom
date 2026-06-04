@@ -10,6 +10,12 @@ const navItems = [
   { to: '/settings', label: '設定', icon: Settings },
 ];
 
+function scrollToPageTop() {
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  });
+}
+
 export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-1.5">
@@ -26,6 +32,7 @@ export function BottomNav() {
                 )
               }
               key={item.to}
+              onClick={scrollToPageTop}
               to={item.to}
             >
               {({ isActive }) => (
