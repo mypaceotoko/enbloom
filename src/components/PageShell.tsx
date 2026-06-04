@@ -9,7 +9,7 @@ type PageShellProps = {
 
 export function PageShell({ title, eyebrow, description, children }: PageShellProps) {
   return (
-    <section className="space-y-5 px-4 pb-8 pt-5">
+    <section className="space-y-5 px-4 pb-8 pt-4">
       {title ? (
         <div className="space-y-2">
           {eyebrow ? <p className="text-xs font-bold uppercase tracking-[0.22em] text-theme-main">{eyebrow}</p> : null}
