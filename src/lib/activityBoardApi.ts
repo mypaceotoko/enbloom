@@ -13,6 +13,8 @@ import type {
 } from '../types/activityBoard';
 import { ensureConversationForActivityInterest } from './matchApi';
 import { getMyProfile, profileRowToUserProfile, type ProfileRow } from './profileApi';
+import { isMissingColumnError } from './dbError';
+import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
 
 type ActivityPostRow = ActivityPost & {
@@ -29,7 +31,7 @@ type InterestCountRpcRow = {
   interest_count: number;
 };
 
-const activityPostColumns = [
+const legacyActivityPostColumns = [
   'id',
   'created_by',
   'title',
@@ -44,19 +46,32 @@ const activityPostColumns = [
   'created_at',
   'updated_at',
   'closed_at',
-  'room_id',
 ].join(',');
+const activityPostColumns = `${legacyActivityPostColumns},room_id`;
 
-const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
+const legacyProfileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const profileSelectColumns = `${legacyProfileSelectColumns},account_status`;
+const legacyActivityPostWithAuthorColumns = [
+  legacyActivityPostColumns,
+  `author:profiles!activity_posts_created_by_fkey(${legacyProfileSelectColumns})`,
+].join(',');
 const activityPostWithAuthorColumns = [
   activityPostColumns,
   `author:profiles!activity_posts_created_by_fkey(${profileSelectColumns})`,
 ].join(',');
 
 const activityInterestColumns = 'id,post_id,user_id,message,status,created_at,updated_at';
+const legacyActivityInterestWithProfileColumns = [
+  activityInterestColumns,
+  `profile:profiles!activity_post_interests_user_id_fkey(${legacyProfileSelectColumns})`,
+].join(',');
 const activityInterestWithProfileColumns = [
   activityInterestColumns,
   `profile:profiles!activity_post_interests_user_id_fkey(${profileSelectColumns})`,
+].join(',');
+const legacyMyInterestedPostColumns = [
+  activityInterestColumns,
+  `post:activity_posts!activity_post_interests_post_id_fkey(${legacyActivityPostWithAuthorColumns})`,
 ].join(',');
 const myInterestedPostColumns = [
   activityInterestColumns,
@@ -81,7 +96,7 @@ function mapInterest(row: ActivityInterestRow): ActivityPostInterestWithProfile 
     post_id: row.post_id,
     user_id: row.user_id,
     message: row.message,
-    status: row.status,
+    status: row.status ?? 'interested',
     created_at: row.created_at,
     updated_at: row.updated_at,
     profile: profile ? profileRowToUserProfile(profile) : null,
@@ -141,7 +156,7 @@ function mapPost(row: ActivityPostRow, stats: Partial<ActivityPostStats> = {}): 
     mode: row.mode,
     max_participants: row.max_participants,
     scheduled_at: row.scheduled_at,
-    status: row.status,
+    status: row.status ?? 'open',
     created_at: row.created_at,
     updated_at: row.updated_at,
     closed_at: row.closed_at,
@@ -225,17 +240,27 @@ async function getActivityPostStatsMap(postIds: string[]): Promise<Map<string, A
 }
 
 export async function getActivityPosts(filters: ActivityPostFilters = {}): Promise<ActivityPostWithAuthor[]> {
-  let query = requireSupabaseClient()
-    .from('activity_posts')
-    .select(activityPostWithAuthorColumns)
-    .in('status', filters.status ? [filters.status] : ['open', 'closed'])
-    .order('created_at', { ascending: false });
+  const queryPosts = (columns: string) => {
+    let query = requireSupabaseClient()
+      .from('activity_posts')
+      .select(columns)
+      .in('status', filters.status ? [filters.status] : ['open', 'closed'])
+      .order('created_at', { ascending: false });
 
-  if (filters.category) query = query.eq('category', filters.category);
-  if (filters.tag) query = query.contains('tags', [filters.tag]);
+    if (filters.category) query = query.eq('category', filters.category);
+    if (filters.tag) query = query.contains('tags', [filters.tag]);
+    return query;
+  };
 
-  const { data, error } = await query;
-  if (error) throw error;
+  let { data, error } = await queryPosts(activityPostWithAuthorColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] activity posts fetch fallback used', getSafeErrorLog(error, 'activity_posts_missing_column_fallback'));
+    ({ data, error } = await queryPosts(legacyActivityPostWithAuthorColumns));
+  }
+  if (error) {
+    console.warn('[ConnectBloom] activity posts fetch failed', getSafeErrorLog(error, 'activity_posts_fetch_failed'));
+    throw error;
+  }
 
   const rows = (data ?? []) as unknown as ActivityPostRow[];
   const counts = await getInterestCounts(rows.map((row) => row.id));
@@ -244,13 +269,22 @@ export async function getActivityPosts(filters: ActivityPostFilters = {}): Promi
 }
 
 export async function getActivityPostById(postId: string): Promise<ActivityPostWithAuthor | null> {
-  const { data, error } = await requireSupabaseClient()
+  const queryPost = (columns: string) => requireSupabaseClient()
     .from('activity_posts')
-    .select(activityPostWithAuthorColumns)
+    .select(columns)
     .eq('id', postId)
     .maybeSingle<ActivityPostRow>();
 
-  if (error) throw error;
+  let { data, error } = await queryPost(activityPostWithAuthorColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] activity post fetch fallback used', getSafeErrorLog(error, 'activity_post_missing_column_fallback'));
+    ({ data, error } = await queryPost(legacyActivityPostWithAuthorColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] activity post fetch failed', getSafeErrorLog(error, 'activity_post_fetch_failed'));
+    throw error;
+  }
   if (!data) return null;
 
   const [counts, stats] = await Promise.all([getInterestCounts([postId]), getActivityPostStats(postId)]);
@@ -319,26 +353,44 @@ export async function canEditActivityPost(postId: string, userId: string): Promi
 }
 
 export async function getMyActivityPosts(userId: string): Promise<ActivityPostWithStats[]> {
-  const { data, error } = await requireSupabaseClient()
+  const queryPosts = (columns: string) => requireSupabaseClient()
     .from('activity_posts')
-    .select(activityPostWithAuthorColumns)
+    .select(columns)
     .eq('created_by', userId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  let { data, error } = await queryPosts(activityPostWithAuthorColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] my activity posts fetch fallback used', getSafeErrorLog(error, 'my_activity_posts_missing_column_fallback'));
+    ({ data, error } = await queryPosts(legacyActivityPostWithAuthorColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] my activity posts fetch failed', getSafeErrorLog(error, 'my_activity_posts_fetch_failed'));
+    throw error;
+  }
   const rows = (data ?? []) as unknown as ActivityPostRow[];
   const stats = await getActivityPostStatsMap(rows.map((row) => row.id));
   return rows.map((row) => mapPost(row, stats.get(row.id)));
 }
 
 export async function getMyInterestedPosts(userId: string): Promise<MyInterestedActivityPost[]> {
-  const { data, error } = await requireSupabaseClient()
+  const queryInterests = (columns: string) => requireSupabaseClient()
     .from('activity_post_interests')
-    .select(myInterestedPostColumns)
+    .select(columns)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  let { data, error } = await queryInterests(myInterestedPostColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] my interested posts fetch fallback used', getSafeErrorLog(error, 'my_interested_posts_missing_column_fallback'));
+    ({ data, error } = await queryInterests(legacyMyInterestedPostColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] my interested posts fetch failed', getSafeErrorLog(error, 'my_interested_posts_fetch_failed'));
+    throw error;
+  }
   const rows = (data ?? []) as unknown as ActivityInterestRow[];
   const postRows = rows.map((row) => firstPost(row.post)).filter((post): post is ActivityPostRow => Boolean(post));
   const stats = await getActivityPostStatsMap(postRows.map((post) => post.id));
@@ -350,7 +402,7 @@ export async function getMyInterestedPosts(userId: string): Promise<MyInterested
       post_id: row.post_id,
       user_id: row.user_id,
       message: row.message,
-      status: row.status,
+      status: row.status ?? 'interested',
       created_at: row.created_at,
       updated_at: row.updated_at,
       post: post ? mapPost(post, stats.get(post.id)) : null,
@@ -432,13 +484,22 @@ export async function getActivityPostStats(postId: string): Promise<ActivityPost
 }
 
 export async function getActivityPostInterestsForOwner(postId: string): Promise<ActivityPostInterestWithProfile[]> {
-  const { data, error } = await requireSupabaseClient()
+  const queryInterests = (columns: string) => requireSupabaseClient()
     .from('activity_post_interests')
-    .select(activityInterestWithProfileColumns)
+    .select(columns)
     .eq('post_id', postId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  let { data, error } = await queryInterests(activityInterestWithProfileColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] activity post interests fetch fallback used', getSafeErrorLog(error, 'activity_post_interests_missing_column_fallback'));
+    ({ data, error } = await queryInterests(legacyActivityInterestWithProfileColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] activity post interests fetch failed', getSafeErrorLog(error, 'activity_post_interests_fetch_failed'));
+    throw error;
+  }
   return ((data ?? []) as unknown as ActivityInterestRow[]).map(mapInterest);
 }
 
