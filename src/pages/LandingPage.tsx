@@ -108,9 +108,15 @@ export function LandingPage() {
       <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-10">
         <section className="grid min-h-[calc(100vh-2rem)] content-center gap-4 py-2 sm:gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(18rem,0.92fr)] lg:items-center">
           <div className="space-y-4">
-            <header className="flex max-w-full items-center justify-center gap-1.5 rounded-full border border-white/60 bg-theme-card/75 px-2 py-2 shadow-lg shadow-theme-sky/10 backdrop-blur sm:gap-2 sm:px-3 sm:py-2.5 lg:max-w-xl">
-              <BrandLogo className="min-w-0 max-w-[310px] flex-[1_1_auto] justify-center sm:max-w-[360px]" imageClassName="max-h-[3.95rem] w-full sm:max-h-[4.45rem]" variant="default" />
-              <span className="shrink-0 rounded-full bg-theme-accent-soft px-2 py-0.5 text-[9px] font-black text-theme-main-dark sm:px-3 sm:py-1 sm:text-[10px]">{t('landing.inviteOnly')}</span>
+            <header className="relative left-1/2 flex w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center justify-center gap-1 rounded-full border border-white/60 bg-theme-card/75 px-1.5 py-2 shadow-lg shadow-theme-sky/10 backdrop-blur sm:left-auto sm:w-fit sm:max-w-xl sm:translate-x-0 sm:gap-1.5 sm:px-2.5 sm:py-2.5">
+              <BrandLogo
+                className="min-w-0 flex-[1_1_15.25rem] justify-start sm:max-w-[430px] sm:flex-[0_1_430px]"
+                imageClassName="max-h-[4.65rem] w-full sm:max-h-[5.35rem]"
+                variant="default"
+              />
+              <span className="mr-0.5 shrink-0 rounded-full bg-theme-accent-soft px-1.5 py-0.5 text-[8px] font-black text-theme-main-dark sm:mr-1 sm:px-2.5 sm:py-1 sm:text-[10px]">
+                {t('landing.inviteOnly')}
+              </span>
             </header>
 
             <div className="flower-gradient soft-shadow relative overflow-hidden rounded-[1.8rem] p-1">
