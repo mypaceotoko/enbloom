@@ -4,7 +4,6 @@ import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile, type ThemeId, type
 import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
 import { assertNotDemoMode } from './demoSession';
-import { toProfileTopic } from './profileDisplay';
 
 export type ProfileRow = {
   id: string;
@@ -15,6 +14,7 @@ export type ProfileRow = {
   bio: string;
   interests: string[];
   relationship_goal: string;
+  talk_topics: string | null;
   dating_temperature: string;
   onboarding_completed: boolean;
   visibility: 'public' | 'private' | 'hidden';
@@ -51,6 +51,7 @@ const baseProfileColumnList = [
   'bio',
   'interests',
   'relationship_goal',
+  'talk_topics',
   'dating_temperature',
   'onboarding_completed',
   'visibility',
@@ -65,7 +66,8 @@ const profileColumns = [
   ...baseProfileColumnList.slice(12),
 ].join(',');
 
-const profileColumnsWithoutAccountStatus = baseProfileColumnList.join(',');
+const legacyProfileColumnList = baseProfileColumnList.filter((column) => column !== 'talk_topics');
+const profileColumnsWithoutOptionalColumns = legacyProfileColumnList.join(',');
 
 type ProfileQueryKind = 'getMyProfile' | 'upsertMyProfile' | 'updateMyProfile' | 'getPublicProfiles' | 'getPublicProfileById';
 
@@ -79,25 +81,27 @@ type SupabaseErrorLike = {
 function normalizeProfileRow(profile: ProfileRow): ProfileRow {
   return {
     ...profile,
+    talk_topics: profile.talk_topics ?? null,
     account_status: profile.account_status ?? 'active',
   };
 }
 
-function isMissingAccountStatusColumnError(error: unknown) {
+function isMissingOptionalProfileColumnError(error: unknown) {
   const errorLike = error && typeof error === 'object' ? (error as SupabaseErrorLike) : {};
   const searchableText = [errorLike.message, errorLike.details, errorLike.hint, errorLike.code].filter(Boolean).join(' ');
-  return /account_status/i.test(searchableText)
+  return /(account_status|talk_topics)/i.test(searchableText)
     && (/column|schema cache|could not find|not found|does not exist|42703|PGRST204/i.test(searchableText));
 }
 
-function logAccountStatusFallback(error: unknown, phase: ProfileQueryKind) {
-  console.warn('[ProfileApi] account_status unavailable; falling back to active', getSafeErrorLog(error, phase));
+function logOptionalProfileColumnsFallback(error: unknown, phase: ProfileQueryKind) {
+  console.warn('[ProfileApi] optional profile columns unavailable; falling back to legacy profile columns', getSafeErrorLog(error, phase));
 }
 
-function omitAccountStatus<TProfile extends { account_status?: ProfileRow['account_status'] }>(profile: TProfile): Omit<TProfile, 'account_status'> {
-  const { account_status: _accountStatus, ...profileWithoutAccountStatus } = profile;
+function omitOptionalProfileColumns<TProfile extends { account_status?: ProfileRow['account_status']; talk_topics?: ProfileRow['talk_topics'] }>(profile: TProfile): Omit<TProfile, 'account_status' | 'talk_topics'> {
+  const { account_status: _accountStatus, talk_topics: _talkTopics, ...profileWithoutOptionalColumns } = profile;
   void _accountStatus;
-  return profileWithoutAccountStatus;
+  void _talkTopics;
+  return profileWithoutOptionalColumns;
 }
 
 export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
@@ -109,12 +113,12 @@ export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
     .maybeSingle<ProfileRow>();
 
   if (!error) return data ? normalizeProfileRow(data) : null;
-  if (!isMissingAccountStatusColumnError(error)) throw error;
+  if (!isMissingOptionalProfileColumnError(error)) throw error;
 
-  logAccountStatusFallback(error, 'getMyProfile');
+  logOptionalProfileColumnsFallback(error, 'getMyProfile');
   const fallbackResult = await client
     .from('profiles')
-    .select(profileColumnsWithoutAccountStatus)
+    .select(profileColumnsWithoutOptionalColumns)
     .eq('id', userId)
     .maybeSingle<ProfileRow>();
 
@@ -132,13 +136,13 @@ export async function upsertMyProfile(profile: ProfileUpsert): Promise<ProfileRo
     .single<ProfileRow>();
 
   if (!error) return normalizeProfileRow(data);
-  if (!isMissingAccountStatusColumnError(error)) throw error;
+  if (!isMissingOptionalProfileColumnError(error)) throw error;
 
-  logAccountStatusFallback(error, 'upsertMyProfile');
+  logOptionalProfileColumnsFallback(error, 'upsertMyProfile');
   const fallbackResult = await client
     .from('profiles')
-    .upsert(omitAccountStatus(profile), { onConflict: 'id' })
-    .select(profileColumnsWithoutAccountStatus)
+    .upsert(omitOptionalProfileColumns(profile), { onConflict: 'id' })
+    .select(profileColumnsWithoutOptionalColumns)
     .single<ProfileRow>();
 
   if (fallbackResult.error) throw fallbackResult.error;
@@ -157,14 +161,14 @@ export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRo
     .single<ProfileRow>();
 
   if (!error) return normalizeProfileRow(data);
-  if (!isMissingAccountStatusColumnError(error)) throw error;
+  if (!isMissingOptionalProfileColumnError(error)) throw error;
 
-  logAccountStatusFallback(error, 'updateMyProfile');
+  logOptionalProfileColumnsFallback(error, 'updateMyProfile');
   const fallbackResult = await client
     .from('profiles')
-    .update(omitAccountStatus(updates))
+    .update(omitOptionalProfileColumns(updates))
     .eq('id', id)
-    .select(profileColumnsWithoutAccountStatus)
+    .select(profileColumnsWithoutOptionalColumns)
     .single<ProfileRow>();
 
   if (fallbackResult.error) throw fallbackResult.error;
@@ -190,6 +194,7 @@ export async function ensureProfileForUser(user: User): Promise<ProfileRow> {
     bio: '',
     interests: [],
     relationship_goal: '',
+    talk_topics: null,
     dating_temperature: DEFAULT_DATING_TEMPERATURE,
     onboarding_completed: false,
     visibility: 'public',
@@ -211,6 +216,7 @@ export function profileRowToCurrentUser(profile: ProfileRow, fallbackTheme: Them
     interests: profile.interests,
     datingTemperature: profile.dating_temperature || DEFAULT_DATING_TEMPERATURE,
     relationshipGoal: profile.relationship_goal,
+    talkTopics: profile.talk_topics ?? '',
     themePreference: fallbackTheme,
   };
 }
@@ -232,12 +238,12 @@ export async function getPublicProfiles(currentUserId?: string, limit = 24): Pro
 
   const { data, error } = await query;
   if (!error) return ((data ?? []) as unknown as ProfileRow[]).map(normalizeProfileRow);
-  if (!isMissingAccountStatusColumnError(error)) throw error;
+  if (!isMissingOptionalProfileColumnError(error)) throw error;
 
-  logAccountStatusFallback(error, 'getPublicProfiles');
+  logOptionalProfileColumnsFallback(error, 'getPublicProfiles');
   let fallbackQuery = client
     .from('profiles')
-    .select(profileColumnsWithoutAccountStatus)
+    .select(profileColumnsWithoutOptionalColumns)
     .eq('visibility', 'public')
     .eq('onboarding_completed', true)
     .order('created_at', { ascending: false })
@@ -263,12 +269,12 @@ export async function getPublicProfileById(profileId: string): Promise<ProfileRo
     .maybeSingle<ProfileRow>();
 
   if (!error) return data ? normalizeProfileRow(data) : null;
-  if (!isMissingAccountStatusColumnError(error)) throw error;
+  if (!isMissingOptionalProfileColumnError(error)) throw error;
 
-  logAccountStatusFallback(error, 'getPublicProfileById');
+  logOptionalProfileColumnsFallback(error, 'getPublicProfileById');
   const fallbackResult = await client
     .from('profiles')
-    .select(profileColumnsWithoutAccountStatus)
+    .select(profileColumnsWithoutOptionalColumns)
     .eq('id', profileId)
     .eq('visibility', 'public')
     .maybeSingle<ProfileRow>();
@@ -287,7 +293,8 @@ export function profileRowToUserProfile(profile: ProfileRow, primaryPhotoUrl?: s
     bio: profile.bio || 'プロフィールを準備中です。ゆっくりご縁を育てていきたいです。',
     interests: profile.interests?.length ? profile.interests : ['紹介経由'],
     datingTemperature: normalizeDatingTemperature(profile.dating_temperature),
-    relationshipGoal: toProfileTopic(profile.relationship_goal),
+    relationshipGoal: profile.relationship_goal,
+    talkTopics: profile.talk_topics ?? '',
     introducedBy: profile.invited_by ? '紹介者' : 'ConnectBloom',
     photoUrl: primaryPhotoUrl,
     avatarUrl: primaryPhotoUrl,

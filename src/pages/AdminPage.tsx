@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, ChevronDown, Copy, KeyRound, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronDown, ClipboardList, Copy, KeyRound, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '../components/Badge';
@@ -14,10 +14,12 @@ import { useLanguage } from '../hooks/useLanguage';
 import { useAuth } from '../hooks/useAuth';
 import { createInviteCode, deactivateInviteCode, deleteInviteCode, getManagedInviteCodes, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
 import { restoreProfile, suspendProfile } from '../lib/adminModerationApi';
+import { deleteActivityPostForAdmin, getArchivedActivityPostsForAdmin, restoreActivityPostForAdmin } from '../lib/activityBoardApi';
 import { archiveReport, getAdminReports, unarchiveReport, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
 import { GENERAL_USER_INVITE_CODE_LIMIT } from '../lib/admin';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { requireSupabaseClient } from '../lib/supabase';
+import type { ActivityPostWithStats } from '../types/activityBoard';
 import type { ReportStatus, ReportWithProfiles } from '../types/report';
 
 type InviteCodeForm = {
@@ -79,6 +81,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   const { language, t } = useLanguage();
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
   const [supabaseReports, setSupabaseReports] = useState<ReportWithProfiles[]>([]);
+  const [archivedActivityPosts, setArchivedActivityPosts] = useState<ActivityPostWithStats[]>([]);
   const [reportError, setReportError] = useState('');
   const [reportNotice, setReportNotice] = useState('');
   const [reportNoteDrafts, setReportNoteDrafts] = useState<Record<string, string>>({});
@@ -88,6 +91,10 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   const [updatingAccountStatusUserId, setUpdatingAccountStatusUserId] = useState<string | null>(null);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [includeArchivedReports, setIncludeArchivedReports] = useState(false);
+  const [activityPostError, setActivityPostError] = useState('');
+  const [activityPostNotice, setActivityPostNotice] = useState('');
+  const [loadingActivityPosts, setLoadingActivityPosts] = useState(false);
+  const [managingActivityPostId, setManagingActivityPostId] = useState<string | null>(null);
   const [form, setForm] = useState<InviteCodeForm>(() => (inviteOnly ? { ...defaultInviteCodeForm, code: generateInviteCodeCandidate(), maxUses: '1', unlimited: false } : defaultInviteCodeForm));
   const [inviteLoading, setInviteLoading] = useState(false);
   const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
@@ -121,6 +128,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   }, [inviteCodes.length, isAuthenticated, isFounder, isSupabaseMode, ownInviteCodeCount]);
   const adminCards = [
     { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: 'βテスターに共有する招待コードを作成・確認できます。\n招待コードは、紹介経路を記録するために使います。' },
+    { icon: ClipboardList, title: '募集管理', count: `${archivedActivityPosts.length}件`, body: '非表示にした募集を確認し、必要に応じて再表示または完全削除できます。' },
     { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: '届いた通報を確認し、必要に応じて対応できます。' },
   ];
 
@@ -186,6 +194,35 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       ignore = true;
     };
   }, [includeArchivedReports, isAuthenticated, isFounder, isSupabaseMode, user]);
+
+  useEffect(() => {
+    if (!isFounder || !isSupabaseMode || !isAuthenticated || !user) return undefined;
+
+    let ignore = false;
+
+    Promise.resolve()
+      .then(() => {
+        if (!ignore) {
+          setLoadingActivityPosts(true);
+          setActivityPostError('');
+        }
+        return getArchivedActivityPostsForAdmin();
+      })
+      .then((posts) => {
+        if (!ignore) setArchivedActivityPosts(posts);
+      })
+      .catch((caughtError: unknown) => {
+        console.warn('[ConnectBloom] admin archived activity posts load failed', getSafeErrorLog(caughtError, 'admin_archived_activity_posts_load_failed'));
+        if (!ignore) setActivityPostError(getShortErrorMessage(caughtError, '非表示募集の取得に失敗しました。'));
+      })
+      .finally(() => {
+        if (!ignore) setLoadingActivityPosts(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, isFounder, isSupabaseMode, user]);
 
   useEffect(() => {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
@@ -498,6 +535,53 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     }
   }
 
+  async function handleRestoreActivityPost(post: ActivityPostWithStats) {
+    setActivityPostError('');
+    setActivityPostNotice('');
+
+    if (!isSupabaseMode || !isAuthenticated) {
+      setActivityPostError('ログイン後に募集を管理できます。');
+      return;
+    }
+
+    setManagingActivityPostId(post.id);
+    try {
+      await restoreActivityPostForAdmin(post.id);
+      setArchivedActivityPosts((current) => current.filter((currentPost) => currentPost.id !== post.id));
+      setActivityPostNotice('募集を再表示しました');
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] admin activity post restore failed', getSafeErrorLog(caughtError, 'admin_activity_post_restore_failed'));
+      setActivityPostError('募集の更新に失敗しました');
+    } finally {
+      setManagingActivityPostId(null);
+    }
+  }
+
+  async function handleDeleteActivityPost(post: ActivityPostWithStats) {
+    setActivityPostError('');
+    setActivityPostNotice('');
+
+    if (!isSupabaseMode || !isAuthenticated) {
+      setActivityPostError('ログイン後に募集を管理できます。');
+      return;
+    }
+
+    const confirmed = window.confirm('この募集を完全に削除します。元に戻せません。よろしいですか？');
+    if (!confirmed) return;
+
+    setManagingActivityPostId(post.id);
+    try {
+      await deleteActivityPostForAdmin(post.id);
+      setArchivedActivityPosts((current) => current.filter((currentPost) => currentPost.id !== post.id));
+      setActivityPostNotice('募集を完全削除しました');
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] admin activity post delete failed', getSafeErrorLog(caughtError, 'admin_activity_post_delete_failed'));
+      setActivityPostError('募集の削除に失敗しました');
+    } finally {
+      setManagingActivityPostId(null);
+    }
+  }
+
   async function handleDeactivateInviteCode(inviteCode: InviteCodeRow) {
     setInviteError('');
     setInviteNotice('');
@@ -672,6 +756,54 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
           );
         })}
       </Card>
+
+      {!inviteOnly ? <Card className="space-y-2.5 p-3 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-black">募集管理</h2>
+            <p className="mt-1 text-[13px] leading-5 text-theme-muted">非表示にした募集を確認し、必要に応じて再表示または完全削除できます。</p>
+          </div>
+          <Badge>{isSupabaseMode && isAuthenticated ? `${archivedActivityPosts.length}件` : 'ログイン後'}</Badge>
+        </div>
+
+        {activityPostError ? <p className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{activityPostError}</p> : null}
+        {activityPostNotice ? <p className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{activityPostNotice}</p> : null}
+        {!isSupabaseMode || !isAuthenticated ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">非表示募集の管理は管理者ログイン後に利用できます。</p> : null}
+        {isSupabaseMode && isAuthenticated && loadingActivityPosts ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">非表示募集を読み込んでいます。</p> : null}
+        {isSupabaseMode && isAuthenticated && !loadingActivityPosts && archivedActivityPosts.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">非表示中の募集はありません。</p> : null}
+        {archivedActivityPosts.map((post) => {
+          const isManagingPost = managingActivityPostId === post.id;
+          const bodyPreview = post.body.length > 120 ? `${post.body.slice(0, 120)}…` : post.body;
+
+          return (
+            <article className="space-y-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-3" key={post.id}>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-theme-text">{post.title}</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-theme-muted">{bodyPreview}</p>
+                </div>
+                <Badge className="bg-theme-background text-theme-main-dark">{post.status}</Badge>
+              </div>
+              <div className="grid gap-1.5 text-xs font-bold text-theme-muted sm:grid-cols-2">
+                <span>投稿者: {post.author?.name ?? '不明'}</span>
+                <span>作成日時: {formatDateTime(post.created_at, '未記録', locale)}</span>
+                <span>ステータス: {post.status}</span>
+                <span>参加希望: {post.interest_count}件</span>
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button className="min-h-9 px-3 py-1.5" disabled={isManagingPost} onClick={() => { void handleRestoreActivityPost(post); }} type="button" variant="secondary">
+                  <ArchiveRestore size={16} />
+                  {isManagingPost ? '更新中...' : '再表示する'}
+                </Button>
+                <Button className="min-h-9 px-3 py-1.5" disabled={isManagingPost} onClick={() => { void handleDeleteActivityPost(post); }} type="button" variant="danger">
+                  <Trash2 size={16} />
+                  {isManagingPost ? '削除中...' : '完全削除'}
+                </Button>
+              </div>
+            </article>
+          );
+        })}
+      </Card> : null}
 
       {!inviteOnly ? <Card className="space-y-2.5 p-3 shadow-sm">
         <div className="flex items-start justify-between gap-3">

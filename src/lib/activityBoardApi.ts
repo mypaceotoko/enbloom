@@ -51,7 +51,7 @@ const legacyActivityPostColumns = [
 const activityPostColumns = `${legacyActivityPostColumns},room_id`;
 
 const legacyProfileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
-const profileSelectColumns = `${legacyProfileSelectColumns},account_status`;
+const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,talk_topics,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used,account_status';
 const legacyActivityPostWithAuthorColumns = [
   legacyActivityPostColumns,
   `author:profiles!activity_posts_created_by_fkey(${legacyProfileSelectColumns})`,
@@ -267,6 +267,38 @@ export async function getActivityPosts(filters: ActivityPostFilters = {}): Promi
   const counts = await getInterestCounts(rows.map((row) => row.id));
   console.info('[ConnectBloom] activity posts loaded', { count: rows.length });
   return rows.map((row) => mapPost(row, { interest_count: counts.get(row.id) ?? 0 }));
+}
+
+
+export async function getArchivedActivityPostsForAdmin(): Promise<ActivityPostWithStats[]> {
+  const queryPosts = (columns: string) => requireSupabaseClient()
+    .from('activity_posts')
+    .select(columns)
+    .eq('status', 'archived')
+    .order('created_at', { ascending: false });
+
+  let { data, error } = await queryPosts(activityPostWithAuthorColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] admin archived activity posts fetch fallback used', getSafeErrorLog(error, 'admin_archived_activity_posts_missing_column_fallback'));
+    ({ data, error } = await queryPosts(legacyActivityPostWithAuthorColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] admin archived activity posts fetch failed', getSafeErrorLog(error, 'admin_archived_activity_posts_fetch_failed'));
+    throw error;
+  }
+
+  const rows = (data ?? []) as unknown as ActivityPostRow[];
+  const stats = await getActivityPostStatsMap(rows.map((row) => row.id));
+  return rows.map((row) => mapPost(row, stats.get(row.id)));
+}
+
+export async function restoreActivityPostForAdmin(postId: string): Promise<ActivityPost> {
+  return reopenActivityPost(postId);
+}
+
+export async function deleteActivityPostForAdmin(postId: string): Promise<void> {
+  await deleteActivityPost(postId);
 }
 
 export async function getActivityPostById(postId: string): Promise<ActivityPostWithAuthor | null> {

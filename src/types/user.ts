@@ -32,6 +32,7 @@ export type UserProfile = {
   interests: string[];
   datingTemperature: DatingTemperature | string;
   relationshipGoal: RelationshipGoal | string;
+  talkTopics?: string;
   introducedBy: string;
   photoUrl?: string;
   avatarUrl?: string;

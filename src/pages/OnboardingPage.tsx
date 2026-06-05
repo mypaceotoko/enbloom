@@ -27,6 +27,7 @@ type OnboardingForm = {
   location: string;
   occupation: string;
   bio: string;
+  talkTopics: string;
   datingTemperature: string;
   interests: string[];
   inviteCode: string;
@@ -42,6 +43,7 @@ type NormalizedForm = {
   location: string;
   occupation: string;
   bio: string;
+  talkTopics: string;
   datingTemperature: string;
   selectedInterestTags: string[];
   inviteCode: string;
@@ -68,6 +70,7 @@ export function OnboardingPage() {
     location: currentUser.location,
     occupation: currentUser.occupation,
     bio: currentUser.bio,
+    talkTopics: currentUser.talkTopics ?? '',
     datingTemperature: normalizeDatingTemperature(currentUser.datingTemperature),
     interests: currentUser.interests,
     inviteCode: getPendingInviteCode(),
@@ -121,6 +124,7 @@ export function OnboardingPage() {
       location: form.location.trim(),
       occupation: form.occupation.trim() || '興味や活動を準備中',
       bio: form.bio.trim() || '一緒にやりたいことや話したいテーマを準備中です。',
+      talkTopics: form.talkTopics.trim().slice(0, 160),
       datingTemperature: normalizeDatingTemperature(form.datingTemperature),
       selectedInterestTags: Array.isArray(form.interests) ? form.interests : [],
       inviteCode: form.inviteCode.trim().toUpperCase(),
@@ -228,6 +232,7 @@ export function OnboardingPage() {
       location: normalizedForm.location,
       occupation: normalizedForm.occupation,
       bio: normalizedForm.bio,
+      talkTopics: normalizedForm.talkTopics,
       datingTemperature: normalizedForm.datingTemperature,
       interests: normalizedForm.selectedInterestTags,
       themePreference: themeId,
@@ -264,6 +269,7 @@ export function OnboardingPage() {
             bio: profile.bio,
             interests: profile.interests,
             relationship_goal: profile.relationshipGoal,
+            talk_topics: profile.talkTopics || null,
             dating_temperature: profile.datingTemperature,
             onboarding_completed: false,
             visibility: 'public',
@@ -302,6 +308,7 @@ export function OnboardingPage() {
           bio: profile.bio,
           interests: profile.interests,
           relationship_goal: profile.relationshipGoal,
+          talk_topics: profile.talkTopics || null,
           dating_temperature: profile.datingTemperature,
           onboarding_completed: true,
           visibility: 'public',
@@ -364,8 +371,14 @@ export function OnboardingPage() {
           <Input helperText={t('onboarding.basic.occupationHelper')} label={t('onboarding.basic.occupation')} name="occupation" onChange={(event) => updateField('occupation', event.target.value)} placeholder="例：AIアプリ制作 / ブログ作業 / イベント企画" value={form.occupation} />
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
             <span>{t('onboarding.basic.bio')}</span>
-            <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('bio', event.target.value)} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
+            <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('bio', event.target.value)} placeholder="例：一緒にやりたいこと、探している仲間を書いてください。" value={form.bio} />
             <span className="block text-xs font-medium leading-5 text-theme-muted">{t('onboarding.basic.bioHelper')}</span>
+          </label>
+          <label className="block space-y-2 text-sm font-semibold text-theme-text">
+            <span>{t('onboarding.basic.talkTopics')}</span>
+            <textarea className="min-h-20 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" maxLength={160} onChange={(event) => updateField('talkTopics', event.target.value)} placeholder={t('onboarding.basic.talkTopicsPlaceholder')} value={form.talkTopics} />
+            <span className="block text-xs font-medium leading-5 text-theme-muted">{t('onboarding.basic.talkTopicsHelper')}</span>
+            <span className="block text-right text-[11px] font-bold text-theme-muted">{form.talkTopics.length}/160</span>
           </label>
         </Card>
       </div>

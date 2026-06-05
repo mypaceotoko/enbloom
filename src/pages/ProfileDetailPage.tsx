@@ -19,7 +19,6 @@ import { getPublicProfileById, profileRowToUserProfile } from '../lib/profileApi
 import { reportUser as reportSupabaseUser } from '../lib/reportApi';
 import type { UserProfile } from '../types/user';
 import { isDemoModeEnabled } from '../lib/demoSession';
-import { toProfileTopic } from '../lib/profileDisplay';
 
 const reportReasonOptions = ['不適切なプロフィール', '迷惑行為', 'なりすまし', '不安を感じた', 'その他'];
 
@@ -92,6 +91,7 @@ export function ProfileDetailPage() {
   const liked = profileUser ? (useSupabaseProfile ? supabaseLiked : isLiked(profileUser.id)) : false;
   const matched = profileUser ? (useSupabaseProfile ? Boolean(supabaseMatchId) : isMatched(profileUser.id)) : false;
   const reported = profileUser ? isReported(profileUser.id) : false;
+  const talkTopics = profileUser?.talkTopics?.trim() ?? '';
 
   async function handleLike() {
     if (!profileUser) return;
@@ -233,7 +233,7 @@ export function ProfileDetailPage() {
 
           <InfoBlock icon={<MessageCircle size={17} />} title={t('profile.connectionStyle')} body={profileUser.datingTemperature} />
           <InfoBlock icon={<UserRoundCheck size={17} />} title={t('profile.introductionShared')} body={`${profileUser.introducedBy}からの紹介。共通点: ${profileUser.interests.join('、')}`} />
-          <InfoBlock icon={<MessageCircle size={17} />} title={t('profile.talkTopics')} body={toProfileTopic(profileUser.relationshipGoal)} />
+          {talkTopics ? <InfoBlock icon={<MessageCircle size={17} />} title={t('profile.talkTopics')} body={talkTopics} /> : null}
 
           <div className="sticky bottom-24 z-10 space-y-2 rounded-[1.25rem] border border-white/60 bg-theme-card/88 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
             <Button className={`w-full ${liked ? 'bg-gradient-to-r from-theme-cyan to-theme-main text-white shadow-theme-main/25 hover:saturate-125' : 'bg-theme-accent-soft text-theme-text'}`} onClick={() => { void handleLike(); }} variant="secondary">

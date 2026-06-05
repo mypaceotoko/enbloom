@@ -42,6 +42,7 @@ export function MyProfilePage() {
     location: currentUser.location,
     occupation: currentUser.occupation,
     bio: currentUser.bio,
+    talkTopics: currentUser.talkTopics ?? '',
     datingTemperature: normalizeDatingTemperature(currentUser.datingTemperature),
     interestsText: currentUser.interests.join('、'),
   });
@@ -73,6 +74,7 @@ export function MyProfilePage() {
           location: syncedProfile.location,
           occupation: syncedProfile.occupation,
           bio: syncedProfile.bio,
+          talkTopics: syncedProfile.talkTopics ?? '',
           datingTemperature: normalizeDatingTemperature(syncedProfile.datingTemperature),
           interestsText: syncedProfile.interests.join('、'),
         });
@@ -168,6 +170,7 @@ export function MyProfilePage() {
       location: form.location.trim(),
       occupation: form.occupation.trim(),
       bio: form.bio.trim(),
+      talkTopics: form.talkTopics.trim().slice(0, 160),
       datingTemperature: normalizeDatingTemperature(form.datingTemperature),
       interests: parseInterestTags(form.interestsText),
       themePreference: themeId,
@@ -187,6 +190,7 @@ export function MyProfilePage() {
           bio: nextProfile.bio,
           interests: nextProfile.interests,
           relationship_goal: nextProfile.relationshipGoal,
+          talk_topics: nextProfile.talkTopics || null,
           dating_temperature: nextProfile.datingTemperature,
           onboarding_completed: true,
         });
@@ -233,8 +237,14 @@ export function MyProfilePage() {
         <Input helperText="未入力でも保存できます。あなたらしい一言として編集できます。" label="できること" name="myOccupation" onChange={(event) => setForm((current) => ({ ...current, occupation: event.target.value }))} placeholder="例：AIアプリ制作 / ブログ作業 / 音声配信" value={form.occupation} />
         <label className="block space-y-2 text-sm font-semibold text-theme-text">
           <span>自己紹介</span>
-          <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
-          <span className="block text-xs font-medium leading-5 text-theme-muted">一緒にやりたいこと、話したいテーマ、探している仲間を書いてみましょう。</span>
+          <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、探している仲間を書いてください。" value={form.bio} />
+          <span className="block text-xs font-medium leading-5 text-theme-muted">一緒にやりたいことや、探している仲間を書いてみましょう。</span>
+        </label>
+        <label className="block space-y-2 text-sm font-semibold text-theme-text">
+          <span>話してみたいテーマ</span>
+          <textarea className="min-h-20 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" maxLength={160} onChange={(event) => setForm((current) => ({ ...current, talkTopics: event.target.value }))} placeholder="カフェ、旅行、AI制作、映画、最近ハマっていることなど" value={form.talkTopics} />
+          <span className="block text-xs font-medium leading-5 text-theme-muted">共通の興味から話し始めやすいように、今話してみたいテーマを書いておきましょう。</span>
+          <span className="block text-right text-[11px] font-bold text-theme-muted">{form.talkTopics.length}/160</span>
         </label>
         <label className="block space-y-2 text-sm font-semibold text-theme-text">
           <span className="block text-sm font-black text-theme-text">つながり方のスタンス</span>
