@@ -1,6 +1,7 @@
 import type { AppNotification, NotificationCreateInput, NotificationType } from '../types/notification';
 import { getSafeErrorLog } from './errorMessage';
 import { supabase } from './supabase';
+import { assertNotDemoMode } from './demoSession';
 
 export const notificationSetupMessage = '通知機能の準備がまだ完了していない可能性があります。';
 
@@ -141,6 +142,7 @@ export async function getNotificationSummary(limit = 3): Promise<NotificationSum
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
+  assertNotDemoMode('通知の既読');
   if (!supabase) return;
   const currentUserId = await getCurrentUserId();
 
@@ -155,6 +157,7 @@ export async function markNotificationRead(notificationId: string): Promise<void
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
+  assertNotDemoMode('通知の既読');
   if (!supabase) return;
   const currentUserId = await getCurrentUserId();
 
@@ -178,6 +181,7 @@ function warnNotificationCreation(type: NotificationType, targetUserId: string |
 }
 
 export async function createNotification(input: NotificationCreateInput): Promise<string | null> {
+  assertNotDemoMode('通知作成');
   if (!supabase) return null;
   const currentUserId = await getCurrentUserId({ optional: true });
   if (!currentUserId) return null;

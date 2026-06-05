@@ -9,6 +9,7 @@ import { PageShell } from '../components/PageShell';
 import { activityPostCategories } from '../data/mockActivityPosts';
 import { demoChatRooms } from '../data/mockChatRooms';
 import { useAuth } from '../hooks/useAuth';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { createActivityPost } from '../lib/activityBoardApi';
 import type { ActivityPostEditFormState } from '../types/activityBoard';
@@ -34,7 +35,7 @@ export function ActivityBoardNewPage() {
   const [form, setForm] = useState<ActivityPostEditFormState>(initialForm);
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
-  const canCreate = isSupabaseMode && isAuthenticated;
+  const canCreate = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

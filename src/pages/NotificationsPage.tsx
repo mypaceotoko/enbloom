@@ -10,6 +10,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import type { TranslationKey } from '../lib/i18n';
 import { getMyNotifications, getNotificationErrorMessage, markAllNotificationsRead, markNotificationRead } from '../lib/notificationApi';
 import type { AppNotification, NotificationType } from '../types/notification';
+import { isDemoModeEnabled } from '../lib/demoSession';
 
 function getTypeLabel(type: NotificationType, t: (key: TranslationKey) => string) {
   if (type === 'activity_interest_received') return t('notifications.type.interest');
@@ -39,7 +40,7 @@ export function NotificationsPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [updatingAll, setUpdatingAll] = useState(false);
-  const canUseSupabaseNotifications = isSupabaseMode && isAuthenticated;
+  const canUseSupabaseNotifications = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.isRead).length,

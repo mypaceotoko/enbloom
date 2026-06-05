@@ -10,6 +10,7 @@ import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { getSafetyHiddenUserIds } from '../lib/blockApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog } from '../lib/errorMessage';
 import { getMyMatches } from '../lib/matchApi';
 import type { MatchWithProfile } from '../types/match';
@@ -22,7 +23,7 @@ export function MatchesPage() {
   const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
-  const useSupabaseMatches = isSupabaseMode && isAuthenticated && Boolean(user);
+  const useSupabaseMatches = isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && Boolean(user);
   const demoMatchedUsers = mockUsers.filter((matchedUser) => matchedUserIds.includes(matchedUser.id) && !blockedUserIds.includes(matchedUser.id));
   const visibleSupabaseMatches = supabaseMatches.filter((match) => !hiddenUserIds.includes(match.otherUserId));
 

@@ -16,6 +16,7 @@ import { getMyProfile, profileRowToUserProfile, type ProfileRow } from './profil
 import { isMissingColumnError, isSchemaRelationshipError } from './dbError';
 import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
+import { assertNotDemoMode } from './demoSession';
 
 type ActivityPostRow = ActivityPost & {
   author?: ProfileRow | ProfileRow[] | null;
@@ -292,6 +293,7 @@ export async function getActivityPostById(postId: string): Promise<ActivityPostW
 }
 
 export async function createActivityPost(input: ActivityPostInput): Promise<ActivityPostWithAuthor> {
+  assertNotDemoMode('募集作成');
   const userId = await getCurrentUserId();
   const roomId = await resolveRoomId(input.room_id);
   const payload = {
@@ -339,6 +341,7 @@ export async function createActivityPost(input: ActivityPostInput): Promise<Acti
 
 
 export async function updateActivityPost(postId: string, input: ActivityPostUpdateInput): Promise<ActivityPostWithAuthor> {
+  assertNotDemoMode('募集編集');
   const payload = buildActivityPostUpdatePayload(input);
 
   const updatePost = (columns: string) => requireSupabaseClient()
@@ -447,6 +450,7 @@ export async function getMyInterestedPosts(userId: string): Promise<MyInterested
 }
 
 export async function expressInterest(postId: string, message?: string): Promise<ActivityPostInterest> {
+  assertNotDemoMode('募集への反応');
   const userId = await getCurrentUserId();
   const payload = {
     post_id: postId,
@@ -467,6 +471,7 @@ export async function expressInterest(postId: string, message?: string): Promise
 }
 
 export async function cancelActivityPostInterest(postId: string): Promise<ActivityPostInterest> {
+  assertNotDemoMode('募集への反応');
   const userId = await getCurrentUserId();
   const { data, error } = await requireSupabaseClient()
     .from('activity_post_interests')
@@ -540,6 +545,7 @@ export async function getActivityPostInterestsForOwner(postId: string): Promise<
 }
 
 export async function updateActivityPostInterestStatus(interestId: string, status: ActivityInterestStatus): Promise<ActivityPostInterest> {
+  assertNotDemoMode('募集への反応');
   const { data, error } = await requireSupabaseClient()
     .from('activity_post_interests')
     .update({ status })
@@ -553,6 +559,7 @@ export async function updateActivityPostInterestStatus(interestId: string, statu
 }
 
 export async function acceptActivityPostInterest(interestId: string): Promise<ActivityPostInterest> {
+  assertNotDemoMode('募集への反応');
   const updatedInterest = await updateActivityPostInterestStatus(interestId, 'accepted');
   const conversation = await ensureConversationForActivityInterest(updatedInterest.post_id, updatedInterest.id, updatedInterest.user_id);
   if (!conversation.success) {
@@ -566,6 +573,7 @@ export async function declineActivityPostInterest(interestId: string): Promise<A
 }
 
 export async function closeActivityPost(postId: string): Promise<ActivityPost> {
+  assertNotDemoMode('募集ステータス変更');
   const { data, error } = await requireSupabaseClient()
     .from('activity_posts')
     .update({ status: 'closed', closed_at: new Date().toISOString() })
@@ -579,6 +587,7 @@ export async function closeActivityPost(postId: string): Promise<ActivityPost> {
 }
 
 export async function reopenActivityPost(postId: string): Promise<ActivityPost> {
+  assertNotDemoMode('募集ステータス変更');
   const { data, error } = await requireSupabaseClient()
     .from('activity_posts')
     .update({ status: 'open', closed_at: null })
@@ -592,6 +601,7 @@ export async function reopenActivityPost(postId: string): Promise<ActivityPost> 
 }
 
 export async function archiveActivityPost(postId: string): Promise<ActivityPost> {
+  assertNotDemoMode('募集アーカイブ');
   const { data, error } = await requireSupabaseClient()
     .from('activity_posts')
     .update({ status: 'archived', closed_at: new Date().toISOString() })
@@ -605,6 +615,7 @@ export async function archiveActivityPost(postId: string): Promise<ActivityPost>
 }
 
 export async function deleteActivityPost(postId: string): Promise<void> {
+  assertNotDemoMode('募集削除');
   const { error } = await requireSupabaseClient()
     .from('activity_posts')
     .delete()

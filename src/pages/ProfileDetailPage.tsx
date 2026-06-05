@@ -18,6 +18,7 @@ import { getPrimaryProfilePhoto } from '../lib/profilePhotoApi';
 import { getPublicProfileById, profileRowToUserProfile } from '../lib/profileApi';
 import { reportUser as reportSupabaseUser } from '../lib/reportApi';
 import type { UserProfile } from '../types/user';
+import { isDemoModeEnabled } from '../lib/demoSession';
 
 const reportReasonOptions = ['不適切なプロフィール', '迷惑行為', 'なりすまし', '不安を感じた', 'その他'];
 
@@ -39,7 +40,7 @@ export function ProfileDetailPage() {
   const [errorNotice, setErrorNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [savingSafety, setSavingSafety] = useState(false);
-  const useSupabaseProfile = isSupabaseMode && isAuthenticated && Boolean(authUser) && Boolean(id);
+  const useSupabaseProfile = isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && Boolean(authUser) && Boolean(id);
 
   useEffect(() => {
     let mounted = true;

@@ -25,8 +25,6 @@ const demoAllowedPathPatterns = [
   /^\/rooms\/?$/,
   /^\/rooms\/[^/]+\/?$/,
   /^\/profile\/[^/]+\/?$/,
-  /^\/likes\/?$/,
-  /^\/matches\/?$/,
 ];
 
 function canBrowseDemoPath(pathname: string) {

@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileAvatar } from '../components/ProfileAvatar';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getShortErrorMessage } from '../lib/errorMessage';
 import { getMyPrimaryProfilePhoto, uploadProfilePhoto } from '../lib/profilePhotoApi';
 import { getMyProfile, profileRowToCurrentUser, updateMyProfile } from '../lib/profileApi';
@@ -196,7 +197,7 @@ export function MyProfilePage() {
     setNotice('');
 
     try {
-      if (isSupabaseMode && isAuthenticated && user) {
+      if (isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && user) {
         await updateMyProfile({
           id: user.id,
           display_name: nextProfile.name,

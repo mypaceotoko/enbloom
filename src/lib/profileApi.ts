@@ -2,6 +2,7 @@ import type { User } from '@supabase/supabase-js';
 import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile, type ThemeId, type UserProfile } from '../types/user';
 import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
+import { assertNotDemoMode } from './demoSession';
 
 export type ProfileRow = {
   id: string;
@@ -120,6 +121,7 @@ export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
 }
 
 export async function upsertMyProfile(profile: ProfileUpsert): Promise<ProfileRow> {
+  assertNotDemoMode('プロフィール保存');
   const client = requireSupabaseClient();
   const { data, error } = await client
     .from('profiles')
@@ -142,6 +144,7 @@ export async function upsertMyProfile(profile: ProfileUpsert): Promise<ProfileRo
 }
 
 export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRow> {
+  assertNotDemoMode('プロフィール更新');
   const { id, ...updates } = profile;
   const client = requireSupabaseClient();
   const { data, error } = await client

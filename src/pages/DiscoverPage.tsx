@@ -12,6 +12,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog } from '../lib/errorMessage';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from '../lib/profilePhotoApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
@@ -35,7 +36,7 @@ export function DiscoverPage() {
   const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const [keyword, setKeyword] = useState('');
-  const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
+  const useSupabaseLikes = isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && Boolean(user);
   const sourceUsers = useSupabaseLikes ? supabaseUsers : mockUsers;
   const safetyHiddenIds = useSupabaseLikes ? hiddenUserIds : blockedUserIds;
   const normalizedKeyword = keyword.trim().toLowerCase();
