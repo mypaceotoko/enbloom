@@ -19,8 +19,8 @@ type LikeRowWithProfiles = LikeRow & {
 const likeColumns = 'id,from_user_id,to_user_id,created_at';
 const likeWithProfilesColumns = [
   likeColumns,
-  'sender_profile:profiles!likes_from_user_id_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used)',
-  'receiver_profile:profiles!likes_to_user_id_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used)',
+  'sender_profile:profiles!likes_from_user_id_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used)',
+  'receiver_profile:profiles!likes_to_user_id_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used)',
 ].join(',');
 
 function mapLikeRow(row: LikeRow): Like {

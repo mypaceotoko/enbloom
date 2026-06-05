@@ -7,7 +7,7 @@ const localAppStateKey = 'connectbloom.appState.v1';
 const legacyStoragePrefix = 'en' + 'bloom';
 const legacyLocalAppStateKey = `${legacyStoragePrefix}.appState.v1`;
 const blockColumns = 'id,blocker_id,blocked_id,created_at';
-const blockedProfileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const blockedProfileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
 
 type BlockRow = Block;
 type BlockedUserProfileJoinRow = BlockRow & {

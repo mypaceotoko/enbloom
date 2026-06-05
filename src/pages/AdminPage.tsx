@@ -1,5 +1,6 @@
 import { Archive, ArchiveRestore, ChevronDown, Copy, KeyRound, RefreshCw, ShieldAlert } from 'lucide-react';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -11,6 +12,7 @@ import { useAppState } from '../hooks/useAppState';
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
 import { createInviteCode, deactivateInviteCode, deleteInviteCode, getManagedInviteCodes, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
+import { restoreProfile, suspendProfile } from '../lib/adminModerationApi';
 import { archiveReport, getAdminReports, unarchiveReport, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
 import { GENERAL_USER_INVITE_CODE_LIMIT } from '../lib/admin';
 import type { ReportStatus, ReportWithProfiles } from '../types/report';
@@ -79,6 +81,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   const [updatingReportStatusId, setUpdatingReportStatusId] = useState<string | null>(null);
   const [savingReportNoteId, setSavingReportNoteId] = useState<string | null>(null);
   const [archivingReportId, setArchivingReportId] = useState<string | null>(null);
+  const [updatingAccountStatusUserId, setUpdatingAccountStatusUserId] = useState<string | null>(null);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [includeArchivedReports, setIncludeArchivedReports] = useState(false);
   const [form, setForm] = useState<InviteCodeForm>(defaultInviteCodeForm);
@@ -359,6 +362,43 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   }
 
 
+
+  async function handleToggleReportedUserStatus(report: ReportWithProfiles) {
+    setReportError('');
+    setReportNotice('');
+
+    if (!isSupabaseMode || !isAuthenticated) {
+      setReportError('ログイン後にユーザー利用制限を更新できます。');
+      return;
+    }
+
+    if (report.reported_user_id === user?.id) {
+      setReportError('Founder は利用停止できません。');
+      return;
+    }
+
+    const isSuspended = report.reportedUserAccountStatus === 'suspended';
+    const confirmed = window.confirm(isSuspended
+      ? 'このユーザーの利用停止を解除しますか？'
+      : 'このユーザーを利用停止にしますか？ログイン自体は残り、主要機能の利用を制限します。');
+    if (!confirmed) return;
+
+    setUpdatingAccountStatusUserId(report.reported_user_id);
+    try {
+      const result = isSuspended ? await restoreProfile(report.reported_user_id) : await suspendProfile(report.reported_user_id);
+      setSupabaseReports((current) => current.map((currentReport) => (
+        currentReport.reported_user_id === report.reported_user_id
+          ? { ...currentReport, reportedUserAccountStatus: result.account_status }
+          : currentReport
+      )));
+      setReportNotice(isSuspended ? '利用停止を解除しました。' : 'ユーザーを利用停止にしました。');
+    } catch (caughtError) {
+      setReportError(caughtError instanceof Error ? `ユーザー利用制限の更新に失敗しました（${caughtError.message}）` : 'ユーザー利用制限の更新に失敗しました。');
+    } finally {
+      setUpdatingAccountStatusUserId(null);
+    }
+  }
+
   async function handleToggleReportArchive(report: ReportWithProfiles) {
     setReportError('');
     setReportNotice('');
@@ -586,6 +626,9 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
               const isUpdatingStatus = updatingReportStatusId === report.id;
               const isSavingNote = savingReportNoteId === report.id;
               const isArchiving = archivingReportId === report.id;
+              const isUpdatingAccount = updatingAccountStatusUserId === report.reported_user_id;
+              const isFounderTarget = report.reported_user_id === user?.id;
+              const isReportedUserSuspended = report.reportedUserAccountStatus === 'suspended';
               const isExpanded = expandedReportId === report.id;
               const isArchived = Boolean(report.archived_at);
               const archiveAllowed = canArchiveReport(report);
@@ -634,6 +677,33 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
                         <span>確認日時: {formatDateTime(report.reviewed_at, '未確認')}</span>
                         <span className="break-words">管理メモ: {report.admin_note || '未入力'}</span>
                         <span>整理日時: {formatDateTime(report.archived_at, '未整理')}</span>
+                        <span>対象募集: {report.target_activity_post_id ? 'あり' : '未設定'}</span>
+                        <span>対象ルーム発言: {report.target_chat_room_message_id ? 'あり' : '未設定'}</span>
+                        <span>利用状態: {isReportedUserSuspended ? '利用停止中' : '利用中'}</span>
+                      </div>
+
+                      <div className="rounded-[1rem] bg-white/60 p-3">
+                        <p className="text-xs font-black text-theme-text">対象へ移動</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs font-black">
+                          <Link className="rounded-full bg-theme-background px-3 py-2 text-theme-main-dark" to={`/profile/${report.reported_user_id}`}>対象ユーザーのプロフィールへ移動</Link>
+                          {report.target_activity_post_id ? <Link className="rounded-full bg-theme-background px-3 py-2 text-theme-main-dark" to={`/board/${report.target_activity_post_id}`}>対象募集へ移動</Link> : <span className="rounded-full bg-theme-background/70 px-3 py-2 text-theme-muted">対象募集なし</span>}
+                          {report.targetChatRoomSlug ? <Link className="rounded-full bg-theme-background px-3 py-2 text-theme-main-dark" to={`/rooms/${report.targetChatRoomSlug}`}>対象ルーム発言へ移動</Link> : <span className="rounded-full bg-theme-background/70 px-3 py-2 text-theme-muted">対象ルーム発言なし</span>}
+                        </div>
+                      </div>
+
+                      <div className="rounded-[1rem] bg-amber-50/70 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-black text-theme-text">ユーザー利用制限</p>
+                            <p className="text-xs font-bold leading-5 text-theme-muted">ログイン自体は残し、主要機能へのアクセスを制限します。</p>
+                            {isFounderTarget ? <p className="text-xs font-black text-amber-700">Founder は利用停止できません。</p> : null}
+                          </div>
+                          {!isFounderTarget ? (
+                            <Button disabled={isUpdatingStatus || isSavingNote || isArchiving || isUpdatingAccount} onClick={() => { void handleToggleReportedUserStatus(report); }} type="button" variant={isReportedUserSuspended ? 'secondary' : 'danger'}>
+                              {isUpdatingAccount ? '更新中...' : isReportedUserSuspended ? '利用停止を解除する' : 'ユーザーを利用停止にする'}
+                            </Button>
+                          ) : null}
+                        </div>
                       </div>
 
                       <label className="grid gap-1.5 text-sm font-black text-theme-text">

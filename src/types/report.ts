@@ -14,6 +14,11 @@ export type Report = {
   admin_note: string | null;
   archived_at: string | null;
   archived_by: string | null;
+  target_activity_post_id: string | null;
+  target_chat_room_id: string | null;
+  target_chat_room_message_id: string | null;
+  targetChatRoomSlug?: string | null;
+  reportedUserAccountStatus?: 'active' | 'suspended';
   created_at: string;
 };
 

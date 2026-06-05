@@ -15,6 +15,7 @@ export type ProfileRow = {
   onboarding_completed: boolean;
   visibility: 'public' | 'private' | 'hidden';
   role: 'user' | 'moderator' | 'admin';
+  account_status: 'active' | 'suspended';
   invited_by: string | null;
   invite_code_used: string | null;
 };
@@ -50,6 +51,7 @@ const profileColumns = [
   'onboarding_completed',
   'visibility',
   'role',
+  'account_status',
   'invited_by',
   'invite_code_used',
 ].join(',');
@@ -112,6 +114,7 @@ export async function ensureProfileForUser(user: User): Promise<ProfileRow> {
     onboarding_completed: false,
     visibility: 'public',
     role: 'user',
+    account_status: 'active',
     invited_by: null,
     invite_code_used: null,
   });

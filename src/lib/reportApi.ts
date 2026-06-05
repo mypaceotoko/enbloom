@@ -7,12 +7,13 @@ import type { Report, ReportStatus, ReportWithProfiles } from '../types/report';
 const localAppStateKey = 'connectbloom.appState.v1';
 const legacyStoragePrefix = 'en' + 'bloom';
 const legacyLocalAppStateKey = `${legacyStoragePrefix}.appState.v1`;
-const reportColumns = 'id,reporter_id,reported_user_id,reason,detail,status,reviewed_by,reviewed_at,admin_note,archived_at,archived_by,created_at';
-const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const reportColumns = 'id,reporter_id,reported_user_id,reason,detail,status,reviewed_by,reviewed_at,admin_note,archived_at,archived_by,target_activity_post_id,target_chat_room_id,target_chat_room_message_id,created_at';
+const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
 const reportWithProfilesColumns = [
   reportColumns,
   `reporter_profile:profiles!reports_reporter_id_fkey(${profileColumns})`,
   `reported_profile:profiles!reports_reported_user_id_fkey(${profileColumns})`,
+  'target_chat_room:chat_rooms!reports_target_chat_room_id_fkey(slug)',
 ].join(',');
 
 const reportStatuses = ['open', 'reviewing', 'resolved', 'dismissed'] as const satisfies readonly ReportStatus[];
@@ -21,6 +22,7 @@ type ReportRow = Report;
 type ReportRowWithProfiles = ReportRow & {
   reporter_profile?: ProfileRow | ProfileRow[] | null;
   reported_profile?: ProfileRow | ProfileRow[] | null;
+  target_chat_room?: { slug: string } | { slug: string }[] | null;
 };
 
 type UpdateReportReviewParams = {
@@ -69,10 +71,14 @@ function mapReportWithProfiles(row: ReportRowWithProfiles): ReportWithProfiles {
   const reporter = firstProfile(row.reporter_profile);
   const reportedUser = firstProfile(row.reported_profile);
 
+  const targetRoom = Array.isArray(row.target_chat_room) ? row.target_chat_room[0] : row.target_chat_room;
+
   return {
     ...row,
     reporter: reporter ? profileRowToUserProfile(reporter) : null,
     reportedUser: reportedUser ? profileRowToUserProfile(reportedUser) : null,
+    reportedUserAccountStatus: reportedUser?.account_status ?? 'active',
+    targetChatRoomSlug: targetRoom?.slug ?? null,
   };
 }
 
@@ -140,6 +146,11 @@ export async function getMyReports(userId?: string): Promise<Report[]> {
       admin_note: null,
       archived_at: null,
       archived_by: null,
+      target_activity_post_id: null,
+      target_chat_room_id: null,
+      target_chat_room_message_id: null,
+      targetChatRoomSlug: null,
+      reportedUserAccountStatus: 'active',
       created_at: new Date(0).toISOString(),
     }));
   }

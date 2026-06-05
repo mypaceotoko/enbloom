@@ -13,7 +13,7 @@ type RoomMessageCountRow = {
 };
 
 const chatRoomColumns = 'id,slug,name,description,category,is_official,created_at,updated_at';
-const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
 const chatRoomMessageColumns = 'id,room_id,sender_id,body,created_at,updated_at';
 const chatRoomMessageWithProfileColumns = [
   chatRoomMessageColumns,

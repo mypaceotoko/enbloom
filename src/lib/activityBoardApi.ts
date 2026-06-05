@@ -47,7 +47,7 @@ const activityPostColumns = [
   'room_id',
 ].join(',');
 
-const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
 const activityPostWithAuthorColumns = [
   activityPostColumns,
   `author:profiles!activity_posts_created_by_fkey(${profileSelectColumns})`,

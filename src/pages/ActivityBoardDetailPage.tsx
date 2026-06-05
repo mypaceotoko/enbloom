@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, UsersRound, XCircle } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, ShieldAlert, UsersRound, XCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -7,6 +7,7 @@ import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { mockActivityPosts } from '../data/mockActivityPosts';
 import { demoChatRooms } from '../data/mockChatRooms';
+import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import type { TranslationKey } from '../lib/i18n';
@@ -18,6 +19,8 @@ import {
   getActivityPostById,
   getActivityPostInterestsForOwner,
   getMyActivityPostInterest,
+  archiveActivityPost,
+  reopenActivityPost,
 } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
@@ -75,6 +78,7 @@ export function ActivityBoardDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
+  const { isFounder } = useAdmin();
   const { language, t } = useLanguage();
   const [post, setPost] = useState<ActivityPostWithAuthor | null>(null);
   const [sourceRoomName, setSourceRoomName] = useState('');
@@ -89,6 +93,7 @@ export function ActivityBoardDetailPage() {
   const [openingConversationId, setOpeningConversationId] = useState<string | null>(null);
   const useSupabaseBoard = isSupabaseMode && isAuthenticated;
   const isOwnPost = Boolean(user?.id && post?.created_by === user.id);
+  const canUseFounderPostModeration = Boolean(isFounder && useSupabaseBoard && post);
 
   useEffect(() => {
     let mounted = true;
@@ -169,6 +174,30 @@ export function ActivityBoardDetailPage() {
       mounted = false;
     };
   }, [location.state, postId, useSupabaseBoard, user?.id]);
+
+
+  async function handleFounderTogglePostVisibility() {
+    if (!post || !canUseFounderPostModeration) return;
+
+    setInterestError('');
+    setNotice('');
+    const willRestore = post.status === 'archived';
+    const confirmed = window.confirm(willRestore
+      ? 'この募集を一覧に戻しますか？'
+      : 'この募集を非表示にしますか？募集は削除されず、管理者と投稿者が確認できます。');
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      const updatedPost = willRestore ? await reopenActivityPost(post.id) : await archiveActivityPost(post.id);
+      setPost((current) => (current ? { ...current, ...updatedPost } : current));
+      setNotice(willRestore ? '募集を戻しました。' : '募集を非表示にしました。');
+    } catch (caughtError) {
+      setInterestError(getShortErrorMessage(caughtError, willRestore ? '募集を戻せませんでした。' : '募集を非表示にできませんでした。'));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleInterest() {
     if (!post) return;
@@ -306,7 +335,7 @@ export function ActivityBoardDetailPage() {
                 <Badge>{post.category}</Badge>
                 <h1 className="text-2xl font-black leading-tight text-theme-text">{post.title}</h1>
               </div>
-              <div className="flex flex-wrap gap-2"><Badge className="bg-theme-main text-white">{getStatusLabel(post.status, t)}</Badge>{isOwnPost ? <Badge className="bg-theme-card text-theme-main-dark">自分が投稿者</Badge> : null}{!isOwnPost && myInterest ? <Badge className={getInterestStatusClass(myInterest.status)}>{getInterestStatusLabel(myInterest.status, t)}</Badge> : null}</div>
+              <div className="flex flex-wrap gap-2"><Badge className="bg-theme-main text-white">{getStatusLabel(post.status, t)}</Badge>{isOwnPost ? <Badge className="bg-theme-card text-theme-main-dark">自分が投稿者</Badge> : null}{isFounder ? <Badge className="bg-amber-50 text-amber-700">管理者操作</Badge> : null}{!isOwnPost && myInterest ? <Badge className={getInterestStatusClass(myInterest.status)}>{getInterestStatusLabel(myInterest.status, t)}</Badge> : null}</div>
             </div>
             {sourceRoomName ? <div className="rounded-xl bg-theme-accent-soft/70 p-3 text-sm font-black text-theme-main-dark">{sourceRoomName}: {t('board.createdFromRoom')}</div> : null}
             <p className="whitespace-pre-wrap text-sm leading-7 text-theme-text">{post.body}</p>
@@ -318,6 +347,19 @@ export function ActivityBoardDetailPage() {
             </div>
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             <div className="rounded-xl bg-theme-accent-soft/60 p-3 text-sm font-black text-theme-main-dark">{t('board.interests')} {post.interest_count}件 / {t('board.accepted')} {post.accepted_count}件</div>
+            {canUseFounderPostModeration ? (
+              <div className="space-y-2 rounded-2xl border border-amber-100 bg-amber-50/45 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <Badge className="bg-white text-amber-700"><ShieldAlert size={14} />管理者操作</Badge>
+                    <p className="text-xs font-bold leading-5 text-theme-muted">不適切な募集を削除せずに非表示化し、必要に応じて戻せます。</p>
+                  </div>
+                  <Button disabled={saving} onClick={() => { void handleFounderTogglePostVisibility(); }} type="button" variant={post.status === 'archived' ? 'secondary' : 'danger'}>
+                    {post.status === 'archived' ? '募集を戻す' : '募集を非表示にする'}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             {isOwnPost ? (
               <Link className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-theme-main px-4 py-2 text-[13px] font-bold text-white" to={`/board/${post.id}/edit`}><Pencil size={16} />募集を編集</Link>
             ) : null}

@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { demoChatRooms, demoRoomMessages, roomTags } from '../data/mockChatRooms';
+import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { getShortErrorMessage } from '../lib/errorMessage';
@@ -59,6 +60,7 @@ export function RoomDetailPage() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
+  const { isFounder } = useAdmin();
   const { language, t } = useLanguage();
   const demoRoom = useMemo(() => demoChatRooms.find((room) => room.slug === roomId) ?? null, [roomId]);
   const [room, setRoom] = useState<ChatRoom | null>(demoRoom);
@@ -142,6 +144,11 @@ export function RoomDetailPage() {
   async function handleDelete(messageId: string) {
     if (!canUseSupabaseRooms) return;
     try {
+      const message = messages.find((currentMessage) => currentMessage.id === messageId);
+      const confirmed = message && isFounder && message.sender_id !== user?.id
+        ? window.confirm('このルーム発言を管理者削除しますか？')
+        : true;
+      if (!confirmed) return;
       await deleteChatRoomMessage(messageId);
       setMessages((currentMessages) => currentMessages.filter((message) => message.id !== messageId));
     } catch (caughtError) {
@@ -248,7 +255,7 @@ export function RoomDetailPage() {
                   </div>
                   <div className="flex gap-1">
                     <button className="inline-flex size-7 items-center justify-center rounded-full bg-transparent text-theme-muted/65 transition hover:bg-theme-accent-soft" title={t('roomDetail.report')} type="button"><ShieldAlert size={14} /></button>
-                    {isOwnMessage ? <button className="inline-flex size-7 items-center justify-center rounded-full bg-transparent text-theme-muted/65 transition hover:bg-rose-50 hover:text-rose-600" title={t('roomDetail.delete')} type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} /></button> : null}
+                    {isOwnMessage || isFounder ? <button className="inline-flex min-h-7 items-center justify-center gap-1 rounded-full bg-transparent px-2 text-[11px] font-black text-theme-muted/65 transition hover:bg-rose-50 hover:text-rose-600" title={isOwnMessage ? t('roomDetail.delete') : '管理者削除'} type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} />{!isOwnMessage && isFounder ? '管理者削除' : null}</button> : null}
                   </div>
                 </div>
                 <p className="whitespace-pre-wrap text-sm leading-5 text-theme-text">{message.body}</p>

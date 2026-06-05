@@ -2,6 +2,7 @@ import { AlertCircle, BookOpen, HeartHandshake, ShieldCheck } from 'lucide-react
 import { useEffect, useState } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { isDemoModeEnabled } from '../lib/demoSession';
 import { getPendingInviteCode } from '../lib/inviteSession';
 import { getMyProfile, type ProfileRow } from '../lib/profileApi';
@@ -9,7 +10,7 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { PageShell } from './PageShell';
 
-type MemberAccessState = 'checking' | 'allowed' | 'inviteRequired' | 'pendingInvite' | 'error';
+type MemberAccessState = 'checking' | 'allowed' | 'inviteRequired' | 'pendingInvite' | 'suspended' | 'error';
 
 function hasOfficialMemberAccess(profile: ProfileRow | null) {
   return Boolean(profile?.onboarding_completed && (profile.invited_by || profile.invite_code_used));
@@ -29,6 +30,38 @@ const demoAllowedPathPatterns = [
 
 function canBrowseDemoPath(pathname: string) {
   return demoAllowedPathPatterns.some((pattern) => pattern.test(pathname));
+}
+
+
+function SuspendedAccountMessage({ onSignOut }: { onSignOut: () => Promise<void> }) {
+  const { t } = useLanguage();
+
+  return (
+    <PageShell
+      description={t('account.suspended.body')}
+      eyebrow="Account status"
+      title={t('account.suspended.title')}
+    >
+      <Card className="flower-gradient border-0 p-1">
+        <div className="space-y-4 rounded-[1.25rem] bg-theme-card/86 p-4 text-center backdrop-blur">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-theme-accent-soft text-theme-main-dark">
+            <ShieldCheck size={24} />
+          </span>
+          <div className="space-y-2">
+            <h2 className="text-lg font-black text-theme-text">{t('account.suspended.title')}</h2>
+            <p className="text-sm font-bold leading-6 text-theme-muted">
+              {t('account.suspended.body')}
+            </p>
+          </div>
+          <div className="grid gap-2 text-sm font-bold text-theme-main-dark sm:grid-cols-3">
+            <Link className="rounded-xl bg-theme-background/70 px-3 py-2.5" to="/safety">{t('account.suspended.safety')}</Link>
+            <Link className="rounded-xl bg-theme-background/70 px-3 py-2.5" to="/terms">{t('account.suspended.terms')}</Link>
+            <Button className="w-full" onClick={() => { void onSignOut(); }} type="button" variant="secondary">{t('settings.logout.button')}</Button>
+          </div>
+        </div>
+      </Card>
+    </PageShell>
+  );
 }
 
 function InviteRequiredMessage({ detail }: { detail?: string }) {
@@ -77,7 +110,7 @@ function InviteRequiredMessage({ detail }: { detail?: string }) {
 
 export function RequireOfficialMember() {
   const location = useLocation();
-  const { isAuthenticated, isSupabaseMode, loading, user } = useAuth();
+  const { isAuthenticated, isSupabaseMode, loading, signOut, user } = useAuth();
   const [state, setState] = useState<MemberAccessState>(isSupabaseMode ? 'checking' : 'allowed');
   const [detail, setDetail] = useState('');
 
@@ -110,6 +143,10 @@ export function RequireOfficialMember() {
       try {
         const profile = await getMyProfile(user.id);
         if (!mounted) return;
+        if (profile?.account_status === 'suspended') {
+          setState('suspended');
+          return;
+        }
         if (hasOfficialMemberAccess(profile)) {
           setState('allowed');
           return;
@@ -148,5 +185,6 @@ export function RequireOfficialMember() {
   }
   if (state === 'allowed') return <Outlet />;
   if (state === 'pendingInvite') return <Navigate replace state={{ from: location.pathname }} to="/onboarding" />;
+  if (state === 'suspended') return <SuspendedAccountMessage onSignOut={signOut} />;
   return <InviteRequiredMessage detail={detail} />;
 }

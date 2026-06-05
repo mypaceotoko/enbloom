@@ -29,7 +29,7 @@ type SendMatchMessageRpcRow = {
   message?: string | null;
 };
 
-const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
 const messageMatchColumns = [
   'id,user1_id,user2_id,created_at,last_message_at',
   `user1_profile:profiles!matches_user1_id_fkey(${profileColumns})`,
