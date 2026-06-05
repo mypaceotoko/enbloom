@@ -6,7 +6,6 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { SETTINGS_SCROLL_STORAGE_KEY } from '../components/BackToSettingsLink';
 import { PageShell } from '../components/PageShell';
-import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
@@ -17,7 +16,6 @@ import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
 export function SettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const { resetDemoState } = useAppState();
   const { isAuthenticated, isSupabaseMode, signOut } = useAuth();
@@ -124,34 +122,34 @@ export function SettingsPage() {
           <p className="mt-1 text-xs leading-5 text-theme-muted">{t('settings.basic.description')}</p>
         </div>
         <SettingsLink body={t('settings.profile.body')} icon={<UserRound size={18} />} onClick={() => navigateFromSettings('/my-profile')} title={t('settings.profile.title')} />
-        <SettingsLink body={`${t('settings.theme.current')}: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigateFromSettings('/settings/theme')} title={t('settings.theme.title')} />
+        <SettingsLink body={t('settings.theme.body')} icon={<Palette size={18} />} onClick={() => navigateFromSettings('/settings/theme')} title={t('settings.theme.title')} />
         <LanguageSettingCard currentLanguage={language} onChange={handleLanguageChange} t={t} />
       </section>
 
       <section className="space-y-3">
         <div className="px-1">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Activity management</p>
-          <h2 className="text-lg font-black text-theme-text">活動管理</h2>
-          <p className="mt-1 text-xs leading-5 text-theme-muted">募集・参加希望・通知・会話をまとめて確認できます。</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('settings.activity.eyebrow')}</p>
+          <h2 className="text-lg font-black text-theme-text">{t('settings.activity.title')}</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">{t('settings.activity.description')}</p>
         </div>
-        <SettingsLink badge={unreadNotificationCount > 0 ? `未読 ${unreadNotificationCount}件` : '通知はありません'} body="参加希望・承認・メッセージを確認できます。" icon={<Bell size={18} />} onClick={() => navigateFromSettings('/notifications')} title="通知" />
-        <SettingsLink body="募集・参加希望・通知・会話への導線を1か所で確認できます。" icon={<Sparkles size={18} />} onClick={() => navigateFromSettings('/my-activity')} title="マイアクティビティ" />
-        <SettingsLink body="投稿した募集と届いた参加希望を管理できます。" icon={<ClipboardList size={18} />} onClick={() => navigateFromSettings('/my-board')} title="自分の募集" />
-        <SettingsLink body="自分が送った参加希望の状態を確認・取り消しできます。" icon={<HeartHandshake size={18} />} onClick={() => navigateFromSettings('/my-interests')} title="参加希望した募集" />
-        <SettingsLink body="承認後につながったコネクトとDMを確認できます。" icon={<MessageCircle size={18} />} onClick={() => navigateFromSettings('/matches')} title="コネクト一覧" />
-        <SettingsLink body="参加中のルームと会話を確認できます。" icon={<DoorOpen size={18} />} onClick={() => navigateFromSettings('/rooms')} title="ルーム" />
+        <SettingsLink badge={unreadNotificationCount > 0 ? t('settings.notifications.unreadBadge').replace('{count}', String(unreadNotificationCount)) : t('settings.notifications.noNotifications')} badgeVariant={unreadNotificationCount > 0 ? 'unread' : 'empty'} body={t('settings.notifications.body')} icon={<Bell size={18} />} onClick={() => navigateFromSettings('/notifications')} title={t('settings.notifications.title')} />
+        <SettingsLink body={t('settings.myActivity.body')} icon={<Sparkles size={18} />} onClick={() => navigateFromSettings('/my-activity')} title={t('settings.myActivity.title')} />
+        <SettingsLink body={t('settings.myPosts.body')} icon={<ClipboardList size={18} />} onClick={() => navigateFromSettings('/my-board')} title={t('settings.myPosts.title')} />
+        <SettingsLink body={t('settings.myInterests.body')} icon={<HeartHandshake size={18} />} onClick={() => navigateFromSettings('/my-interests')} title={t('settings.myInterests.title')} />
+        <SettingsLink body={t('settings.connections.body')} icon={<MessageCircle size={18} />} onClick={() => navigateFromSettings('/matches')} title={t('settings.connections.title')} />
+        <SettingsLink body={t('settings.rooms.body')} icon={<DoorOpen size={18} />} onClick={() => navigateFromSettings('/rooms')} title={t('settings.rooms.title')} />
       </section>
 
       <section className="space-y-3">
         <div className="px-1">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Safety & operations</p>
-          <h2 className="text-lg font-black text-theme-text">安心・運営</h2>
-          <p className="mt-1 text-xs leading-5 text-theme-muted">安心して使うためのガイドや管理機能を確認できます。</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('settings.safetyOperations.eyebrow')}</p>
+          <h2 className="text-lg font-black text-theme-text">{t('settings.safetyOperations.title')}</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">{t('settings.safetyOperations.description')}</p>
         </div>
         <SettingsLink body={t('settings.safety.body')} icon={<ShieldCheck size={18} />} onClick={() => navigateFromSettings('/safety')} title={t('settings.safety.title')} />
-        <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigateFromSettings('/blocked-users')} title="ブロック中のユーザー" />
-        <SettingsLink body="βテスター向けの招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigateFromSettings('/admin')} title="招待コード管理" />
-        <SettingsLink body="届いた通報の確認・対応を管理画面で行えます。" icon={<Flag size={18} />} onClick={() => navigateFromSettings('/admin')} title="通報管理" />
+        <SettingsLink body={t('settings.blockedUsers.body')} icon={<ShieldMinus size={18} />} onClick={() => navigateFromSettings('/blocked-users')} title={t('settings.blockedUsers.title')} />
+        <SettingsLink body={t('settings.inviteCodes.body')} icon={<Ticket size={18} />} onClick={() => navigateFromSettings('/admin')} title={t('settings.inviteCodes.title')} />
+        <SettingsLink body={t('settings.reports.body')} icon={<Flag size={18} />} onClick={() => navigateFromSettings('/admin')} title={t('settings.reports.title')} />
       </section>
 
       <section className="space-y-3">
@@ -228,7 +226,7 @@ function LanguageSettingCard({ currentLanguage, onChange, t }: { currentLanguage
   );
 }
 
-function SettingsLink({ badge, body, icon, onClick, title }: { badge?: string; body: string; icon: ReactNode; onClick: () => void; title: string }) {
+function SettingsLink({ badge, badgeVariant = 'empty', body, icon, onClick, title }: { badge?: string; badgeVariant?: 'empty' | 'unread'; body: string; icon: ReactNode; onClick: () => void; title: string }) {
   return (
     <button className="w-full text-left transition active:scale-[0.99]" onClick={onClick} type="button">
       <Card className="space-y-2 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
@@ -237,7 +235,7 @@ function SettingsLink({ badge, body, icon, onClick, title }: { badge?: string; b
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2 text-sm font-black text-theme-text">
               {title}
-              {badge ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${badge.startsWith('未読') ? 'bg-theme-main text-white' : 'bg-theme-accent-soft text-theme-main-dark'}`}>{badge}</span> : null}
+              {badge ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${badgeVariant === 'unread' ? 'bg-theme-main text-white' : 'bg-theme-accent-soft text-theme-main-dark'}`}>{badge}</span> : null}
             </span>
             <span className="mt-0.5 block text-xs leading-5 text-theme-muted">{body}</span>
           </span>
