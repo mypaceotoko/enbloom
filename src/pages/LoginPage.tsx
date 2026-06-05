@@ -7,6 +7,7 @@ import { Input } from '../components/Input';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { enableDemoMode, clearDemoMode } from '../lib/demoSession';
+import { getSafeErrorLog } from '../lib/errorMessage';
 import { validateInviteCode } from '../lib/inviteCodeApi';
 import { clearPendingInviteCode, normalizeInviteCodeInput, setPendingInviteCode } from '../lib/inviteSession';
 
@@ -17,12 +18,14 @@ export function LoginPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
+  const [inviteCodeStatus, setInviteCodeStatus] = useState<'empty' | 'checking' | 'confirmed' | 'invalid'>('empty');
   const [submitting, setSubmitting] = useState(false);
 
   function handleInviteCodeChange(value: string) {
     setInviteCode(normalizeInviteCodeInput(value));
     setError('');
     setStatusMessage('');
+    setInviteCodeStatus('empty');
   }
 
   async function handleGoogleLogin() {
@@ -40,26 +43,32 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       if (normalizedInviteCode) {
+        setInviteCodeStatus('checking');
         setStatusMessage(t('login.status.checkingInvite'));
         const inviteValidation = await validateInviteCode(normalizedInviteCode);
         if (!inviteValidation.ok) {
-          setError(inviteValidation.error);
+          console.warn('[Login] invite code validation failed', { success: false, inviteCodeExists: true });
+          setInviteCodeStatus('invalid');
+          setError(t('login.inviteCode.status.invalid'));
           setSubmitting(false);
           setStatusMessage('');
           return;
         }
         setPendingInviteCode(inviteValidation.inviteCode.code);
         clearDemoMode();
+        setInviteCodeStatus('confirmed');
         setStatusMessage(t('login.status.inviteConfirmed'));
       } else {
         clearPendingInviteCode();
         clearDemoMode();
+        setInviteCodeStatus('empty');
         setStatusMessage(t('login.status.googleWithoutInvite'));
       }
       await signInWithGoogle();
     } catch (caughtError) {
+      console.error('[Login] Google login start failed', getSafeErrorLog(caughtError, 'google_login_start'));
       setSubmitting(false);
-      setError(caughtError instanceof Error ? caughtError.message : t('login.error.googleStart'));
+      setError(t('login.error.googleStart'));
     }
   }
 
@@ -80,6 +89,7 @@ export function LoginPage() {
               <p>{t('login.description1')}</p>
               <p>{t('login.description2')}</p>
               <p>{t('login.description3')}</p>
+              <p>{t('login.description4')}</p>
             </div>
           </div>
           {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{error}</div> : null}
@@ -98,11 +108,21 @@ export function LoginPage() {
             placeholder={t('login.inviteCode.placeholder')}
             value={inviteCode}
           />
-          {inviteCode ? (
-            <p className="rounded-[1.15rem] bg-theme-background/75 p-3 text-xs font-bold leading-5 text-theme-main-dark">
-              {t('login.inviteCode.selected')}
-            </p>
-          ) : null}
+          <div className={`rounded-[1.15rem] p-3 text-xs font-bold leading-5 ${inviteCodeStatus === 'invalid' ? 'bg-red-50 text-red-600' : inviteCodeStatus === 'confirmed' ? 'bg-theme-accent-soft/70 text-theme-main-dark' : 'bg-theme-background/75 text-theme-muted'}`} role="status">
+            {inviteCodeStatus === 'checking'
+              ? t('login.inviteCode.status.checking')
+              : inviteCodeStatus === 'confirmed'
+                ? t('login.inviteCode.status.confirmed')
+                : inviteCodeStatus === 'invalid'
+                  ? t('login.inviteCode.status.invalid')
+                  : inviteCode
+                    ? t('login.inviteCode.selected')
+                    : t('login.inviteCode.status.empty')}
+          </div>
+          <div className="space-y-1 rounded-[1.15rem] bg-theme-background/60 p-3 text-xs font-bold leading-5 text-theme-muted">
+            <p>{t('login.google.note1')}</p>
+            <p>{t('login.google.note2')}</p>
+          </div>
           <Button className="w-full bg-white text-theme-text ring-1 ring-theme-main/15" disabled={submitting} onClick={handleGoogleLogin} variant="ghost">
             <span className="flex size-5 items-center justify-center rounded-full bg-theme-main text-xs font-black text-white">G</span>
             {submitting ? t('login.google.submitting') : t('login.google')}
