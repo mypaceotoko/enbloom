@@ -15,6 +15,7 @@ import { createInviteCode, deactivateInviteCode, deleteInviteCode, getManagedInv
 import { restoreProfile, suspendProfile } from '../lib/adminModerationApi';
 import { archiveReport, getAdminReports, unarchiveReport, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
 import { GENERAL_USER_INVITE_CODE_LIMIT } from '../lib/admin';
+import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import type { ReportStatus, ReportWithProfiles } from '../types/report';
 
 type InviteCodeForm = {
@@ -128,7 +129,8 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
         }
       })
       .catch((caughtError: unknown) => {
-        if (!ignore) setReportError(caughtError instanceof Error ? caughtError.message : '通報一覧の取得に失敗しました。');
+        console.warn('[ConnectBloom] admin reports load failed', getSafeErrorLog(caughtError, 'admin_reports_load_failed'));
+        if (!ignore) setReportError(getShortErrorMessage(caughtError, '通報一覧の取得に失敗しました。'));
       });
 
     return () => {
@@ -329,7 +331,8 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       )));
       setReportNotice('ステータスを更新しました');
     } catch (caughtError) {
-      setReportError(caughtError instanceof Error ? `ステータス更新に失敗しました（${caughtError.message}）` : 'ステータス更新に失敗しました');
+      console.warn('[ConnectBloom] report status update failed', getSafeErrorLog(caughtError, 'report_status_update_failed'));
+      setReportError('ステータス更新に失敗しました');
     } finally {
       setUpdatingReportStatusId(null);
     }
@@ -355,7 +358,8 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       )));
       setReportNotice('管理メモを保存しました');
     } catch (caughtError) {
-      setReportError(caughtError instanceof Error ? `管理メモの保存に失敗しました（${caughtError.message}）` : '管理メモの保存に失敗しました');
+      console.warn('[ConnectBloom] report admin note save failed', getSafeErrorLog(caughtError, 'report_admin_note_save_failed'));
+      setReportError('管理メモの保存に失敗しました');
     } finally {
       setSavingReportNoteId(null);
     }
@@ -393,7 +397,8 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       )));
       setReportNotice(isSuspended ? '利用停止を解除しました。' : 'ユーザーを利用停止にしました。');
     } catch (caughtError) {
-      setReportError(caughtError instanceof Error ? `ユーザー利用制限の更新に失敗しました（${caughtError.message}）` : 'ユーザー利用制限の更新に失敗しました。');
+      console.warn('[ConnectBloom] reported user status update failed', getSafeErrorLog(caughtError, 'reported_user_status_update_failed'));
+      setReportError('ユーザー利用制限の更新に失敗しました。');
     } finally {
       setUpdatingAccountStatusUserId(null);
     }
@@ -434,7 +439,8 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       if (!includeArchivedReports && !isArchived) setExpandedReportId((current) => (current === report.id ? null : current));
       setReportNotice(isArchived ? '通報のアーカイブを解除しました' : '通報をアーカイブしました');
     } catch (caughtError) {
-      setReportError(caughtError instanceof Error ? `通報の整理に失敗しました（${caughtError.message}）` : '通信に失敗しました。少し時間を置いてもう一度お試しください');
+      console.warn('[ConnectBloom] report archive update failed', getSafeErrorLog(caughtError, 'report_archive_update_failed'));
+      setReportError('通報の整理に失敗しました');
     } finally {
       setArchivingReportId(null);
     }

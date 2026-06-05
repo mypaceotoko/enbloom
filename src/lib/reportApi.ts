@@ -2,13 +2,22 @@ import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoA
 import type { ProfileRow } from './profileApi';
 import { profileRowToUserProfile } from './profileApi';
 import { isSupabaseConfigured, requireSupabaseClient, supabase } from './supabase';
+import { isMissingColumnError } from './dbError';
+import { getSafeErrorLog } from './errorMessage';
 import type { Report, ReportStatus, ReportWithProfiles } from '../types/report';
 
 const localAppStateKey = 'connectbloom.appState.v1';
 const legacyStoragePrefix = 'en' + 'bloom';
 const legacyLocalAppStateKey = `${legacyStoragePrefix}.appState.v1`;
-const reportColumns = 'id,reporter_id,reported_user_id,reason,detail,status,reviewed_by,reviewed_at,admin_note,archived_at,archived_by,target_activity_post_id,target_chat_room_id,target_chat_room_message_id,created_at';
-const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
+const legacyReportColumns = 'id,reporter_id,reported_user_id,reason,detail,status,reviewed_by,reviewed_at,admin_note,archived_at,archived_by,created_at';
+const reportColumns = `${legacyReportColumns},target_activity_post_id,target_chat_room_id,target_chat_room_message_id`;
+const legacyProfileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const profileColumns = `${legacyProfileColumns},account_status`;
+const legacyReportWithProfilesColumns = [
+  legacyReportColumns,
+  `reporter_profile:profiles!reports_reporter_id_fkey(${legacyProfileColumns})`,
+  `reported_profile:profiles!reports_reported_user_id_fkey(${legacyProfileColumns})`,
+].join(',');
 const reportWithProfilesColumns = [
   reportColumns,
   `reporter_profile:profiles!reports_reporter_id_fkey(${profileColumns})`,
@@ -19,7 +28,8 @@ const reportWithProfilesColumns = [
 const reportStatuses = ['open', 'reviewing', 'resolved', 'dismissed'] as const satisfies readonly ReportStatus[];
 
 type ReportRow = Report;
-type ReportRowWithProfiles = ReportRow & {
+type LegacyReportRow = Omit<Report, 'target_activity_post_id' | 'target_chat_room_id' | 'target_chat_room_message_id'>;
+type ReportRowWithProfiles = (ReportRow | LegacyReportRow) & {
   reporter_profile?: ProfileRow | ProfileRow[] | null;
   reported_profile?: ProfileRow | ProfileRow[] | null;
   target_chat_room?: { slug: string } | { slug: string }[] | null;
@@ -67,6 +77,15 @@ function firstProfile(profile: ProfileRow | ProfileRow[] | null | undefined): Pr
   return profile ?? null;
 }
 
+function withLegacyReportTargets(row: LegacyReportRow | ReportRow): ReportRow {
+  return {
+    ...row,
+    target_activity_post_id: 'target_activity_post_id' in row ? row.target_activity_post_id : null,
+    target_chat_room_id: 'target_chat_room_id' in row ? row.target_chat_room_id : null,
+    target_chat_room_message_id: 'target_chat_room_message_id' in row ? row.target_chat_room_message_id : null,
+  };
+}
+
 function mapReportWithProfiles(row: ReportRowWithProfiles): ReportWithProfiles {
   const reporter = firstProfile(row.reporter_profile);
   const reportedUser = firstProfile(row.reported_profile);
@@ -74,7 +93,7 @@ function mapReportWithProfiles(row: ReportRowWithProfiles): ReportWithProfiles {
   const targetRoom = Array.isArray(row.target_chat_room) ? row.target_chat_room[0] : row.target_chat_room;
 
   return {
-    ...row,
+    ...withLegacyReportTargets(row),
     reporter: reporter ? profileRowToUserProfile(reporter) : null,
     reportedUser: reportedUser ? profileRowToUserProfile(reportedUser) : null,
     reportedUserAccountStatus: reportedUser?.account_status ?? 'active',
@@ -120,14 +139,14 @@ export async function reportUser(targetUserId: string, reason: string, detail?: 
       detail: trimmedDetail,
       status: 'open' satisfies ReportStatus,
     })
-    .select(reportColumns)
-    .single<ReportRow>();
+    .select(legacyReportColumns)
+    .single<LegacyReportRow>();
 
   const success = !error;
   console.info('[ConnectBloom] report user success', { success });
   if (error) throw error;
 
-  return data;
+  return withLegacyReportTargets(data);
 }
 
 export async function getMyReports(userId?: string): Promise<Report[]> {
@@ -156,31 +175,53 @@ export async function getMyReports(userId?: string): Promise<Report[]> {
   }
 
   const reporterId = userId ?? await getCurrentUserId();
-  const { data, error } = await requireSupabaseClient()
+  const queryReports = (columns: string) => requireSupabaseClient()
     .from('reports')
-    .select(reportColumns)
+    .select(columns)
     .eq('reporter_id', reporterId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  let { data, error } = await queryReports(reportColumns);
+
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] reports fetch fallback used', getSafeErrorLog(error, 'reports_missing_column_fallback'));
+    ({ data, error } = await queryReports(legacyReportColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] reports fetch failed', getSafeErrorLog(error, 'reports_fetch_failed'));
+    throw error;
+  }
   console.info('[ConnectBloom] reports count', { count: data?.length ?? 0 });
-  return (data ?? []) as Report[];
+  return ((data ?? []) as unknown as Array<LegacyReportRow | ReportRow>).map(withLegacyReportTargets);
 }
 
 export async function getAdminReports(options: GetAdminReportsOptions = {}): Promise<ReportWithProfiles[]> {
-  let query = requireSupabaseClient()
-    .from('reports')
-    .select(reportWithProfilesColumns);
+  const queryReports = (columns: string) => {
+    let query = requireSupabaseClient()
+      .from('reports')
+      .select(columns);
 
-  if (!options.includeArchived) {
-    query = query.is('archived_at', null);
+    if (!options.includeArchived) {
+      query = query.is('archived_at', null);
+    }
+
+    return query
+      .order('created_at', { ascending: false })
+      .limit(100);
+  };
+
+  let { data, error } = await queryReports(reportWithProfilesColumns);
+
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] admin reports fetch fallback used', getSafeErrorLog(error, 'admin_reports_missing_column_fallback'));
+    ({ data, error } = await queryReports(legacyReportWithProfilesColumns));
   }
 
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  if (error) throw error;
+  if (error) {
+    console.warn('[ConnectBloom] admin reports fetch failed', getSafeErrorLog(error, 'admin_reports_fetch_failed'));
+    throw error;
+  }
   console.info('[ConnectBloom] reports count', { count: data?.length ?? 0 });
   const reports = (data ?? []).map((row) => mapReportWithProfiles(row as unknown as ReportRowWithProfiles));
   const profiles = reports.flatMap((report) => [report.reporter, report.reportedUser]).filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
