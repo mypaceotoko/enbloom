@@ -14,6 +14,7 @@ import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
 import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
+import { getSafeErrorLog } from '../lib/errorMessage';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from '../lib/profilePhotoApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
 import type { UserProfile } from '../types/user';
@@ -51,7 +52,7 @@ export function HomePage() {
         const count = await safeGetUnreadNotificationCount();
         if (mounted) setUnreadNotificationCount(count);
       } catch (caughtError) {
-        console.warn('[ConnectBloom] notification count fetch failed', { error: caughtError });
+        console.warn('[ConnectBloom] notification count fetch failed', getSafeErrorLog(caughtError, 'notification_count_fetch'));
         if (mounted) setUnreadNotificationCount(0);
       }
     }
@@ -80,28 +81,39 @@ export function HomePage() {
       setNotice('');
 
       try {
-        const [profiles, likedIds, matchedIds, nextHiddenUserIds] = await Promise.all([
-          getPublicProfiles(user.id, 12),
-          getLikedUserIds(user.id),
-          getMatchedUserIds(user.id),
-          getSafetyHiddenUserIds(user.id),
+        try {
+          const profiles = await getPublicProfiles(user.id, 12);
+          const usersWithFallbacks = profiles.map((profile) => profileRowToUserProfile(profile));
+          const photosByUserId = await getPrimaryProfilePhotos(usersWithFallbacks.map((profile) => profile.id));
+
+          if (!mounted) return;
+          setSupabaseUsers(attachPrimaryPhotoUrls(usersWithFallbacks, photosByUserId));
+        } catch (caughtError) {
+          console.warn('[ConnectBloom] public profiles fetch failed', getSafeErrorLog(caughtError, 'public_profiles_fetch'));
+          if (!mounted) return;
+          setSupabaseUsers([]);
+        }
+
+        const [likedIds, matchedIds, nextHiddenUserIds] = await Promise.all([
+          getLikedUserIds(user.id).catch((caughtError) => {
+            console.warn('[ConnectBloom] failed to load sent likes', getSafeErrorLog(caughtError, 'sent_like_ids_load'));
+            if (mounted) setNotice('話してみたい状態の取得に失敗しました。');
+            return [];
+          }),
+          getMatchedUserIds(user.id).catch((caughtError) => {
+            console.warn('[ConnectBloom] failed to load matched ids', getSafeErrorLog(caughtError, 'matched_ids_load'));
+            return [];
+          }),
+          getSafetyHiddenUserIds(user.id).catch((caughtError) => {
+            console.warn('[ConnectBloom] failed to load hidden user ids', getSafeErrorLog(caughtError, 'hidden_user_ids_load'));
+            return [];
+          }),
         ]);
 
-        const usersWithFallbacks = profiles.map((profile) => profileRowToUserProfile(profile));
-        const photosByUserId = await getPrimaryProfilePhotos(usersWithFallbacks.map((profile) => profile.id));
-
         if (!mounted) return;
-        setSupabaseUsers(attachPrimaryPhotoUrls(usersWithFallbacks, photosByUserId));
         setLikedUserIds(likedIds);
         setMatchedUserIds(matchedIds);
         setHiddenUserIds(nextHiddenUserIds);
-      } catch (caughtError) {
-        if (!mounted) return;
-        setSupabaseUsers([]);
-        setLikedUserIds([]);
-        setMatchedUserIds([]);
-        setHiddenUserIds([]);
-        setNotice(caughtError instanceof Error ? `話してみたい状態の取得に失敗しました: ${caughtError.message}` : '話してみたい状態の取得に失敗しました。');
       } finally {
         if (mounted) setLoadingLikes(false);
       }

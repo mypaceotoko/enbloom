@@ -1,4 +1,6 @@
 import type { Like, LikeWithProfile } from '../types/like';
+import { isSchemaRelationshipError } from './dbError';
+import { getSafeErrorLog } from './errorMessage';
 import { createMatchIfMutualLike } from './matchApi';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoApi';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
@@ -17,10 +19,17 @@ type LikeRowWithProfiles = LikeRow & {
 };
 
 const likeColumns = 'id,from_user_id,to_user_id,created_at';
+const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
+const profileColumnsWithoutAccountStatus = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 const likeWithProfilesColumns = [
   likeColumns,
-  'sender_profile:profiles!likes_from_user_id_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used)',
-  'receiver_profile:profiles!likes_to_user_id_fkey(id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used)',
+  `sender_profile:profiles!likes_from_user_id_fkey(${profileColumns})`,
+  `receiver_profile:profiles!likes_to_user_id_fkey(${profileColumns})`,
+].join(',');
+const likeWithProfilesFallbackColumns = [
+  likeColumns,
+  `sender_profile:profiles!likes_from_user_id_fkey(${profileColumnsWithoutAccountStatus})`,
+  `receiver_profile:profiles!likes_to_user_id_fkey(${profileColumnsWithoutAccountStatus})`,
 ].join(',');
 
 function mapLikeRow(row: LikeRow): Like {
@@ -62,28 +71,59 @@ async function attachPhotosToLikes(likes: LikeWithProfile[]): Promise<LikeWithPr
   return likes.map((like) => ({ ...like, profile: like.profile ? profileById.get(like.profile.id) ?? like.profile : null }));
 }
 
-export async function getSentLikes(userId: string): Promise<LikeWithProfile[]> {
-  const { data, error } = await requireSupabaseClient()
+async function getLikesWithProfileFallback(userId: string, direction: 'sent' | 'received'): Promise<LikeWithProfile[]> {
+  const filterColumn = direction === 'sent' ? 'from_user_id' : 'to_user_id';
+  const phase = direction === 'sent' ? 'sent_likes_fetch' : 'received_likes_fetch';
+  const client = requireSupabaseClient();
+  const primaryResult = await client
     .from('likes')
     .select(likeWithProfilesColumns)
-    .eq('from_user_id', userId)
+    .eq(filterColumn, userId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
-  console.info('[ConnectBloom] sent likes count', { count: data?.length ?? 0 });
-  return attachPhotosToLikes((data ?? []).map((row) => mapLikeWithProfile(row as unknown as LikeRowWithProfiles, 'sent')));
+  if (!primaryResult.error) {
+    console.info(`[ConnectBloom] ${direction} likes count`, { count: primaryResult.data?.length ?? 0 });
+    return attachPhotosToLikes((primaryResult.data ?? []).map((row) => mapLikeWithProfile(row as unknown as LikeRowWithProfiles, direction)));
+  }
+
+  console.warn('[ConnectBloom] likes fetch failed', getSafeErrorLog(primaryResult.error, phase));
+  if (!isSchemaRelationshipError(primaryResult.error)) throw primaryResult.error;
+
+  const fallbackWithProfiles = await client
+    .from('likes')
+    .select(likeWithProfilesFallbackColumns)
+    .eq(filterColumn, userId)
+    .order('created_at', { ascending: false });
+
+  if (!fallbackWithProfiles.error) {
+    console.warn('[ConnectBloom] likes profile fallback used', getSafeErrorLog(primaryResult.error, `${phase}_profile_fallback`));
+    return attachPhotosToLikes((fallbackWithProfiles.data ?? []).map((row) => mapLikeWithProfile(row as unknown as LikeRowWithProfiles, direction)));
+  }
+
+  console.warn('[ConnectBloom] likes profile fallback failed', getSafeErrorLog(fallbackWithProfiles.error, `${phase}_profile_fallback_failed`));
+  if (!isSchemaRelationshipError(fallbackWithProfiles.error)) throw fallbackWithProfiles.error;
+
+  const baseResult = await client
+    .from('likes')
+    .select(likeColumns)
+    .eq(filterColumn, userId)
+    .order('created_at', { ascending: false });
+
+  if (baseResult.error) {
+    console.warn('[ConnectBloom] likes base fallback failed', getSafeErrorLog(baseResult.error, `${phase}_base_fallback_failed`));
+    throw baseResult.error;
+  }
+
+  console.warn('[ConnectBloom] likes base fallback used', getSafeErrorLog(fallbackWithProfiles.error, `${phase}_base_fallback`));
+  return (baseResult.data ?? []).map((row) => ({ ...mapLikeRow(row as LikeRow), direction, profile: null }));
+}
+
+export async function getSentLikes(userId: string): Promise<LikeWithProfile[]> {
+  return getLikesWithProfileFallback(userId, 'sent');
 }
 
 export async function getReceivedLikes(userId: string): Promise<LikeWithProfile[]> {
-  const { data, error } = await requireSupabaseClient()
-    .from('likes')
-    .select(likeWithProfilesColumns)
-    .eq('to_user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  console.info('[ConnectBloom] received likes count', { count: data?.length ?? 0 });
-  return attachPhotosToLikes((data ?? []).map((row) => mapLikeWithProfile(row as unknown as LikeRowWithProfiles, 'received')));
+  return getLikesWithProfileFallback(userId, 'received');
 }
 
 export async function hasLiked(senderId: string, receiverId: string): Promise<boolean> {
@@ -184,7 +224,10 @@ export async function getLikedUserIds(userId: string): Promise<string[]> {
     .select('to_user_id')
     .eq('from_user_id', userId);
 
-  if (error) throw error;
+  if (error) {
+    console.warn('[ConnectBloom] sent like ids fetch failed', getSafeErrorLog(error, 'sent_like_ids_fetch'));
+    throw error;
+  }
   console.info('[ConnectBloom] sent likes count', { count: data?.length ?? 0 });
   return (data ?? []).map((row) => row.to_user_id as string);
 }

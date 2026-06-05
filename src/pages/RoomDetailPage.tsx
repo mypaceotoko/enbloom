@@ -9,9 +9,9 @@ import { demoChatRooms, demoRoomMessages, roomTags } from '../data/mockChatRooms
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
-import { getShortErrorMessage } from '../lib/errorMessage';
+import { deleteChatRoomMessage, getChatRoomByIdentifier, getChatRoomMessages, sendChatRoomMessage } from '../lib/chatRoomApi';
+import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { getRoomVisual } from '../lib/roomVisual';
-import { deleteChatRoomMessage, getChatRoomBySlug, getChatRoomMessages, sendChatRoomMessage } from '../lib/chatRoomApi';
 import type { ChatRoom, ChatRoomMessageWithProfile } from '../types/chatRoom';
 import type { TranslationKey } from '../lib/i18n';
 
@@ -85,7 +85,7 @@ export function RoomDetailPage() {
       setLoading(true);
       setNotice('');
       try {
-        const loadedRoom = await getChatRoomBySlug(roomId);
+        const loadedRoom = await getChatRoomByIdentifier(roomId);
         if (!loadedRoom) {
           if (mounted) {
             setRoom(null);
@@ -99,6 +99,7 @@ export function RoomDetailPage() {
           setMessages(loadedMessages);
         }
       } catch (caughtError) {
+        console.warn('[ConnectBloom] room detail load failed', getSafeErrorLog(caughtError, 'room_detail_load_failed'));
         if (mounted) {
           setRoom(demoRoom);
           setMessages(demoRoomMessages[roomId] ?? []);
@@ -135,6 +136,7 @@ export function RoomDetailPage() {
       setMessages((currentMessages) => [...currentMessages, sentMessage]);
       setMessageBody('');
     } catch (caughtError) {
+      console.warn('[ConnectBloom] room message send failed', getSafeErrorLog(caughtError, 'room_message_send_failed'));
       setNotice(getShortErrorMessage(caughtError, '送信に失敗しました。'));
     } finally {
       setSending(false);
@@ -152,6 +154,7 @@ export function RoomDetailPage() {
       await deleteChatRoomMessage(messageId);
       setMessages((currentMessages) => currentMessages.filter((message) => message.id !== messageId));
     } catch (caughtError) {
+      console.warn('[ConnectBloom] room message delete failed', getSafeErrorLog(caughtError, 'room_message_delete_failed'));
       setNotice(getShortErrorMessage(caughtError, '削除に失敗しました。'));
     }
   }

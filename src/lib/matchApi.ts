@@ -1,6 +1,7 @@
 import type { DirectConversationResult, Match, MatchCreateResult, MatchStatus, MatchWithProfile } from '../types/match';
+import { isSchemaRelationshipError } from './dbError';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoApi';
-import { profileRowToUserProfile, type ProfileRow } from './profileApi';
+import { getPublicProfileById, profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { getErrorDebugInfo, getSafeErrorLog, getShortErrorMessage } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
 
@@ -58,10 +59,16 @@ type ActivityInterestConversationPathResult = DirectConversationResult & {
 
 const matchColumns = 'id,user1_id,user2_id,status,created_at,last_message_at';
 const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
+const profileColumnsWithoutAccountStatus = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 const matchWithProfilesColumns = [
   matchColumns,
   `user1_profile:profiles!matches_user1_id_fkey(${profileColumns})`,
   `user2_profile:profiles!matches_user2_id_fkey(${profileColumns})`,
+].join(',');
+const matchWithProfilesFallbackColumns = [
+  matchColumns,
+  `user1_profile:profiles!matches_user1_id_fkey(${profileColumnsWithoutAccountStatus})`,
+  `user2_profile:profiles!matches_user2_id_fkey(${profileColumnsWithoutAccountStatus})`,
 ].join(',');
 
 function mapMatchRow(row: MatchRow): Match {
@@ -235,22 +242,80 @@ function isMissingRpcError(error: { code?: string; message?: string }) {
   return error.code === '42883' || /function .*create_match_if_mutual_like/i.test(error.message ?? '');
 }
 
-export async function getMyMatches(userId: string): Promise<MatchWithProfile[]> {
+async function attachPhotosToMatches(matches: MatchWithProfile[]): Promise<MatchWithProfile[]> {
+  const profiles = matches.map((match) => match.profile).filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
+  const photosByUserId = await getPrimaryProfilePhotos(profiles.map((profile) => profile.id));
+  const profilesWithPhotos = attachPrimaryPhotoUrls(profiles, photosByUserId);
+  const profileById = new Map(profilesWithPhotos.map((profile) => [profile.id, profile]));
+  return matches.map((match) => ({ ...match, profile: match.profile ? profileById.get(match.profile.id) ?? match.profile : null }));
+}
+
+async function getMatchesWithBaseColumns(userId: string): Promise<MatchWithProfile[]> {
   const { data, error } = await requireSupabaseClient()
+    .from('matches')
+    .select(matchColumns)
+    .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn('[ConnectBloom] matches base fallback failed', getSafeErrorLog(error, 'matches_base_fallback_failed'));
+    throw error;
+  }
+
+  const baseMatches = ((data ?? []) as MatchRow[]).map((row) => ({
+    ...mapMatchRow(row),
+    otherUserId: row.user1_id === userId ? row.user2_id : row.user1_id,
+    profile: null,
+  }));
+
+  const matchesWithProfiles = await Promise.all(baseMatches.map(async (match) => {
+    try {
+      const profile = await getPublicProfileById(match.otherUserId);
+      return { ...match, profile: profile ? profileRowToUserProfile(profile) : null };
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] match profile fallback fetch failed', getSafeErrorLog(caughtError, 'match_profile_fallback_fetch_failed'));
+      return match;
+    }
+  }));
+
+  return attachPhotosToMatches(matchesWithProfiles);
+}
+
+export async function getMyMatches(userId: string): Promise<MatchWithProfile[]> {
+  const client = requireSupabaseClient();
+  const { data, error } = await client
     .from('matches')
     .select(matchWithProfilesColumns)
     .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
     .eq('status', 'active')
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
-  console.info('[ConnectBloom] my matches count', { count: data?.length ?? 0 });
-  const matches = (data ?? []).map((row) => mapMatchWithProfile(row as unknown as MatchRowWithProfiles, userId));
-  const profiles = matches.map((match) => match.profile).filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
-  const photosByUserId = await getPrimaryProfilePhotos(profiles.map((profile) => profile.id));
-  const profilesWithPhotos = attachPrimaryPhotoUrls(profiles, photosByUserId);
-  const profileById = new Map(profilesWithPhotos.map((profile) => [profile.id, profile]));
-  return matches.map((match) => ({ ...match, profile: match.profile ? profileById.get(match.profile.id) ?? match.profile : null }));
+  if (!error) {
+    console.info('[ConnectBloom] my matches count', { count: data?.length ?? 0 });
+    return attachPhotosToMatches((data ?? []).map((row) => mapMatchWithProfile(row as unknown as MatchRowWithProfiles, userId)));
+  }
+
+  console.warn('[ConnectBloom] matches fetch failed', getSafeErrorLog(error, 'matches_fetch'));
+  if (!isSchemaRelationshipError(error)) throw error;
+
+  const fallbackWithProfiles = await client
+    .from('matches')
+    .select(matchWithProfilesFallbackColumns)
+    .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  if (!fallbackWithProfiles.error) {
+    console.warn('[ConnectBloom] matches profile fallback used', getSafeErrorLog(error, 'matches_profile_fallback'));
+    return attachPhotosToMatches((fallbackWithProfiles.data ?? []).map((row) => mapMatchWithProfile(row as unknown as MatchRowWithProfiles, userId)));
+  }
+
+  console.warn('[ConnectBloom] matches profile fallback failed', getSafeErrorLog(fallbackWithProfiles.error, 'matches_profile_fallback_failed'));
+  if (!isSchemaRelationshipError(fallbackWithProfiles.error)) throw fallbackWithProfiles.error;
+
+  console.warn('[ConnectBloom] matches base fallback used', getSafeErrorLog(fallbackWithProfiles.error, 'matches_base_fallback'));
+  return getMatchesWithBaseColumns(userId);
 }
 
 export async function hasMatched(userAId: string, userBId: string): Promise<boolean> {

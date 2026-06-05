@@ -29,5 +29,17 @@ export function isMissingColumnError(error: unknown): boolean {
     || errorText.includes('schema cache')
     || errorText.includes('does not exist in the schema cache')
     || errorText.includes('foreign key relationship')
+    || errorText.includes('could not find a relationship')
+    || errorText.includes('no relationship found')
+    || (errorText.includes('relationship') && errorText.includes('schema cache'))
     || (errorText.includes('relationship') && errorText.includes('reports_target_chat_room_id_fkey'));
+}
+
+export function isSchemaRelationshipError(error: unknown): boolean {
+  const errorText = getErrorText(error);
+  return isMissingColumnError(error)
+    || errorText.includes('foreign key relationship')
+    || errorText.includes('could not find a relationship')
+    || errorText.includes('no relationship found')
+    || (errorText.includes('relationship') && errorText.includes('schema cache'));
 }

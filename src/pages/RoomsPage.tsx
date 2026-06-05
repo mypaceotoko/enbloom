@@ -9,6 +9,7 @@ import { demoChatRooms, roomTags } from '../data/mockChatRooms';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { getChatRooms } from '../lib/chatRoomApi';
+import { getSafeErrorLog } from '../lib/errorMessage';
 import { getRoomVisual } from '../lib/roomVisual';
 import type { ChatRoomWithStats } from '../types/chatRoom';
 import type { TranslationKey } from '../lib/i18n';
@@ -61,8 +62,9 @@ export function RoomsPage() {
         if (mounted) setRooms(loadedRooms.length ? loadedRooms : demoChatRooms);
       } catch (caughtError) {
         if (mounted) {
+          console.warn('[ConnectBloom] rooms load failed', getSafeErrorLog(caughtError, 'rooms_load_failed'));
           setRooms(demoChatRooms);
-          setNotice(caughtError instanceof Error ? `ルームの読み込みに失敗しました。デモ表示に切り替えました: ${caughtError.message}` : 'ルームの読み込みに失敗しました。デモ表示に切り替えました。');
+          setNotice('ルームの読み込みに失敗しました。デモ表示に切り替えました。');
         }
       } finally {
         if (mounted) setLoading(false);

@@ -10,6 +10,7 @@ import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { getSafetyHiddenUserIds } from '../lib/blockApi';
+import { getSafeErrorLog } from '../lib/errorMessage';
 import { getMyMatches } from '../lib/matchApi';
 import type { MatchWithProfile } from '../types/match';
 import type { UserProfile } from '../types/user';
@@ -40,15 +41,19 @@ export function MatchesPage() {
       setNotice('');
 
       try {
-        const [nextMatches, nextHiddenUserIds] = await Promise.all([getMyMatches(user.id), getSafetyHiddenUserIds(user.id)]);
+        const nextMatches = await getMyMatches(user.id).catch((caughtError) => {
+          console.warn('[ConnectBloom] matches page load failed', getSafeErrorLog(caughtError, 'matches_page_load_failed'));
+          if (mounted) setNotice('コネクト一覧の取得に失敗しました。');
+          return [];
+        });
+        const nextHiddenUserIds = await getSafetyHiddenUserIds(user.id).catch((caughtError) => {
+          console.warn('[ConnectBloom] matches hidden users load failed', getSafeErrorLog(caughtError, 'matches_hidden_users_load_failed'));
+          return [];
+        });
+
         if (!mounted) return;
         setSupabaseMatches(nextMatches);
         setHiddenUserIds(nextHiddenUserIds);
-      } catch (caughtError) {
-        if (!mounted) return;
-        setSupabaseMatches([]);
-        setHiddenUserIds([]);
-        setNotice(caughtError instanceof Error ? `コネクト一覧の取得に失敗しました: ${caughtError.message}` : 'コネクト一覧の取得に失敗しました。');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -80,7 +85,7 @@ export function MatchesPage() {
       {useSupabaseMatches ? (
         <Card className="space-y-2.5">
           {visibleSupabaseMatches.length === 0 ? <EmptyMatches /> : null}
-          {visibleSupabaseMatches.map((match) => match.profile ? <MatchRow createdAt={match.created_at} key={match.id} messagePath={`/messages/${match.id}`} user={match.profile} /> : null)}
+          {visibleSupabaseMatches.map((match) => <MatchRow createdAt={match.created_at} key={match.id} messagePath={`/messages/${match.id}`} user={match.profile ?? createFallbackMatchProfile(match.otherUserId)} />)}
         </Card>
       ) : (
         <Card className="space-y-2.5">
@@ -90,6 +95,23 @@ export function MatchesPage() {
       )}
     </PageShell>
   );
+}
+
+
+function createFallbackMatchProfile(userId: string): UserProfile {
+  return {
+    id: userId,
+    name: 'ConnectBloomユーザー',
+    age: 18,
+    location: 'プロフィール確認中',
+    occupation: '自然体のプロフィール',
+    bio: 'プロフィール情報を読み込めませんでした。会話はここから始められます。',
+    interests: ['コネクト'],
+    datingTemperature: 'ゆっくり話したい',
+    relationshipGoal: '自然体で長く付き合える関係',
+    introducedBy: 'ConnectBloom',
+    gradient: 'from-sky-100 via-cyan-50 to-yellow-100',
+  };
 }
 
 function EmptyMatches() {
