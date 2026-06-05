@@ -571,7 +571,24 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
 
     setManagingActivityPostId(post.id);
     try {
-      await deleteActivityPostForAdmin(post.id);
+      let publicIsAdminAuthUid: boolean | null = null;
+      try {
+        const { data, error } = await requireSupabaseClient().rpc('is_admin', { user_id: user?.id });
+        publicIsAdminAuthUid = error ? null : Boolean(data);
+        if (error) {
+          console.warn('[ConnectBloom] admin delete is_admin diagnostic failed', getSafeErrorLog(error, 'admin_delete_is_admin_diagnostic_failed'));
+        }
+      } catch (diagnosticError) {
+        console.warn('[ConnectBloom] admin delete is_admin diagnostic failed', getSafeErrorLog(diagnosticError, 'admin_delete_is_admin_diagnostic_failed'));
+      }
+
+      await deleteActivityPostForAdmin(post.id, {
+        currentUserId: user?.id ?? null,
+        currentUserEmail: user?.email ?? null,
+        isFounder,
+        isAdmin,
+        publicIsAdminAuthUid,
+      });
       setArchivedActivityPosts((current) => current.filter((currentPost) => currentPost.id !== post.id));
       setActivityPostNotice('募集を完全削除しました');
     } catch (caughtError) {

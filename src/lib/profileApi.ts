@@ -97,6 +97,27 @@ function logOptionalProfileColumnsFallback(error: unknown, phase: ProfileQueryKi
   console.warn('[ProfileApi] optional profile columns unavailable; falling back to legacy profile columns', getSafeErrorLog(error, phase));
 }
 
+function logTalkTopicsSaveDiagnostics(params: {
+  phase: Extract<ProfileQueryKind, 'upsertMyProfile' | 'updateMyProfile'>;
+  currentUserId: string;
+  payload?: Partial<ProfileRow>;
+  savedProfile?: ProfileRow | null;
+  error?: unknown;
+}) {
+  const hasTalkTopicsInPayload = Object.prototype.hasOwnProperty.call(params.payload ?? {}, 'talk_topics');
+  const talkTopics = hasTalkTopicsInPayload ? params.payload?.talk_topics : undefined;
+
+  console.info('[ConnectBloom] profile talk_topics save diagnostic', {
+    action: 'profile_talk_topics_save',
+    phase: params.phase,
+    currentUserId: params.currentUserId,
+    talkTopicsLength: typeof talkTopics === 'string' ? talkTopics.length : 0,
+    hasTalkTopicsInPayload,
+    updateError: params.error ? getSafeErrorLog(params.error, params.phase) : null,
+    savedProfileTalkTopicsExists: typeof params.savedProfile?.talk_topics === 'string' && params.savedProfile.talk_topics.length > 0,
+  });
+}
+
 function omitOptionalProfileColumns<TProfile extends { account_status?: ProfileRow['account_status']; talk_topics?: ProfileRow['talk_topics'] }>(profile: TProfile): Omit<TProfile, 'account_status' | 'talk_topics'> {
   const { account_status: _accountStatus, talk_topics: _talkTopics, ...profileWithoutOptionalColumns } = profile;
   void _accountStatus;
@@ -135,9 +156,17 @@ export async function upsertMyProfile(profile: ProfileUpsert): Promise<ProfileRo
     .select(profileColumns)
     .single<ProfileRow>();
 
-  if (!error) return normalizeProfileRow(data);
-  if (!isMissingOptionalProfileColumnError(error)) throw error;
+  if (!error) {
+    const normalizedProfile = normalizeProfileRow(data);
+    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, savedProfile: normalizedProfile });
+    return normalizedProfile;
+  }
+  if (!isMissingOptionalProfileColumnError(error)) {
+    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, error });
+    throw error;
+  }
 
+  logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, error });
   logOptionalProfileColumnsFallback(error, 'upsertMyProfile');
   const fallbackResult = await client
     .from('profiles')
@@ -145,8 +174,13 @@ export async function upsertMyProfile(profile: ProfileUpsert): Promise<ProfileRo
     .select(profileColumnsWithoutOptionalColumns)
     .single<ProfileRow>();
 
-  if (fallbackResult.error) throw fallbackResult.error;
-  return normalizeProfileRow(fallbackResult.data);
+  if (fallbackResult.error) {
+    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, error: fallbackResult.error });
+    throw fallbackResult.error;
+  }
+  const normalizedProfile = normalizeProfileRow(fallbackResult.data);
+  logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, savedProfile: normalizedProfile });
+  return normalizedProfile;
 }
 
 export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRow> {
@@ -160,9 +194,17 @@ export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRo
     .select(profileColumns)
     .single<ProfileRow>();
 
-  if (!error) return normalizeProfileRow(data);
-  if (!isMissingOptionalProfileColumnError(error)) throw error;
+  if (!error) {
+    const normalizedProfile = normalizeProfileRow(data);
+    logTalkTopicsSaveDiagnostics({ phase: 'updateMyProfile', currentUserId: id, payload: updates, savedProfile: normalizedProfile });
+    return normalizedProfile;
+  }
+  if (!isMissingOptionalProfileColumnError(error)) {
+    logTalkTopicsSaveDiagnostics({ phase: 'updateMyProfile', currentUserId: id, payload: updates, error });
+    throw error;
+  }
 
+  logTalkTopicsSaveDiagnostics({ phase: 'updateMyProfile', currentUserId: id, payload: updates, error });
   logOptionalProfileColumnsFallback(error, 'updateMyProfile');
   const fallbackResult = await client
     .from('profiles')
@@ -171,8 +213,13 @@ export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRo
     .select(profileColumnsWithoutOptionalColumns)
     .single<ProfileRow>();
 
-  if (fallbackResult.error) throw fallbackResult.error;
-  return normalizeProfileRow(fallbackResult.data);
+  if (fallbackResult.error) {
+    logTalkTopicsSaveDiagnostics({ phase: 'updateMyProfile', currentUserId: id, payload: updates, error: fallbackResult.error });
+    throw fallbackResult.error;
+  }
+  const normalizedProfile = normalizeProfileRow(fallbackResult.data);
+  logTalkTopicsSaveDiagnostics({ phase: 'updateMyProfile', currentUserId: id, payload: updates, savedProfile: normalizedProfile });
+  return normalizedProfile;
 }
 
 export async function ensureProfileForUser(user: User): Promise<ProfileRow> {

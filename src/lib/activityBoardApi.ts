@@ -302,15 +302,37 @@ export type AdminDeleteActivityPostResult = {
   deleted_post_id: string;
 };
 
-export async function deleteActivityPostForAdmin(postId: string): Promise<AdminDeleteActivityPostResult> {
+export type AdminDeleteActivityPostDiagnostics = {
+  currentUserId?: string | null;
+  currentUserEmail?: string | null;
+  isFounder?: boolean;
+  isAdmin?: boolean;
+  publicIsAdminAuthUid?: boolean | null;
+};
+
+export async function deleteActivityPostForAdmin(postId: string, diagnostics: AdminDeleteActivityPostDiagnostics = {}): Promise<AdminDeleteActivityPostResult> {
   assertNotDemoMode('管理者募集削除');
-  const { data, error } = await requireSupabaseClient()
+  const { data, error, count } = await requireSupabaseClient()
     .rpc('admin_delete_activity_post', { p_post_id: postId })
     .single<AdminDeleteActivityPostResult>();
 
+  const deletedPostId = data?.deleted_post_id ?? null;
+  console.info('[ConnectBloom] admin activity post delete diagnostic', {
+    action: 'admin_delete_activity_post',
+    postId,
+    currentUserId: diagnostics.currentUserId ?? null,
+    currentUserEmail: diagnostics.currentUserEmail ?? null,
+    isFounder: Boolean(diagnostics.isFounder),
+    isAdmin: Boolean(diagnostics.isAdmin),
+    publicIsAdminAuthUid: diagnostics.publicIsAdminAuthUid ?? null,
+    deleteMethod: 'rpc',
+    deleteError: error ? getSafeErrorLog(error, 'admin_delete_activity_post') : null,
+    deletedPostId,
+    deletedRowCount: count ?? (deletedPostId ? 1 : 0),
+  });
+
   if (error) throw error;
   if (!data?.success) throw new Error('募集の削除に失敗しました');
-  console.info('[ConnectBloom] admin activity post deleted', { success: true });
   return data;
 }
 
