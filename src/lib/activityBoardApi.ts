@@ -297,8 +297,21 @@ export async function restoreActivityPostForAdmin(postId: string): Promise<Activ
   return reopenActivityPost(postId);
 }
 
-export async function deleteActivityPostForAdmin(postId: string): Promise<void> {
-  await deleteActivityPost(postId);
+export type AdminDeleteActivityPostResult = {
+  success: boolean;
+  deleted_post_id: string;
+};
+
+export async function deleteActivityPostForAdmin(postId: string): Promise<AdminDeleteActivityPostResult> {
+  assertNotDemoMode('管理者募集削除');
+  const { data, error } = await requireSupabaseClient()
+    .rpc('admin_delete_activity_post', { p_post_id: postId })
+    .single<AdminDeleteActivityPostResult>();
+
+  if (error) throw error;
+  if (!data?.success) throw new Error('募集の削除に失敗しました');
+  console.info('[ConnectBloom] admin activity post deleted', { success: true });
+  return data;
 }
 
 export async function getActivityPostById(postId: string): Promise<ActivityPostWithAuthor | null> {

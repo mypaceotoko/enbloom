@@ -412,6 +412,28 @@ export async function createMatchIfMutualLike(targetUserId: string): Promise<Mat
   return createMatch(currentUserId, targetUserId);
 }
 
+
+export async function adminCreateOrGetDirectConversation(targetUserId: string): Promise<DirectConversationResult> {
+  const { data, error } = await requireSupabaseClient()
+    .rpc('admin_create_or_get_direct_conversation', { p_target_user_id: targetUserId });
+
+  if (error) {
+    logDmSupabaseError('admin_create_or_get_direct_conversation', error);
+    return {
+      success: false,
+      phase: 'rpc_failed',
+      message: mapDirectConversationError(error, '管理者メッセージ用の会話作成に失敗しました'),
+      debugError: formatSupabaseDebugError(error),
+      errorDetails: getSupabaseErrorDetails(error),
+    };
+  }
+
+  const result = mapDirectConversationResult(data);
+  const phase = result.success && result.matchId ? 'admin_create_or_get_direct_conversation' : 'match_id_missing';
+  const debugError = phase === 'match_id_missing' ? `rpc data: ${safeStringifyRpcData(data)}` : result.debugError;
+  return { ...result, phase, debugError };
+}
+
 export async function getMatchedUserIds(userId: string): Promise<string[]> {
   const matches = await getMyMatches(userId);
   return matches.map((match) => match.otherUserId);

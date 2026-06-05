@@ -10,10 +10,11 @@ import { ProfileAvatar } from '../components/ProfileAvatar';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { useAdmin } from '../hooks/useAdmin';
 import { useLanguage } from '../hooks/useLanguage';
 import { blockUser as blockSupabaseUser } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
-import { getMyMatches } from '../lib/matchApi';
+import { adminCreateOrGetDirectConversation, getMyMatches } from '../lib/matchApi';
 import { getPrimaryProfilePhoto } from '../lib/profilePhotoApi';
 import { getPublicProfileById, profileRowToUserProfile } from '../lib/profileApi';
 import { reportUser as reportSupabaseUser } from '../lib/reportApi';
@@ -32,6 +33,7 @@ export function ProfileDetailPage() {
   const demoUser = mockUsers.find((mockUser) => mockUser.id === id);
   const { blockUser, isLiked, isMatched, isReported, reportUser, toggleLike } = useAppState();
   const { isAuthenticated, isSupabaseMode, user: authUser } = useAuth();
+  const { isAdmin } = useAdmin();
   const { t } = useLanguage();
   const [supabaseUser, setSupabaseUser] = useState<UserProfile | null>(null);
   const [supabaseLiked, setSupabaseLiked] = useState(false);
@@ -40,6 +42,7 @@ export function ProfileDetailPage() {
   const [errorNotice, setErrorNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [savingSafety, setSavingSafety] = useState(false);
+  const [startingAdminMessage, setStartingAdminMessage] = useState(false);
   const useSupabaseProfile = isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && Boolean(authUser) && Boolean(id);
 
   useEffect(() => {
@@ -149,6 +152,28 @@ export function ProfileDetailPage() {
     }
   }
 
+  async function handleAdminMessage() {
+    if (!profileUser || !useSupabaseProfile || !isAdmin || startingAdminMessage) return;
+
+    setNotice('');
+    setErrorNotice('');
+    setStartingAdminMessage(true);
+
+    try {
+      const result = await adminCreateOrGetDirectConversation(profileUser.id);
+      if (!result.success || !result.matchId) {
+        setErrorNotice(result.message ?? '管理者メッセージ用の会話作成に失敗しました。');
+        return;
+      }
+
+      navigate(`/messages/${result.matchId}`);
+    } catch (caughtError) {
+      setErrorNotice(caughtError instanceof Error ? caughtError.message : '管理者メッセージ用の会話作成に失敗しました。');
+    } finally {
+      setStartingAdminMessage(false);
+    }
+  }
+
   async function handleReport() {
     if (!profileUser) return;
     const reasonText = `${reportReasonOptions.map((reason, index) => `${index + 1}. ${reason}`).join('\n')}\n\n番号または理由を入力してください。`;
@@ -234,6 +259,22 @@ export function ProfileDetailPage() {
           <InfoBlock icon={<MessageCircle size={17} />} title={t('profile.connectionStyle')} body={profileUser.datingTemperature} />
           <InfoBlock icon={<UserRoundCheck size={17} />} title={t('profile.introductionShared')} body={`${profileUser.introducedBy}からの紹介。共通点: ${profileUser.interests.join('、')}`} />
           {talkTopics ? <InfoBlock icon={<MessageCircle size={17} />} title={t('profile.talkTopics')} body={talkTopics} /> : null}
+
+          {isAdmin && useSupabaseProfile && profileUser.id !== authUser?.id ? (
+            <Card className="space-y-2.5 border border-theme-main/15 bg-theme-accent-soft/55 p-3.5 shadow-sm">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="mt-0.5 shrink-0 text-theme-main" size={17} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-theme-text">管理者メッセージ</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-theme-muted">運営者として、このユーザーへ直接メッセージを送れます。</p>
+                </div>
+              </div>
+              <Button className="w-full" disabled={startingAdminMessage} onClick={() => { void handleAdminMessage(); }} type="button" variant="secondary">
+                {startingAdminMessage ? <Loader2 className="animate-spin" size={16} /> : <MessageCircle size={16} />}
+                管理者メッセージを送る
+              </Button>
+            </Card>
+          ) : null}
 
           <div className="sticky bottom-24 z-10 space-y-2 rounded-[1.25rem] border border-white/60 bg-theme-card/88 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
             <Button className={`w-full ${liked ? 'bg-gradient-to-r from-theme-cyan to-theme-main text-white shadow-theme-main/25 hover:saturate-125' : 'bg-theme-accent-soft text-theme-text'}`} onClick={() => { void handleLike(); }} variant="secondary">

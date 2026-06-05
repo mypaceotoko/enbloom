@@ -21,6 +21,8 @@ type MatchMessageRow = {
   user2_id: string;
   created_at: string;
   last_message_at: string | null;
+  admin_initiated_by?: string | null;
+  admin_initiated_at?: string | null;
   user1_profile?: ProfileRow | ProfileRow[] | null;
   user2_profile?: ProfileRow | ProfileRow[] | null;
 };
@@ -40,7 +42,7 @@ const legacyMessageMatchColumns = [
   `user2_profile:profiles!matches_user2_id_fkey(${legacyProfileColumns})`,
 ].join(',');
 const messageMatchColumns = [
-  'id,user1_id,user2_id,created_at,last_message_at',
+  'id,user1_id,user2_id,created_at,last_message_at,admin_initiated_by,admin_initiated_at',
   `user1_profile:profiles!matches_user1_id_fkey(${profileColumns})`,
   `user2_profile:profiles!matches_user2_id_fkey(${profileColumns})`,
 ].join(',');
@@ -108,6 +110,8 @@ export async function getMessageMatchById(matchId: string): Promise<MessageMatch
     otherProfile: otherProfile ? profileRowToUserProfile(otherProfile, (await getPrimaryProfilePhoto(data.user1_id === currentUserId ? data.user2_id : data.user1_id).catch(() => null))?.publicUrl) : null,
     createdAt: data.created_at,
     lastMessageAt: data.last_message_at,
+    adminInitiatedBy: data.admin_initiated_by ?? null,
+    adminInitiatedAt: data.admin_initiated_at ?? null,
   };
 }
 

@@ -77,7 +77,7 @@ function formatDateTime(value: string | null, emptyLabel = '期限なし', local
 export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {}) {
   const { reportedUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
-  const { isFounder } = useAdmin();
+  const { isAdmin, isFounder } = useAdmin();
   const { language, t } = useLanguage();
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
   const [supabaseReports, setSupabaseReports] = useState<ReportWithProfiles[]>([]);
@@ -116,16 +116,16 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     : { total: reportedUserIds.length, open: reportedUserIds.length, reviewing: 0, resolved: 0, dismissed: 0 };
   const ownInviteCodeCount = useMemo(() => inviteCodes.filter((inviteCode) => inviteCode.created_by === user?.id).length, [inviteCodes, user?.id]);
   const remainingInviteSlots = Math.max(GENERAL_USER_INVITE_CODE_LIMIT - ownInviteCodeCount, 0);
-  const inviteLimitReached = !isFounder && ownInviteCodeCount >= GENERAL_USER_INVITE_CODE_LIMIT;
+  const inviteLimitReached = !isAdmin && ownInviteCodeCount >= GENERAL_USER_INVITE_CODE_LIMIT;
   const locale = language === 'en' ? 'en-US' : 'ja-JP';
-  const inviteSlotSummary = isFounder
+  const inviteSlotSummary = isAdmin
     ? t('inviteCodes.slots.unlimited')
     : `${t('inviteCodes.remainingInvites')} ${remainingInviteSlots} / ${GENERAL_USER_INVITE_CODE_LIMIT} ${t('inviteCodes.peopleUnit')}`;
   const inviteCountLabel = useMemo(() => {
     if (!isSupabaseMode) return 'デモ表示';
     if (!isAuthenticated) return '未ログイン';
-    return isFounder ? `${inviteCodes.length}件` : `${ownInviteCodeCount}/${GENERAL_USER_INVITE_CODE_LIMIT}件`;
-  }, [inviteCodes.length, isAuthenticated, isFounder, isSupabaseMode, ownInviteCodeCount]);
+    return isAdmin ? `${inviteCodes.length}件` : `${ownInviteCodeCount}/${GENERAL_USER_INVITE_CODE_LIMIT}件`;
+  }, [inviteCodes.length, isAdmin, isAuthenticated, isSupabaseMode, ownInviteCodeCount]);
   const adminCards = [
     { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: 'βテスターに共有する招待コードを作成・確認できます。\n招待コードは、紹介経路を記録するために使います。' },
     { icon: ClipboardList, title: '募集管理', count: `${archivedActivityPosts.length}件`, body: '非表示にした募集を確認し、必要に応じて再表示または完全削除できます。' },
@@ -172,10 +172,10 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, isFounder, isSupabaseMode, user]);
+  }, [isAuthenticated, isAdmin, isFounder, isSupabaseMode, user]);
 
   useEffect(() => {
-    if (!isFounder || !isSupabaseMode || !isAuthenticated || !user) return undefined;
+    if (!isAdmin || !isSupabaseMode || !isAuthenticated || !user) return undefined;
 
     let ignore = false;
     getAdminReports({ includeArchived: includeArchivedReports })
@@ -193,10 +193,10 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     return () => {
       ignore = true;
     };
-  }, [includeArchivedReports, isAuthenticated, isFounder, isSupabaseMode, user]);
+  }, [includeArchivedReports, isAdmin, isAuthenticated, isSupabaseMode, user]);
 
   useEffect(() => {
-    if (!isFounder || !isSupabaseMode || !isAuthenticated || !user) return undefined;
+    if (!isAdmin || !isSupabaseMode || !isAuthenticated || !user) return undefined;
 
     let ignore = false;
 
@@ -222,13 +222,13 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, isFounder, isSupabaseMode, user]);
+  }, [isAdmin, isAuthenticated, isSupabaseMode, user]);
 
   useEffect(() => {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
 
     let ignore = false;
-    (isFounder ? getManagedInviteCodes() : getMyInviteCodes(user.id))
+    (isAdmin ? getManagedInviteCodes() : getMyInviteCodes(user.id))
       .then((nextInviteCodes) => {
         if (!ignore) setInviteCodes(nextInviteCodes);
       })
@@ -239,7 +239,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, isFounder, isSupabaseMode, user]);
+  }, [isAdmin, isAuthenticated, isSupabaseMode, user]);
 
   function updateForm(field: keyof InviteCodeForm, value: string | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -312,7 +312,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       return;
     }
 
-    const generalInvitePage = inviteOnly && !isFounder;
+    const generalInvitePage = inviteOnly && !isAdmin;
     const parsedMaxUses = Number(form.maxUses);
     if (!generalInvitePage && !form.unlimited && (!Number.isInteger(parsedMaxUses) || parsedMaxUses <= 0)) {
       setInviteError('利用上限は1以上の整数で入力してください。');
@@ -551,7 +551,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       setActivityPostNotice('募集を再表示しました');
     } catch (caughtError) {
       console.warn('[ConnectBloom] admin activity post restore failed', getSafeErrorLog(caughtError, 'admin_activity_post_restore_failed'));
-      setActivityPostError('募集の更新に失敗しました');
+      setActivityPostError('募集の再表示に失敗しました');
     } finally {
       setManagingActivityPostId(null);
     }
@@ -616,7 +616,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     }
   }
 
-  if (!isFounder && !inviteOnly) {
+  if (!isAdmin && !inviteOnly) {
     return (
       <PageShell description="このページは管理者のみ利用できます。" eyebrow="Admin" title="管理者専用ページです">
         <Card className="space-y-3 p-4 text-center shadow-sm">
@@ -641,11 +641,11 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('inviteCodes.slotsTitle')}</p>
               <h2 className="mt-1 text-xl font-black text-theme-main-dark">{inviteSlotSummary}</h2>
             </div>
-            <Badge>{isFounder ? t('inviteCodes.unlimitedBadge') : `${ownInviteCodeCount} / ${GENERAL_USER_INVITE_CODE_LIMIT}`}</Badge>
+            <Badge>{isAdmin ? t('inviteCodes.unlimitedBadge') : `${ownInviteCodeCount} / ${GENERAL_USER_INVITE_CODE_LIMIT}`}</Badge>
           </div>
           <p className="text-[13px] font-bold leading-6 text-theme-muted">{t('inviteCodes.philosophy')}</p>
           <p className="rounded-[1.15rem] bg-white/70 p-3 text-[13px] font-black leading-5 text-theme-main-dark">{inviteLimitReached ? t('inviteCodes.usedAllSlots') : t('inviteCodes.sendToTrusted')}</p>
-          {isFounder ? <p className="text-xs font-bold leading-5 text-theme-muted">{t('inviteCodes.founderHint')} <Link className="font-black text-theme-main-dark underline" to="/admin">/admin</Link></p> : null}
+          {isAdmin ? <p className="text-xs font-bold leading-5 text-theme-muted">{t('inviteCodes.founderHint')} <Link className="font-black text-theme-main-dark underline" to="/admin">/admin</Link></p> : null}
         </Card>
       ) : null}
 
@@ -663,14 +663,14 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
 
         {!isSupabaseMode ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">デモ表示では招待コードは保存されません。画面確認用として表示しています。</div> : null}
         {isSupabaseMode && !isAuthenticated ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">招待コードを作成・確認するにはGoogleログインしてください。</div> : null}
-        {!inviteOnly && (isFounder ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark">Founder 管理者として、招待コードを無制限に発行できます。</div> : <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted"><p>招待枠: 残り{remainingInviteSlots}人</p><p className="mt-1 text-xs">ConnectBloomは、信頼できる紹介から少しずつ広がる場所です。<br />本当に一緒に使いたい人へ招待を送ってください。</p></div>)}
+        {!inviteOnly && (isAdmin ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark">Founder 管理者として、招待コードを無制限に発行できます。</div> : <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted"><p>招待枠: 残り{remainingInviteSlots}人</p><p className="mt-1 text-xs">ConnectBloomは、信頼できる紹介から少しずつ広がる場所です。<br />本当に一緒に使いたい人へ招待を送ってください。</p></div>)}
         {inviteLimitReached ? <div className="rounded-[1.15rem] bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-700">{t('inviteCodes.usedAllSlots')}</div> : null}
         {inviteError ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{inviteError}</div> : null}
         {inviteNotice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{inviteNotice}</div> : null}
 
         <form className="space-y-3" onSubmit={handleCreateInviteCode}>
-          <Input helperText={inviteOnly && !isFounder ? t('inviteCodes.inputHelperGeneral') : 'βテスターに共有する招待コードです。英数字・ハイフン推奨で、保存時に大文字化します。'} label={t('inviteCodes.codeLabel')} name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="BLOOM-2026" value={form.code} />
-          {inviteOnly && !isFounder ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-xs font-bold leading-5 text-theme-muted">{t('inviteCodes.generalLimitHint')}</p> : (<>
+          <Input helperText={inviteOnly && !isAdmin ? t('inviteCodes.inputHelperGeneral') : 'βテスターに共有する招待コードです。英数字・ハイフン推奨で、保存時に大文字化します。'} label={t('inviteCodes.codeLabel')} name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="BLOOM-2026" value={form.code} />
+          {inviteOnly && !isAdmin ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-xs font-bold leading-5 text-theme-muted">{t('inviteCodes.generalLimitHint')}</p> : (<>
             <div className="rounded-[1.15rem] bg-theme-background/70 p-3">
               <label className="flex items-center gap-2 text-sm font-black text-theme-text">
                 <input checked={form.unlimited} className="size-4 accent-theme-main" onChange={(event) => updateForm('unlimited', event.target.checked)} type="checkbox" />

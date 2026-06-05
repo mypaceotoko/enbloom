@@ -29,4 +29,6 @@ export type MessageMatch = {
   otherProfile: UserProfile | null;
   createdAt: string;
   lastMessageAt: string | null;
+  adminInitiatedBy?: string | null;
+  adminInitiatedAt?: string | null;
 };

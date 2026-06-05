@@ -90,7 +90,7 @@ export function MessagesPage() {
         const nextMessages = await getMessagesByMatchId(matchId);
         if (!mounted) return;
         setMessageMatch(nextMatch);
-        setBlockedConversation(safetyBlocked);
+        setBlockedConversation(safetyBlocked && !nextMatch.adminInitiatedBy);
         setSupabaseMessages(nextMessages);
       } catch (caughtError) {
         if (!mounted) return;
@@ -116,8 +116,11 @@ export function MessagesPage() {
   const messages = useSupabaseMessages ? supabaseMessages : demoMessages;
   const safetyTargetUserId = useSupabaseMessages ? messageMatch?.otherUserId : activeMatchId;
   const titleName = useSupabaseMessages ? messageMatch?.otherProfile?.name : demoUser?.name;
+  const isAdminInitiatedConversation = Boolean(messageMatch?.adminInitiatedBy);
   const headerDescription = useSupabaseMessages
-    ? '相互の話してみたい、または承認済みの募集参加から始まった相手と話せます。焦らず、丁寧にやり取りしましょう。'
+    ? isAdminInitiatedConversation
+      ? 'この会話は運営者からの連絡として開始されました。必要な確認やサポート連絡に使われます。'
+      : '相互の話してみたい、または承認済みの募集参加から始まった相手と話せます。焦らず、丁寧にやり取りしましょう。'
     : '送信内容はデモ用に保存され、リロード後も残ります。';
   useEffect(() => {
     let mounted = true;
@@ -266,9 +269,16 @@ export function MessagesPage() {
             <p className="text-sm font-black text-theme-text">{useSupabaseMessages ? 'メッセージ保存中' : 'デモ表示'}</p>
             <p className="mt-1 text-xs font-bold leading-5 text-theme-muted">会話は軽い連絡先交換ではなく、ご縁がつながった相手とゆっくり会話を始める場所です。</p>
           </div>
-          <Badge>{loading ? '取得中' : <><Sparkles size={12} />ご縁</>}</Badge>
+          <Badge>{loading ? '取得中' : isAdminInitiatedConversation ? '運営連絡' : <><Sparkles size={12} />ご縁</>}</Badge>
         </div>
       </Card>
+
+      {isAdminInitiatedConversation ? (
+        <Card className="space-y-1 border border-theme-main/15 bg-theme-accent-soft/70 shadow-sm">
+          <p className="text-sm font-black text-theme-text">運営メッセージ</p>
+          <p className="text-xs font-bold leading-5 text-theme-muted">この会話は運営者からの連絡として開始されました。</p>
+        </Card>
+      ) : null}
 
       {activityPostId ? (
         <Card className="space-y-1 bg-cyan-50/70 shadow-sm">
