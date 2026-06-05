@@ -3,6 +3,31 @@
 -- This keeps report reads unchanged and only allows Founder/Admin accounts to
 -- update moderation fields.
 
+-- Ensure the moderation columns used by the admin UI/RPC exist even if older
+-- report-review migrations have not been applied yet.
+alter table public.reports
+  add column if not exists admin_note text,
+  add column if not exists reviewed_by uuid references public.profiles(id) on delete set null,
+  add column if not exists reviewed_at timestamptz;
+
+-- Normalize any legacy/unexpected status values before enforcing the current
+-- allowed report status set.
+update public.reports
+set status = 'open'
+where status is null
+   or status not in ('open', 'reviewing', 'resolved', 'dismissed');
+
+alter table public.reports
+  alter column status set default 'open',
+  alter column status set not null;
+
+alter table public.reports
+  drop constraint if exists reports_status_check;
+
+alter table public.reports
+  add constraint reports_status_check
+  check (status in ('open', 'reviewing', 'resolved', 'dismissed'));
+
 create or replace function public.is_admin(user_id uuid default auth.uid())
 returns boolean
 language sql
@@ -21,6 +46,8 @@ as $$
       )
   );
 $$;
+
+alter table public.reports enable row level security;
 
 drop policy if exists "reports_update_admin" on public.reports;
 create policy "reports_update_admin"
@@ -76,6 +103,9 @@ begin
   returning true, r.id, r.status, r.reviewed_at;
 end;
 $$;
+
+revoke all on function public.is_admin(uuid) from public;
+grant execute on function public.is_admin(uuid) to authenticated;
 
 revoke all on function public.update_report_review(uuid, text, text) from public;
 grant execute on function public.update_report_review(uuid, text, text) to authenticated;
