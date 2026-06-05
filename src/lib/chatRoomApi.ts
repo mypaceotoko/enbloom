@@ -53,7 +53,7 @@ export class AdminDeleteRoomMessageError extends Error {
   diagnosis: AdminDeleteRoomMessageDiagnosis;
 
   constructor(diagnosis: AdminDeleteRoomMessageDiagnosis, cause?: unknown) {
-    super(`削除に失敗しました。原因: ${diagnosis}`);
+    super('削除に失敗しました。');
     this.name = 'AdminDeleteRoomMessageError';
     this.diagnosis = diagnosis;
     this.cause = cause;

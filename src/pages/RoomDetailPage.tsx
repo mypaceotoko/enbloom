@@ -221,9 +221,7 @@ export function RoomDetailPage() {
       setMessages((currentMessages) => currentMessages.filter((message) => message.id !== messageId));
     } catch (caughtError) {
       console.warn('[ConnectBloom] room message delete failed', getSafeErrorLog(caughtError, 'room_message_delete_failed'));
-      setNotice(caughtError instanceof AdminDeleteRoomMessageError
-        ? caughtError.message
-        : getShortErrorMessage(caughtError, '削除に失敗しました。'));
+      setNotice(getShortErrorMessage(caughtError, '削除に失敗しました。'));
     }
   }
 
