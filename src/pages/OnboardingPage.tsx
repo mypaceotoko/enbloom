@@ -9,6 +9,7 @@ import { Input } from '../components/Input';
 import { PageShell } from '../components/PageShell';
 import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
+import { DATING_TEMPERATURE_OPTIONS, normalizeDatingTemperature } from '../constants/datingTemperature';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
@@ -16,7 +17,7 @@ import { getSafeErrorLog } from '../lib/errorMessage';
 import { isFounderInviteCode, isInviteCodeSelfUseError, validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
 import { clearPendingInviteCode, getPendingInviteCode } from '../lib/inviteSession';
 import { upsertMyProfile } from '../lib/profileApi';
-import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile } from '../types/user';
+import type { CurrentUserProfile } from '../types/user';
 
 const tags = ['AI', 'ブログ', '音声配信', 'ラジオ', 'YouTube', 'ダンス', '歌', '音楽', 'ライブ', '映画', '怪談', '漫画', 'アニメ', 'ゲーム', 'ゲーム制作', 'イベント同行', '地域交流', '海外', '旅行', 'カフェ', '読書', '作業仲間', '企画仲間', '相談相手', 'コラボ', '創作', '写真', '動画制作'];
 
@@ -67,7 +68,7 @@ export function OnboardingPage() {
     location: currentUser.location,
     occupation: currentUser.occupation,
     bio: currentUser.bio,
-    datingTemperature: currentUser.datingTemperature || DEFAULT_DATING_TEMPERATURE,
+    datingTemperature: normalizeDatingTemperature(currentUser.datingTemperature),
     interests: currentUser.interests,
     inviteCode: getPendingInviteCode(),
   });
@@ -120,7 +121,7 @@ export function OnboardingPage() {
       location: form.location.trim(),
       occupation: form.occupation.trim() || '興味や活動を準備中',
       bio: form.bio.trim() || '一緒にやりたいことや話したいテーマを準備中です。',
-      datingTemperature: form.datingTemperature.trim() || DEFAULT_DATING_TEMPERATURE,
+      datingTemperature: normalizeDatingTemperature(form.datingTemperature),
       selectedInterestTags: Array.isArray(form.interests) ? form.interests : [],
       inviteCode: form.inviteCode.trim().toUpperCase(),
     };
@@ -377,11 +378,9 @@ export function OnboardingPage() {
             <p className="text-xs font-medium leading-5 text-theme-muted">{t('onboarding.temperature.body')}</p>
             <p className="text-xs font-bold leading-5 text-theme-main-dark">{t('onboarding.temperature.editLater')}</p>
             <select className="min-h-11 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
-              <option value={DEFAULT_DATING_TEMPERATURE}>{DEFAULT_DATING_TEMPERATURE}</option>
-              <option>共通の趣味でつながりたい</option>
-              <option>一緒に企画・制作したい</option>
-              <option>イベントや活動で会って話したい</option>
-              <option>相談・情報交換から始めたい</option>
+              {DATING_TEMPERATURE_OPTIONS.map((datingTemperature) => (
+                <option key={datingTemperature} value={datingTemperature}>{datingTemperature}</option>
+              ))}
             </select>
           </label>
         </Card>

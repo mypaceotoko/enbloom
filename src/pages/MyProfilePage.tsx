@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { PageShell } from '../components/PageShell';
 import { useTheme } from '../context/ThemeProvider';
+import { DATING_TEMPERATURE_OPTIONS, normalizeDatingTemperature } from '../constants/datingTemperature';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileAvatar } from '../components/ProfileAvatar';
@@ -12,10 +13,8 @@ import { isDemoModeEnabled } from '../lib/demoSession';
 import { getShortErrorMessage } from '../lib/errorMessage';
 import { getMyPrimaryProfilePhoto, uploadProfilePhoto } from '../lib/profilePhotoApi';
 import { getMyProfile, profileRowToCurrentUser, updateMyProfile } from '../lib/profileApi';
-import { DEFAULT_DATING_TEMPERATURE } from '../types/user';
 
 const suggestedInterestTags = ['映画', '旅行', 'カフェ', '音楽', '読書', '散歩', 'AI制作'];
-const suggestedDatingTemperatures = ['まずはゆっくり話したい', '価値観が合えば前向きに進めたい', '一緒に企画・制作したい', '気軽に情報交換したい'];
 
 function parseInterestTags(text: string) {
   return Array.from(new Set(text.split(/[、,]/).map((interest) => interest.trim()).filter(Boolean)));
@@ -43,7 +42,7 @@ export function MyProfilePage() {
     location: currentUser.location,
     occupation: currentUser.occupation,
     bio: currentUser.bio,
-    datingTemperature: currentUser.datingTemperature || DEFAULT_DATING_TEMPERATURE,
+    datingTemperature: normalizeDatingTemperature(currentUser.datingTemperature),
     interestsText: currentUser.interests.join('、'),
   });
   const [notice, setNotice] = useState('');
@@ -53,8 +52,6 @@ export function MyProfilePage() {
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showDatingTemperatureSuggestions, setShowDatingTemperatureSuggestions] = useState(false);
-  const datingTemperatureFieldRef = useRef<HTMLDivElement>(null);
   const selectedInterests = parseInterestTags(form.interestsText);
 
   useEffect(() => {
@@ -76,7 +73,7 @@ export function MyProfilePage() {
           location: syncedProfile.location,
           occupation: syncedProfile.occupation,
           bio: syncedProfile.bio,
-          datingTemperature: syncedProfile.datingTemperature || DEFAULT_DATING_TEMPERATURE,
+          datingTemperature: normalizeDatingTemperature(syncedProfile.datingTemperature),
           interestsText: syncedProfile.interests.join('、'),
         });
       } catch (caughtError) {
@@ -91,18 +88,6 @@ export function MyProfilePage() {
       mounted = false;
     };
   }, [isAuthenticated, isSupabaseMode, themeId, user]);
-
-  useEffect(() => {
-    if (!showDatingTemperatureSuggestions) return;
-
-    function handlePointerDown(event: PointerEvent) {
-      if (datingTemperatureFieldRef.current?.contains(event.target as Node)) return;
-      setShowDatingTemperatureSuggestions(false);
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown);
-    return () => document.removeEventListener('pointerdown', handlePointerDown);
-  }, [showDatingTemperatureSuggestions]);
 
   function validateSelectedPhoto(file: File | null) {
     console.info('[ConnectBloom] file exists', { exists: Boolean(file) });
@@ -169,11 +154,6 @@ export function MyProfilePage() {
     });
   }
 
-  function handleSuggestedDatingTemperatureClick(datingTemperature: string) {
-    setForm((current) => ({ ...current, datingTemperature }));
-    setShowDatingTemperatureSuggestions(false);
-  }
-
   async function handleSave() {
     const age = Number(form.age);
     if (!form.name.trim() || Number.isNaN(age) || age < 18 || !form.location.trim()) {
@@ -188,7 +168,7 @@ export function MyProfilePage() {
       location: form.location.trim(),
       occupation: form.occupation.trim(),
       bio: form.bio.trim(),
-      datingTemperature: form.datingTemperature.trim() || DEFAULT_DATING_TEMPERATURE,
+      datingTemperature: normalizeDatingTemperature(form.datingTemperature),
       interests: parseInterestTags(form.interestsText),
       themePreference: themeId,
     };
@@ -256,49 +236,17 @@ export function MyProfilePage() {
           <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
           <span className="block text-xs font-medium leading-5 text-theme-muted">一緒にやりたいこと、話したいテーマ、探している仲間を書いてみましょう。</span>
         </label>
-        <div ref={datingTemperatureFieldRef} className="relative space-y-2 text-sm font-semibold text-theme-text">
-          <span id="myDatingTemperatureLabel">つながり方のスタンス</span>
-          <button
-            aria-controls="dating-temperature-options"
-            aria-expanded={showDatingTemperatureSuggestions}
-            aria-haspopup="listbox"
-            aria-labelledby="myDatingTemperatureLabel"
-            className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-left text-sm text-theme-text outline-none transition focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15 active:scale-[0.99]"
-            id="myDatingTemperature"
-            onClick={() => setShowDatingTemperatureSuggestions((current) => !current)}
-            type="button"
-          >
-            <span className={form.datingTemperature ? 'truncate font-bold' : 'truncate font-medium text-theme-muted'}>
-              {form.datingTemperature || 'つながり方のスタンスを選択'}
-            </span>
-            <span aria-hidden="true" className={`shrink-0 text-base text-theme-main-dark transition-transform ${showDatingTemperatureSuggestions ? 'rotate-180' : ''}`}>
-              ▾
-            </span>
-          </button>
-          <span className="block text-xs font-medium leading-5 text-theme-muted">どんな距離感で話したいかを4つの候補から選べます。</span>
-          {showDatingTemperatureSuggestions ? (
-            <div className="absolute left-0 right-0 z-30 overflow-hidden rounded-[1.35rem] border border-white/15 bg-neutral-900/82 p-1.5 shadow-2xl shadow-neutral-950/20 backdrop-blur-md" id="dating-temperature-options" role="listbox" aria-label="つながり方のスタンス候補">
-              <div className="max-h-72 overflow-y-auto py-1">
-                {suggestedDatingTemperatures.map((datingTemperature) => {
-                  const selected = form.datingTemperature === datingTemperature;
-                  return (
-                    <button
-                      aria-selected={selected}
-                      className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-left text-sm font-bold transition active:scale-[0.98] ${selected ? 'bg-white/95 text-neutral-950 shadow-sm' : 'text-white hover:bg-white/15'}`}
-                      key={datingTemperature}
-                      onClick={() => handleSuggestedDatingTemperatureClick(datingTemperature)}
-                      role="option"
-                      type="button"
-                    >
-                      <span>{datingTemperature}</span>
-                      {selected ? <span aria-hidden="true" className="text-base">✓</span> : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <label className="block space-y-2 text-sm font-semibold text-theme-text">
+          <span className="block text-sm font-black text-theme-text">つながり方のスタンス</span>
+          <span>今の気持ちに近いもの</span>
+          <p className="text-xs font-medium leading-5 text-theme-muted">どんなきっかけでつながりたいかに近いものを1つ選んでください。</p>
+          <p className="text-xs font-bold leading-5 text-theme-main-dark">迷ったら“まずはゆっくり話したい”のままで大丈夫です。あとからマイプロフィールで変更できます。</p>
+          <select className="min-h-11 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, datingTemperature: normalizeDatingTemperature(event.target.value) }))} value={form.datingTemperature}>
+            {DATING_TEMPERATURE_OPTIONS.map((datingTemperature) => (
+              <option key={datingTemperature} value={datingTemperature}>{datingTemperature}</option>
+            ))}
+          </select>
+        </label>
         <Input helperText="興味のあることを読点やカンマで入力できます。候補タグをタップして追加もできます。" label="活動ジャンル / 興味タグ（読点区切り）" name="myInterests" onChange={(event) => setForm((current) => ({ ...current, interestsText: event.target.value }))} placeholder="AI、ブログ、音声配信、ゲーム制作、作業仲間" value={form.interestsText} />
         <div className="flex flex-wrap gap-1">
           {suggestedInterestTags.map((tag) => {

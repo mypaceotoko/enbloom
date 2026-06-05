@@ -1,8 +1,9 @@
 import type { ThemeId } from '../context/ThemeProvider';
+import { DEFAULT_DATING_TEMPERATURE } from '../constants/datingTemperature';
 
 export type { ThemeId };
 
-export const DEFAULT_DATING_TEMPERATURE = 'まずはゆっくり話したい';
+export { DEFAULT_DATING_TEMPERATURE } from '../constants/datingTemperature';
 
 export type DatingTemperature =
   | typeof DEFAULT_DATING_TEMPERATURE
