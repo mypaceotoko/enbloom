@@ -15,6 +15,24 @@ type RoomMessageCountRow = {
   latest_message_at: string | null;
 };
 
+export type ChatRoomMessageDeleteResult = {
+  deletedId: string;
+  deletedRowCount: number;
+};
+
+export type ChatRoomAdminDeleteDiagnostics = {
+  action: 'admin_delete_room_message';
+  messageId: string;
+  roomId: string | null;
+  roomSlug: string | null;
+  currentUserId: string | null;
+  currentUserEmail: string | null;
+  isFounder: boolean;
+  isAdmin: boolean;
+  messageSenderId: string | null;
+  senderMatchesCurrentUser: boolean;
+};
+
 const chatRoomColumns = 'id,slug,name,description,category,is_official,created_at,updated_at';
 const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
 const profileSelectColumnsWithoutAccountStatus = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
@@ -119,6 +137,10 @@ export async function getChatRoomById(roomId: string): Promise<ChatRoom | null> 
 
 function looksLikeUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export function isChatRoomMessageUuid(value: string) {
+  return looksLikeUuid(value);
 }
 
 export async function getChatRoomByIdentifier(roomIdOrSlug: string): Promise<ChatRoom | null> {
@@ -236,7 +258,15 @@ export async function sendChatRoomMessage(roomId: string, body: string): Promise
 
 }
 
-export async function deleteChatRoomMessage(messageId: string): Promise<void> {
+export async function getDatabaseAdminStatus(currentUserId: string | null): Promise<{ isAdmin: boolean; error: unknown | null }> {
+  if (!currentUserId || !looksLikeUuid(currentUserId)) return { isAdmin: false, error: new Error('ログイン状態を確認できませんでした。') };
+
+  const { data, error } = await requireSupabaseClient().rpc('is_admin', { user_id: currentUserId });
+  if (error) return { isAdmin: false, error };
+  return { isAdmin: data === true, error: null };
+}
+
+export async function deleteChatRoomMessage(messageId: string): Promise<ChatRoomMessageDeleteResult> {
   assertNotDemoMode('ルームメッセージ削除');
   if (!looksLikeUuid(messageId)) throw new Error('削除対象のメッセージを確認できませんでした。');
   const { data, error } = await requireSupabaseClient()
@@ -252,8 +282,67 @@ export async function deleteChatRoomMessage(messageId: string): Promise<void> {
   }
   if (!data) {
     const notDeletedError = new Error('メッセージを削除できませんでした。権限または削除対象を確認してください。');
-    console.warn('[ConnectBloom] chat room message delete affected no rows', getSafeErrorLog(notDeletedError, 'chat_room_message_delete_no_rows'));
+    console.warn('[ConnectBloom] delete_zero_rows_or_rls_denied', getSafeErrorLog(notDeletedError, 'chat_room_message_delete_no_rows'));
     throw notDeletedError;
   }
-  console.info('[ConnectBloom] chat room message deleted', { success: true });
+  console.info('[ConnectBloom] chat room message deleted', { success: true, deletedRowCount: 1 });
+  return { deletedId: data.id, deletedRowCount: 1 };
+}
+
+export async function adminDeleteChatRoomMessage(
+  messageId: string,
+  diagnostics: ChatRoomAdminDeleteDiagnostics,
+): Promise<ChatRoomMessageDeleteResult> {
+  assertNotDemoMode('ルームメッセージ管理者削除');
+  const messageIdLooksUuid = looksLikeUuid(messageId);
+  console.info('[ConnectBloom] admin room message delete requested', {
+    ...diagnostics,
+    messageIdLooksUuid,
+  });
+
+  if (!messageIdLooksUuid) throw new Error('削除対象のメッセージを確認できませんでした。');
+
+  const dbAdminStatus = await getDatabaseAdminStatus(diagnostics.currentUserId);
+  console.info('[ConnectBloom] admin room message delete db admin check', {
+    ...diagnostics,
+    publicIsAdminAuthUid: dbAdminStatus.isAdmin,
+    publicIsAdminRpcError: dbAdminStatus.error ? getSafeErrorLog(dbAdminStatus.error, 'admin_delete_room_message_is_admin_rpc') : null,
+  });
+
+  if (!dbAdminStatus.isAdmin) throw new Error('削除に失敗しました。');
+
+  const { data, error } = await requireSupabaseClient().rpc('admin_delete_chat_room_message', { p_message_id: messageId });
+  const deletedId = typeof data === 'string' ? data : null;
+  const deletedRowCount = deletedId ? 1 : 0;
+  const safeDeleteErrorLog = error ? getSafeErrorLog(error, 'admin_delete_room_message_rpc') : null;
+
+  console.info('[ConnectBloom] admin room message delete result', {
+    ...diagnostics,
+    publicIsAdminAuthUid: dbAdminStatus.isAdmin,
+    deleteData: data ?? null,
+    deleteErrorCode: safeDeleteErrorLog?.code,
+    deleteErrorMessage: safeDeleteErrorLog?.message,
+    deleteErrorDetails: safeDeleteErrorLog?.details,
+    deleteErrorHint: safeDeleteErrorLog?.hint,
+    deleteError: safeDeleteErrorLog,
+    deletedRowCount,
+  });
+
+  if (error) {
+    console.error('[ConnectBloom] admin room message delete failed', getSafeErrorLog(error, 'admin_delete_room_message_rpc'));
+    throw error;
+  }
+
+  if (!deletedId) {
+    const notDeletedError = new Error('メッセージを削除できませんでした。権限または削除対象を確認してください。');
+    console.error('[ConnectBloom] delete_zero_rows_or_rls_denied', {
+      ...diagnostics,
+      publicIsAdminAuthUid: dbAdminStatus.isAdmin,
+      deletedRowCount,
+      ...getSafeErrorLog(notDeletedError, 'admin_delete_room_message_zero_rows'),
+    });
+    throw notDeletedError;
+  }
+
+  return { deletedId, deletedRowCount };
 }

@@ -9,7 +9,7 @@ import { demoChatRooms, demoRoomMessages, roomTags } from '../data/mockChatRooms
 import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
-import { deleteChatRoomMessage, getChatRoomByIdentifier, getChatRoomMessages, sendChatRoomMessage } from '../lib/chatRoomApi';
+import { adminDeleteChatRoomMessage, deleteChatRoomMessage, getChatRoomByIdentifier, getChatRoomMessages, isChatRoomMessageUuid, sendChatRoomMessage } from '../lib/chatRoomApi';
 import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { getRoomVisual } from '../lib/roomVisual';
@@ -61,7 +61,7 @@ export function RoomDetailPage() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
-  const { isFounder } = useAdmin();
+  const { isAdmin, isFounder } = useAdmin();
   const { language, t } = useLanguage();
   const demoRoom = useMemo(() => demoChatRooms.find((room) => room.slug === roomId) ?? null, [roomId]);
   const [room, setRoom] = useState<ChatRoom | null>(demoRoom);
@@ -163,12 +163,60 @@ export function RoomDetailPage() {
 
   async function handleDelete(messageId: string) {
     if (!canUseSupabaseRooms) return;
+    const message = messages.find((currentMessage) => currentMessage.id === messageId);
+    const senderMatchesCurrentUser = message?.sender_id === user?.id;
+    const isAdminDelete = Boolean(message && (isFounder || isAdmin) && !senderMatchesCurrentUser);
+
     try {
-      const message = messages.find((currentMessage) => currentMessage.id === messageId);
-      const confirmed = message && isFounder && message.sender_id !== user?.id
+      if (isAdminDelete) {
+        console.info('[ConnectBloom] admin room message delete click', {
+          action: 'admin_delete_room_message',
+          messageId,
+          messageIdLooksUuid: isChatRoomMessageUuid(messageId),
+          roomId: room?.id ?? null,
+          roomSlug: room?.slug ?? roomId,
+          currentUserId: user?.id ?? null,
+          currentUserEmail: user?.email ?? null,
+          isFounder,
+          isAdmin,
+          messageSenderId: message?.sender_id ?? null,
+          senderMatchesCurrentUser,
+        });
+      }
+
+      const confirmed = isAdminDelete
         ? window.confirm('このルーム発言を管理者削除しますか？')
         : true;
       if (!confirmed) return;
+
+      if (isAdminDelete && message) {
+        const diagnostics = {
+          action: 'admin_delete_room_message' as const,
+          messageId,
+          roomId: room?.id ?? null,
+          roomSlug: room?.slug ?? roomId,
+          currentUserId: user?.id ?? null,
+          currentUserEmail: user?.email ?? null,
+          isFounder,
+          isAdmin,
+          messageSenderId: message.sender_id,
+          senderMatchesCurrentUser,
+        };
+        const deleteResult = await adminDeleteChatRoomMessage(messageId, diagnostics);
+        const reloadedMessages = room?.id ? await getChatRoomMessages(room.id) : messages.filter((currentMessage) => currentMessage.id !== messageId);
+        const messageReturnedAfterRefetch = reloadedMessages.some((currentMessage) => currentMessage.id === messageId);
+        console.info('[ConnectBloom] admin room message delete refetch verification', {
+          ...diagnostics,
+          deleteData: deleteResult.deletedId,
+          deletedRowCount: deleteResult.deletedRowCount,
+          messageReturnedAfterRefetch,
+          refetchedCount: reloadedMessages.length,
+        });
+        if (messageReturnedAfterRefetch) throw new Error('削除に失敗しました。');
+        setMessages(reloadedMessages);
+        return;
+      }
+
       await deleteChatRoomMessage(messageId);
       setMessages((currentMessages) => currentMessages.filter((message) => message.id !== messageId));
     } catch (caughtError) {
@@ -288,7 +336,7 @@ export function RoomDetailPage() {
                   </div>
                   <div className="flex gap-1">
                     <button className="inline-flex size-7 items-center justify-center rounded-full bg-transparent text-theme-muted/65 transition hover:bg-theme-accent-soft" title={t('roomDetail.report')} type="button"><ShieldAlert size={14} /></button>
-                    {isOwnMessage || isFounder ? <button className="inline-flex min-h-7 items-center justify-center gap-1 rounded-full bg-transparent px-2 text-[11px] font-black text-theme-muted/65 transition hover:bg-rose-50 hover:text-rose-600" title={isOwnMessage ? t('roomDetail.delete') : '管理者削除'} type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} />{!isOwnMessage && isFounder ? '管理者削除' : null}</button> : null}
+                    {isOwnMessage || isFounder || isAdmin ? <button className="inline-flex min-h-7 items-center justify-center gap-1 rounded-full bg-transparent px-2 text-[11px] font-black text-theme-muted/65 transition hover:bg-rose-50 hover:text-rose-600" title={isOwnMessage ? t('roomDetail.delete') : '管理者削除'} type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} />{!isOwnMessage && (isFounder || isAdmin) ? '管理者削除' : null}</button> : null}
                   </div>
                 </div>
                 <p className="whitespace-pre-wrap text-sm leading-5 text-theme-text">{message.body}</p>
