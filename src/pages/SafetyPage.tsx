@@ -2,6 +2,7 @@ import { Flag, HandHeart, MessagesSquare, ShieldCheck, UserX, UsersRound } from 
 import { Fragment } from 'react';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
+import { useLanguage } from '../hooks/useLanguage';
 
 const guides = [
   {
@@ -48,8 +49,10 @@ function renderSentenceBreaks(text: string) {
 }
 
 export function SafetyPage() {
+  const { t } = useLanguage();
+
   return (
-    <PageShell description="ConnectBloomを安心して使うためのルールとヒントをまとめています。" eyebrow="Safety" title="安心ガイド">
+    <PageShell description={t('safety.description')} eyebrow="Safety" title={t('safety.title')}>
       <div className="space-y-2.5 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
         {guides.map((guide) => {
           const Icon = guide.icon;

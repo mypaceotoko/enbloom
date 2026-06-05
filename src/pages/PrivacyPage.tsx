@@ -1,6 +1,7 @@
 import { Bell, Database, Eye, FileWarning, HelpCircle, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
+import { useLanguage } from '../hooks/useLanguage';
 
 const privacySections = [
   {
@@ -74,23 +75,21 @@ const privacySections = [
 ];
 
 export function PrivacyPage() {
+  const { t } = useLanguage();
+
   return (
-    <PageShell description="ConnectBloomで扱う情報と、その使い方についてまとめています。" eyebrow="PRIVACY" title="プライバシーポリシー">
+    <PageShell description={t('privacy.description')} eyebrow="PRIVACY" title={t('privacy.title')}>
       <div className="space-y-3">
         <Card className="border-theme-main/20 bg-theme-main/10 p-3 shadow-sm">
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-theme-main-dark">Beta notice</p>
           <p className="mt-1.5 text-[13px] font-bold leading-5 text-theme-text">
-            このプライバシーポリシーは、β版テスト向けの暫定版です。
-            <br />
-            正式公開前に内容を見直す可能性があります。
+            {t('privacy.notice').split('\n').map((line) => <span className="block" key={line}>{line}</span>)}
           </p>
         </Card>
 
         <Card className="border-theme-main/15 bg-theme-accent-soft/70 p-3 shadow-sm">
           <p className="text-[13px] leading-5 text-theme-muted">
-            ConnectBloomは、共通の興味から活動仲間・趣味仲間・制作仲間とつながる紹介制コネクトSNSです。
-            <br />
-            活動や企画を安心して進めるために、必要な情報だけを大切に扱います。
+            {t('privacy.intro').split('\n').map((line) => <span className="block" key={line}>{line}</span>)}
           </p>
         </Card>
 

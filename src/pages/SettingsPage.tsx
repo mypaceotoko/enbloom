@@ -9,15 +9,20 @@ import { PageShell } from '../components/PageShell';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
+import type { TranslationKey } from '../lib/i18n';
+import { LANGUAGE_LABELS, type AppLanguage } from '../lib/language';
 import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
 
 export function SettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const { resetDemoState } = useAppState();
   const { isAuthenticated, isSupabaseMode, signOut } = useAuth();
   const [notice, setNotice] = useState('');
+  const [noticeKind, setNoticeKind] = useState<'success' | 'error'>('success');
   const [signingOut, setSigningOut] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
@@ -71,7 +76,7 @@ export function SettingsPage() {
   }
 
   async function handleSignOut() {
-    const confirmed = window.confirm('ConnectBloomからログアウトしますか？');
+    const confirmed = window.confirm(t('settings.logout.confirm'));
     if (!confirmed) return;
 
     setSigningOut(true);
@@ -85,30 +90,42 @@ export function SettingsPage() {
       }
       navigate('/login');
     } catch (caughtError) {
-      setNotice(caughtError instanceof Error ? `ログアウトに失敗しました: ${caughtError.message}` : 'ログアウトに失敗しました。');
+      setNoticeKind('error');
+      setNotice(caughtError instanceof Error ? `${t('settings.logout.failed')}: ${caughtError.message}` : t('settings.logout.failed'));
     } finally {
       setSigningOut(false);
     }
   }
 
+  function handleLanguageChange(nextLanguage: AppLanguage) {
+    setLanguage(nextLanguage);
+    setNoticeKind('success');
+    setNotice(t(nextLanguage === 'ja' ? 'settings.language.changed.ja' : 'settings.language.changed.en'));
+  }
+
   return (
-    <PageShell description="通知・活動管理・テーマをまとめて確認できます。" eyebrow="Settings" title="設定">
+    <PageShell description={t('settings.description')} eyebrow="Settings" title={t('settings.title')}>
       {!isSupabaseMode || !isAuthenticated ? (
         <div className="rounded-full border border-theme-main/15 bg-theme-card/80 px-3 py-1.5 text-center text-[11px] font-black text-theme-main-dark shadow-sm">
-          デモ表示
+          {t('settings.demo')}
         </div>
       ) : null}
 
-      {notice ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{notice}</div> : null}
+      {notice ? (
+        <div className={`rounded-[1.15rem] p-3 text-sm font-bold ${noticeKind === 'error' ? 'bg-red-50 text-red-600' : 'bg-theme-accent-soft/70 text-theme-main-dark'}`}>
+          {notice}
+        </div>
+      ) : null}
 
       <section className="space-y-3">
         <div className="px-1">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Profile & theme</p>
-          <h2 className="text-lg font-black text-theme-text">基本設定</h2>
-          <p className="mt-1 text-xs leading-5 text-theme-muted">プロフィールと見た目を整えられます。</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('settings.basic.eyebrow')}</p>
+          <h2 className="text-lg font-black text-theme-text">{t('settings.basic.title')}</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">{t('settings.basic.description')}</p>
         </div>
-        <SettingsLink body="プロフィールを確認・編集できます。" icon={<UserRound size={18} />} onClick={() => navigateFromSettings('/my-profile')} title="マイプロフィール" />
-        <SettingsLink body={`現在のテーマ: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigateFromSettings('/settings/theme')} title="テーマカラー" />
+        <SettingsLink body={t('settings.profile.body')} icon={<UserRound size={18} />} onClick={() => navigateFromSettings('/my-profile')} title={t('settings.profile.title')} />
+        <SettingsLink body={`${t('settings.theme.current')}: ${currentTheme.name}`} icon={<Palette size={18} />} onClick={() => navigateFromSettings('/settings/theme')} title={t('settings.theme.title')} />
+        <LanguageSettingCard currentLanguage={language} onChange={handleLanguageChange} t={t} />
       </section>
 
       <section className="space-y-3">
@@ -131,7 +148,7 @@ export function SettingsPage() {
           <h2 className="text-lg font-black text-theme-text">安心・運営</h2>
           <p className="mt-1 text-xs leading-5 text-theme-muted">安心して使うためのガイドや管理機能を確認できます。</p>
         </div>
-        <SettingsLink body="ルールと安心して使うためのヒントを確認できます。" icon={<ShieldCheck size={18} />} onClick={() => navigateFromSettings('/safety')} title="安心ガイド" />
+        <SettingsLink body={t('settings.safety.body')} icon={<ShieldCheck size={18} />} onClick={() => navigateFromSettings('/safety')} title={t('settings.safety.title')} />
         <SettingsLink body="ブロックした相手の確認・解除ができます。" icon={<ShieldMinus size={18} />} onClick={() => navigateFromSettings('/blocked-users')} title="ブロック中のユーザー" />
         <SettingsLink body="βテスター向けの招待コードを作成・確認できます。" icon={<Ticket size={18} />} onClick={() => navigateFromSettings('/admin')} title="招待コード管理" />
         <SettingsLink body="届いた通報の確認・対応を管理画面で行えます。" icon={<Flag size={18} />} onClick={() => navigateFromSettings('/admin')} title="通報管理" />
@@ -139,40 +156,75 @@ export function SettingsPage() {
 
       <section className="space-y-3">
         <div className="px-1">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Guide & policy</p>
-          <h2 className="text-lg font-black text-theme-text">ガイド・規約</h2>
-          <p className="mt-1 text-xs leading-5 text-theme-muted">使い方と大切なルールを確認できます。</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('settings.guide.eyebrow')}</p>
+          <h2 className="text-lg font-black text-theme-text">{t('settings.guide.title')}</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">{t('settings.guide.description')}</p>
         </div>
-        <SettingsLink body="確認してほしい流れと、フィードバックの送り方をまとめています。" icon={<ClipboardCheck size={18} />} onClick={() => navigateFromSettings('/test-guide')} title="テスターガイド" />
-        <SettingsLink body="ConnectBloomを使うための基本ルールです。" icon={<FileText size={18} />} onClick={() => navigateFromSettings('/terms')} title="利用規約" />
-        <SettingsLink body="扱う情報と使い方について確認できます。" icon={<LockKeyhole size={18} />} onClick={() => navigateFromSettings('/privacy')} title="プライバシーポリシー" />
+        <SettingsLink body={t('settings.testGuide.body')} icon={<ClipboardCheck size={18} />} onClick={() => navigateFromSettings('/test-guide')} title={t('settings.testGuide.title')} />
+        <SettingsLink body={t('settings.terms.body')} icon={<FileText size={18} />} onClick={() => navigateFromSettings('/terms')} title={t('settings.terms.title')} />
+        <SettingsLink body={t('settings.privacy.body')} icon={<LockKeyhole size={18} />} onClick={() => navigateFromSettings('/privacy')} title={t('settings.privacy.title')} />
       </section>
 
       <section className="space-y-3">
         <div className="px-1">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Coming soon</p>
-          <h2 className="text-lg font-black text-theme-text">今後対応予定</h2>
-          <p className="mt-1 text-xs leading-5 text-theme-muted">β版では表示のみで、現在は変更できません。</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('settings.comingSoon.eyebrow')}</p>
+          <h2 className="text-lg font-black text-theme-text">{t('settings.comingSoon.title')}</h2>
+          <p className="mt-1 text-xs leading-5 text-theme-muted">{t('settings.comingSoon.description')}</p>
         </div>
-        <Placeholder icon={<Languages size={18} />} title="言語設定" body="日本語で表示しています。英語切り替えは今後対応予定です。" />
-        <Placeholder icon={<UserRoundCheck size={18} />} title="紹介者表示設定" body="紹介経路の見せ方は今後調整予定です。" />
-        <Placeholder icon={<ShieldCheck size={18} />} title="安心サポート設定" body="ブロック・通報・安心ガイドを中心に運用しています。詳細設定は今後対応予定です。" />
+        <Placeholder icon={<UserRoundCheck size={18} />} title={t('settings.referrer.title')} body={t('settings.referrer.body')} />
+        <Placeholder icon={<ShieldCheck size={18} />} title={t('settings.support.title')} body={t('settings.support.body')} />
       </section>
 
       <Card className="space-y-3 border-white/40 bg-theme-card/72 py-3 shadow-sm">
         <div className="flex gap-2.5">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-accent-soft/60 text-theme-main-dark"><LogOut size={18} /></span>
           <span>
-            <span className="block text-sm font-black">ログアウト</span>
-            <span className="mt-0.5 block text-xs leading-5 text-theme-muted">Googleログイン時はセッションを終了し、デモ時は体験用の状態を初期化します。</span>
+            <span className="block text-sm font-black">{t('settings.logout.title')}</span>
+            <span className="mt-0.5 block text-xs leading-5 text-theme-muted">{t('settings.logout.body')}</span>
           </span>
         </div>
         <Button className="w-full bg-theme-card/90 hover:bg-theme-accent-soft/70" disabled={signingOut} onClick={handleSignOut} variant="secondary">
-          {signingOut ? 'ログアウト中...' : 'ログアウト'}
+          {signingOut ? t('settings.logout.signingOut') : t('settings.logout.button')}
         </Button>
       </Card>
 
     </PageShell>
+  );
+}
+
+
+function LanguageSettingCard({ currentLanguage, onChange, t }: { currentLanguage: AppLanguage; onChange: (language: AppLanguage) => void; t: (key: TranslationKey) => string }) {
+  const languages: AppLanguage[] = ['ja', 'en'];
+
+  return (
+    <Card className="space-y-3 border-theme-main/15 bg-theme-card/86 py-3 shadow-sm">
+      <div className="flex items-start gap-2.5">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-theme-main/10 text-theme-main-dark"><Languages size={18} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-black text-theme-text">{t('settings.language.title')}</span>
+          <span className="mt-0.5 block text-xs leading-5 text-theme-muted">{t('settings.language.description')}</span>
+          <span className="mt-1 block text-xs font-bold text-theme-main-dark">
+            {t('settings.language.current')}: {LANGUAGE_LABELS[currentLanguage]}
+          </span>
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {languages.map((language) => {
+          const selected = language === currentLanguage;
+          return (
+            <Button
+              aria-pressed={selected}
+              className={selected ? 'min-h-10 bg-theme-main text-white hover:bg-theme-main' : 'min-h-10 bg-theme-card/90'}
+              key={language}
+              onClick={() => onChange(language)}
+              variant={selected ? 'primary' : 'secondary'}
+            >
+              {t(language === 'ja' ? 'settings.language.ja' : 'settings.language.en')}
+            </Button>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 

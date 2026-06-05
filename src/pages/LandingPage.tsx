@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import { BrandLogo } from '../components/BrandLogo';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { useLanguage } from '../hooks/useLanguage';
 import { enableDemoMode } from '../lib/demoSession';
 
 export function LandingPage() {
+  const { t } = useLanguage();
+
   return (
     <section className="relative min-h-screen overflow-hidden px-4 pb-[calc(env(safe-area-inset-bottom)+4rem)] pt-6">
       <div className="pointer-events-none absolute -left-20 top-24 size-56 rounded-full bg-theme-accent-soft/70 blur-3xl" />
@@ -15,7 +18,7 @@ export function LandingPage() {
       <div className="relative mx-auto flex max-w-md flex-col gap-4">
         <header className="flex items-center justify-center gap-2 rounded-full border border-white/60 bg-theme-card/72 px-3 py-2.5 shadow-lg shadow-theme-sky/10 backdrop-blur">
           <BrandLogo className="min-w-0 max-w-[250px] flex-1 justify-center" imageClassName="max-h-[3.75rem] w-full" variant="default" />
-          <span className="shrink-0 rounded-full bg-theme-accent-soft px-2.5 py-1 text-[10px] font-black text-theme-main-dark sm:px-3 sm:text-[11px]">招待制</span>
+          <span className="shrink-0 rounded-full bg-theme-accent-soft px-2.5 py-1 text-[10px] font-black text-theme-main-dark sm:px-3 sm:text-[11px]">{t('landing.inviteOnly')}</span>
         </header>
 
         <div className="flower-gradient soft-shadow relative overflow-hidden rounded-[1.7rem] p-1">
@@ -25,29 +28,30 @@ export function LandingPage() {
           <div className="space-y-3 rounded-[1.45rem] bg-theme-card/78 p-4 pt-6 backdrop-blur-md sm:p-5 sm:pt-7">
             <div className="inline-flex items-center gap-2 rounded-full bg-theme-card/80 px-2.5 py-0.5 text-[11px] font-black text-theme-main-dark">
               <Sparkles size={14} />
-              Invite-only / Connect SNS
+              {t('landing.heroLabel')}
             </div>
             <div className="space-y-3">
-              <h1 className="text-[2.65rem] font-black leading-[1.07] tracking-[-0.055em] text-theme-text sm:text-5xl">紹介から、<br />共創がひらく。</h1>
-              <p className="text-[15px] leading-7 text-theme-text">
-                信頼できる紹介や共通の興味から、一緒に作る・話す・出かける・学ぶ人とつながる紹介制コネクトSNS。
-              </p>
+              <h1 className="text-[2.45rem] font-black leading-[1.07] tracking-[-0.055em] text-theme-text sm:text-5xl">
+                {t('landing.title').split('\n').map((line) => <span className="block" key={line}>{line}</span>)}
+              </h1>
+              <p className="text-base font-black leading-7 text-theme-main-dark">{t('landing.subtitle')}</p>
+              <p className="text-[15px] leading-7 text-theme-text">{t('landing.body')}</p>
             </div>
             <div className="grid gap-3 rounded-[1.15rem] bg-theme-background/70 p-3 text-[13px] font-bold text-theme-text">
-              <span className="flex items-center gap-2"><UsersRound className="text-theme-main-dark" size={17} />信頼できる紹介から、活動仲間とつながる</span>
-              <span className="flex items-center gap-2"><HeartHandshake className="text-theme-main-dark" size={17} />共通の興味から、ゆっくり会話が始まる</span>
-              <span className="flex items-center gap-2"><LockKeyhole className="text-theme-main-dark" size={17} />活動・共創を軸にしたつながり体験</span>
+              <span className="flex items-center gap-2"><UsersRound className="text-theme-main-dark" size={17} />{t('landing.point1')}</span>
+              <span className="flex items-center gap-2"><HeartHandshake className="text-theme-main-dark" size={17} />{t('landing.point2')}</span>
+              <span className="flex items-center gap-2"><LockKeyhole className="text-theme-main-dark" size={17} />{t('landing.point3')}</span>
             </div>
             <div className="grid gap-2">
               <Link to="/login">
                 <Button className="min-h-12 w-full text-sm">
-                  招待コードで始める
+                  {t('landing.start')}
                   <ArrowRight size={18} />
                 </Button>
               </Link>
               <Link onClick={enableDemoMode} to="/home">
                 <Button className="w-full bg-theme-card/85 text-theme-main-dark ring-1 ring-theme-sky/20" variant="ghost">
-                  デモで雰囲気を見る
+                  {t('landing.demo')}
                 </Button>
               </Link>
             </div>

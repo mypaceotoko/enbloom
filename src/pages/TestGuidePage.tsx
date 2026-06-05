@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
+import { useLanguage } from '../hooks/useLanguage';
 
 const testerGuideItems = [
   {
@@ -110,13 +111,23 @@ const testerGuideItems = [
   },
 ];
 
-const testNotes = [
+const testNotesJa = [
   'ConnectBloomは現在、招待制のβ版です。',
   '招待コードを受け取ったら、ログイン画面でコードを入力してからGoogleログインへ進んでください。',
   '参加後は、プロフィールを整えてから今日のつながりを確認できます。',
   '表示崩れや予期しないエラーが起きる可能性があります。',
   '気づいた点は、スクリーンショットと一緒に共有してください。',
   '住所・勤務先・電話番号・金融情報など、重要な個人情報は入力しないでください。',
+];
+
+
+const testNotesEn = [
+  'ConnectBloom is currently an invite-only beta.',
+  'When you receive an invite code, enter it on the login screen before continuing with Google.',
+  'After joining, complete your profile and then check today’s connections.',
+  'Some layout issues or unexpected errors may still happen.',
+  'Please share anything you notice together with screenshots when possible.',
+  'Do not enter sensitive personal information such as addresses, workplaces, phone numbers, or financial information.',
 ];
 
 const feedbackPoints = [
@@ -133,13 +144,16 @@ const feedbackPoints = [
 ];
 
 export function TestGuidePage() {
+  const { language, t } = useLanguage();
+  const testNotes = language === 'en' ? testNotesEn : testNotesJa;
+
   return (
-    <PageShell description="ConnectBloomを試すときに、確認してほしい流れをまとめています。" eyebrow="TESTER GUIDE" title="テスターガイド">
+    <PageShell description={t('testGuide.description')} eyebrow="TESTER GUIDE" title={t('testGuide.title')}>
       <div className="space-y-3">
         <Card className="space-y-3 border-theme-main/15 bg-theme-accent-soft/70 shadow-sm">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">For testers</p>
-            <h2 className="mt-1 text-lg font-black text-theme-text">テスト時のお願い</h2>
+            <h2 className="mt-1 text-lg font-black text-theme-text">{t('testGuide.beforeTesting')}</h2>
           </div>
           <div className="space-y-1.5 text-sm leading-6 text-theme-muted">
             {testNotes.map((sentence) => <p key={sentence}>{sentence}</p>)}
@@ -148,11 +162,9 @@ export function TestGuidePage() {
 
         <Card className="space-y-2 border-theme-main/15 bg-theme-card/90 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Checklist</p>
-          <h2 className="text-lg font-black text-theme-text">確認してほしい流れ</h2>
+          <h2 className="text-lg font-black text-theme-text">{t('testGuide.whatToTry')}</h2>
           <p className="text-sm leading-6 text-theme-muted">
-            上から順番に確認してください。
-            <br />
-            実際のチェック保存機能はありません。
+            {t('testGuide.whatToTry.description').split('\n').map((line) => <span className="block" key={line}>{line}</span>)}
           </p>
         </Card>
 
@@ -189,11 +201,9 @@ export function TestGuidePage() {
         <Card className="space-y-3 border-theme-main/20 bg-theme-main/10 shadow-sm">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">Feedback</p>
-            <h2 className="mt-1 text-lg font-black text-theme-text">フィードバックしてほしいこと</h2>
+            <h2 className="mt-1 text-lg font-black text-theme-text">{t('testGuide.feedback')}</h2>
             <p className="mt-2 text-sm leading-6 text-theme-muted">
-              気づいた点は、分かる範囲で送ってください。
-              <br />
-              スクリーンショットがあると確認しやすくなります。
+              {t('testGuide.feedback.description').split('\n').map((line) => <span className="block" key={line}>{line}</span>)}
             </p>
           </div>
           <ul className="grid gap-2 sm:grid-cols-2">
