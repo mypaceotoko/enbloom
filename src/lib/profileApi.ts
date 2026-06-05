@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile, type ThemeId, type UserProfile } from '../types/user';
+import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
 
 export type ProfileRow = {
@@ -15,7 +16,7 @@ export type ProfileRow = {
   onboarding_completed: boolean;
   visibility: 'public' | 'private' | 'hidden';
   role: 'user' | 'moderator' | 'admin';
-  account_status: 'active' | 'suspended';
+  account_status?: 'active' | 'suspended' | null;
   invited_by: string | null;
   invite_code_used: string | null;
 };
@@ -38,7 +39,7 @@ function getProfileGradient(profileId: string) {
   return profileGradients[charTotal % profileGradients.length];
 }
 
-const profileColumns = [
+const baseProfileColumnList = [
   'id',
   'display_name',
   'age',
@@ -51,44 +52,118 @@ const profileColumns = [
   'onboarding_completed',
   'visibility',
   'role',
-  'account_status',
   'invited_by',
   'invite_code_used',
+];
+
+const profileColumns = [
+  ...baseProfileColumnList.slice(0, 12),
+  'account_status',
+  ...baseProfileColumnList.slice(12),
 ].join(',');
 
+const profileColumnsWithoutAccountStatus = baseProfileColumnList.join(',');
+
+type ProfileQueryKind = 'getMyProfile' | 'upsertMyProfile' | 'updateMyProfile' | 'getPublicProfiles' | 'getPublicProfileById';
+
+type SupabaseErrorLike = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
+function normalizeProfileRow(profile: ProfileRow): ProfileRow {
+  return {
+    ...profile,
+    account_status: profile.account_status ?? 'active',
+  };
+}
+
+function isMissingAccountStatusColumnError(error: unknown) {
+  const errorLike = error && typeof error === 'object' ? (error as SupabaseErrorLike) : {};
+  const searchableText = [errorLike.message, errorLike.details, errorLike.hint, errorLike.code].filter(Boolean).join(' ');
+  return /account_status/i.test(searchableText)
+    && (/column|schema cache|could not find|not found|does not exist|42703|PGRST204/i.test(searchableText));
+}
+
+function logAccountStatusFallback(error: unknown, phase: ProfileQueryKind) {
+  console.warn('[ProfileApi] account_status unavailable; falling back to active', getSafeErrorLog(error, phase));
+}
+
+function omitAccountStatus<TProfile extends { account_status?: ProfileRow['account_status'] }>(profile: TProfile): Omit<TProfile, 'account_status'> {
+  const { account_status: _accountStatus, ...profileWithoutAccountStatus } = profile;
+  void _accountStatus;
+  return profileWithoutAccountStatus;
+}
+
 export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
-  const { data, error } = await requireSupabaseClient()
+  const client = requireSupabaseClient();
+  const { data, error } = await client
     .from('profiles')
     .select(profileColumns)
     .eq('id', userId)
     .maybeSingle<ProfileRow>();
 
-  if (error) throw error;
-  return data ?? null;
+  if (!error) return data ? normalizeProfileRow(data) : null;
+  if (!isMissingAccountStatusColumnError(error)) throw error;
+
+  logAccountStatusFallback(error, 'getMyProfile');
+  const fallbackResult = await client
+    .from('profiles')
+    .select(profileColumnsWithoutAccountStatus)
+    .eq('id', userId)
+    .maybeSingle<ProfileRow>();
+
+  if (fallbackResult.error) throw fallbackResult.error;
+  return fallbackResult.data ? normalizeProfileRow(fallbackResult.data) : null;
 }
 
 export async function upsertMyProfile(profile: ProfileUpsert): Promise<ProfileRow> {
-  const { data, error } = await requireSupabaseClient()
+  const client = requireSupabaseClient();
+  const { data, error } = await client
     .from('profiles')
     .upsert(profile, { onConflict: 'id' })
     .select(profileColumns)
     .single<ProfileRow>();
 
-  if (error) throw error;
-  return data;
+  if (!error) return normalizeProfileRow(data);
+  if (!isMissingAccountStatusColumnError(error)) throw error;
+
+  logAccountStatusFallback(error, 'upsertMyProfile');
+  const fallbackResult = await client
+    .from('profiles')
+    .upsert(omitAccountStatus(profile), { onConflict: 'id' })
+    .select(profileColumnsWithoutAccountStatus)
+    .single<ProfileRow>();
+
+  if (fallbackResult.error) throw fallbackResult.error;
+  return normalizeProfileRow(fallbackResult.data);
 }
 
 export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRow> {
   const { id, ...updates } = profile;
-  const { data, error } = await requireSupabaseClient()
+  const client = requireSupabaseClient();
+  const { data, error } = await client
     .from('profiles')
     .update(updates)
     .eq('id', id)
     .select(profileColumns)
     .single<ProfileRow>();
 
-  if (error) throw error;
-  return data;
+  if (!error) return normalizeProfileRow(data);
+  if (!isMissingAccountStatusColumnError(error)) throw error;
+
+  logAccountStatusFallback(error, 'updateMyProfile');
+  const fallbackResult = await client
+    .from('profiles')
+    .update(omitAccountStatus(updates))
+    .eq('id', id)
+    .select(profileColumnsWithoutAccountStatus)
+    .single<ProfileRow>();
+
+  if (fallbackResult.error) throw fallbackResult.error;
+  return normalizeProfileRow(fallbackResult.data);
 }
 
 export async function ensureProfileForUser(user: User): Promise<ProfileRow> {
@@ -137,7 +212,8 @@ export function profileRowToCurrentUser(profile: ProfileRow, fallbackTheme: Them
 
 
 export async function getPublicProfiles(currentUserId?: string, limit = 24): Promise<ProfileRow[]> {
-  let query = requireSupabaseClient()
+  const client = requireSupabaseClient();
+  let query = client
     .from('profiles')
     .select(profileColumns)
     .eq('visibility', 'public')
@@ -150,21 +226,50 @@ export async function getPublicProfiles(currentUserId?: string, limit = 24): Pro
   }
 
   const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []) as unknown as ProfileRow[];
+  if (!error) return ((data ?? []) as unknown as ProfileRow[]).map(normalizeProfileRow);
+  if (!isMissingAccountStatusColumnError(error)) throw error;
+
+  logAccountStatusFallback(error, 'getPublicProfiles');
+  let fallbackQuery = client
+    .from('profiles')
+    .select(profileColumnsWithoutAccountStatus)
+    .eq('visibility', 'public')
+    .eq('onboarding_completed', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (currentUserId) {
+    fallbackQuery = fallbackQuery.neq('id', currentUserId);
+  }
+
+  const fallbackResult = await fallbackQuery;
+  if (fallbackResult.error) throw fallbackResult.error;
+  return ((fallbackResult.data ?? []) as unknown as ProfileRow[]).map(normalizeProfileRow);
 }
 
 
 export async function getPublicProfileById(profileId: string): Promise<ProfileRow | null> {
-  const { data, error } = await requireSupabaseClient()
+  const client = requireSupabaseClient();
+  const { data, error } = await client
     .from('profiles')
     .select(profileColumns)
     .eq('id', profileId)
     .eq('visibility', 'public')
     .maybeSingle<ProfileRow>();
 
-  if (error) throw error;
-  return data ?? null;
+  if (!error) return data ? normalizeProfileRow(data) : null;
+  if (!isMissingAccountStatusColumnError(error)) throw error;
+
+  logAccountStatusFallback(error, 'getPublicProfileById');
+  const fallbackResult = await client
+    .from('profiles')
+    .select(profileColumnsWithoutAccountStatus)
+    .eq('id', profileId)
+    .eq('visibility', 'public')
+    .maybeSingle<ProfileRow>();
+
+  if (fallbackResult.error) throw fallbackResult.error;
+  return fallbackResult.data ? normalizeProfileRow(fallbackResult.data) : null;
 }
 
 export function profileRowToUserProfile(profile: ProfileRow, primaryPhotoUrl?: string): UserProfile {

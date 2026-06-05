@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { clearDemoMode } from '../lib/demoSession';
+import { getSafeErrorLog } from '../lib/errorMessage';
 import { getPendingInviteCode } from '../lib/inviteSession';
 import { ensureProfileForUser, profileRowToCurrentUser } from '../lib/profileApi';
 
@@ -50,8 +51,9 @@ export function AuthCallbackPage() {
         saveCurrentUserProfile(currentUserProfile);
         navigate('/onboarding', { replace: true });
       } catch (caughtError) {
+        console.error('[AuthCallback] failed', getSafeErrorLog(caughtError, 'auth_callback'));
         if (!mounted) return;
-        setError(caughtError instanceof Error ? caughtError.message : 'ログイン処理中にエラーが発生しました。');
+        setError('ログイン処理中にエラーが発生しました。');
       }
     }
 
