@@ -10,6 +10,7 @@ import { ProfileAvatar } from '../components/ProfileAvatar';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAdmin } from '../hooks/useAdmin';
+import { useLanguage } from '../hooks/useLanguage';
 import { useAuth } from '../hooks/useAuth';
 import { createInviteCode, deactivateInviteCode, deleteInviteCode, getManagedInviteCodes, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
 import { restoreProfile, suspendProfile } from '../lib/adminModerationApi';
@@ -62,9 +63,9 @@ function generateInviteCodeCandidate() {
   return `${prefix}-${suffix}`;
 }
 
-function formatDateTime(value: string | null, emptyLabel = '期限なし') {
+function formatDateTime(value: string | null, emptyLabel = '期限なし', locale = 'ja-JP') {
   if (!value) return emptyLabel;
-  return new Intl.DateTimeFormat('ja-JP', {
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -74,6 +75,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   const { reportedUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
   const { isFounder } = useAdmin();
+  const { language, t } = useLanguage();
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
   const [supabaseReports, setSupabaseReports] = useState<ReportWithProfiles[]>([]);
   const [reportError, setReportError] = useState('');
@@ -85,7 +87,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   const [updatingAccountStatusUserId, setUpdatingAccountStatusUserId] = useState<string | null>(null);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [includeArchivedReports, setIncludeArchivedReports] = useState(false);
-  const [form, setForm] = useState<InviteCodeForm>(defaultInviteCodeForm);
+  const [form, setForm] = useState<InviteCodeForm>(() => (inviteOnly ? { ...defaultInviteCodeForm, code: generateInviteCodeCandidate(), maxUses: '1', unlimited: false } : defaultInviteCodeForm));
   const [inviteLoading, setInviteLoading] = useState(false);
   const [managingInviteCodeId, setManagingInviteCodeId] = useState<string | null>(null);
   const [copiedInviteCodeId, setCopiedInviteCodeId] = useState<string | null>(null);
@@ -107,6 +109,10 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   const ownInviteCodeCount = useMemo(() => inviteCodes.filter((inviteCode) => inviteCode.created_by === user?.id).length, [inviteCodes, user?.id]);
   const remainingInviteSlots = Math.max(GENERAL_USER_INVITE_CODE_LIMIT - ownInviteCodeCount, 0);
   const inviteLimitReached = !isFounder && ownInviteCodeCount >= GENERAL_USER_INVITE_CODE_LIMIT;
+  const locale = language === 'en' ? 'en-US' : 'ja-JP';
+  const inviteSlotSummary = isFounder
+    ? t('inviteCodes.slots.unlimited')
+    : `${t('inviteCodes.remainingInvites')} ${remainingInviteSlots} / ${GENERAL_USER_INVITE_CODE_LIMIT} ${t('inviteCodes.peopleUnit')}`;
   const inviteCountLabel = useMemo(() => {
     if (!isSupabaseMode) return 'デモ表示';
     if (!isAuthenticated) return '未ログイン';
@@ -165,11 +171,13 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       '',
       `招待コード: ${inviteCode.code}`,
       '',
+      'ConnectBloomは、紹介から始まる招待制コネクトSNSです。',
+      '共通の興味や、一緒にやりたいことから、ゆっくり人とつながれます。',
+      '',
       '以下のページから参加できます。',
       connectBloomShareUrl,
       '',
-      'ConnectBloomは、紹介から始まる招待制コネクトSNSです。',
-      '気づいた点があれば、スクリーンショットと一緒に共有してもらえると助かります。',
+      '気づいた点があれば、スクリーンショットと一緒に教えてもらえると助かります。',
     ].join('\n');
   }
 
@@ -224,12 +232,13 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       return;
     }
 
+    const generalInvitePage = inviteOnly && !isFounder;
     const parsedMaxUses = Number(form.maxUses);
-    if (!form.unlimited && (!Number.isInteger(parsedMaxUses) || parsedMaxUses <= 0)) {
+    if (!generalInvitePage && !form.unlimited && (!Number.isInteger(parsedMaxUses) || parsedMaxUses <= 0)) {
       setInviteError('利用上限は1以上の整数で入力してください。');
       return;
     }
-    const maxUses = form.unlimited ? null : parsedMaxUses;
+    const maxUses = generalInvitePage ? 1 : (form.unlimited ? null : parsedMaxUses);
 
     setInviteLoading(true);
     try {
@@ -241,8 +250,8 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
         expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
       });
       setInviteCodes((current) => [createdInviteCode, ...current.filter((inviteCode) => inviteCode.id !== createdInviteCode.id)]);
-      setInviteNotice(`${createdInviteCode.code} を作成しました。一覧に反映しました。`);
-      setForm(defaultInviteCodeForm);
+      setInviteNotice(t('inviteCodes.created'));
+      setForm(inviteOnly ? { ...defaultInviteCodeForm, code: generateInviteCodeCandidate(), maxUses: '1', unlimited: false } : defaultInviteCodeForm);
     } catch (caughtError) {
       setInviteError(caughtError instanceof Error ? caughtError.message : '招待コードの作成に失敗しました。');
     } finally {
@@ -492,49 +501,66 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
   }
 
   return (
-    <PageShell description={inviteOnly ? <>招待コードを作成・確認できます。<br />ConnectBloomは、信頼できる紹介から少しずつ広がる場所です。</> : <>βテスター用の招待コード作成と、届いた通報の確認を行えます。<br />将来的に不適切な募集・ルーム発言・通報ユーザー・アカウント停止などを管理できるよう拡張する前提です。</>} eyebrow={inviteOnly ? 'Invite slots' : 'Admin'} title={inviteOnly ? '招待コード' : '管理画面'}>
+    <PageShell description={inviteOnly ? <>{t('inviteCodes.pageDescription1')}<br />{t('inviteCodes.pageDescription2')}</> : <>βテスター用の招待コード作成と、届いた通報の確認を行えます。<br />将来的に不適切な募集・ルーム発言・通報ユーザー・アカウント停止などを管理できるよう拡張する前提です。</>} eyebrow={inviteOnly ? 'Invite slots' : 'Admin'} title={inviteOnly ? t('inviteCodes.title') : '管理画面'}>
       {!inviteOnly ? adminCards.map((item) => {
         const Icon = item.icon;
         return <Card className="space-y-2.5 p-3 shadow-sm" key={item.title}><div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2.5"><span className="flex size-9 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><Icon size={18} /></span><span className="text-sm font-black">{item.title}</span></span><Badge>{item.count}</Badge></div><p className="whitespace-pre-line text-[13px] leading-5 text-theme-muted">{item.body}</p></Card>;
       }) : null}
 
+      {inviteOnly ? (
+        <Card className="space-y-3 border-theme-main/15 bg-gradient-to-br from-theme-accent-soft/80 to-white p-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('inviteCodes.slotsTitle')}</p>
+              <h2 className="mt-1 text-xl font-black text-theme-main-dark">{inviteSlotSummary}</h2>
+            </div>
+            <Badge>{isFounder ? t('inviteCodes.unlimitedBadge') : `${ownInviteCodeCount} / ${GENERAL_USER_INVITE_CODE_LIMIT}`}</Badge>
+          </div>
+          <p className="text-[13px] font-bold leading-6 text-theme-muted">{t('inviteCodes.philosophy')}</p>
+          <p className="rounded-[1.15rem] bg-white/70 p-3 text-[13px] font-black leading-5 text-theme-main-dark">{inviteLimitReached ? t('inviteCodes.usedAllSlots') : t('inviteCodes.sendToTrusted')}</p>
+          {isFounder ? <p className="text-xs font-bold leading-5 text-theme-muted">{t('inviteCodes.founderHint')} <Link className="font-black text-theme-main-dark underline" to="/admin">/admin</Link></p> : null}
+        </Card>
+      ) : null}
+
       <Card className="space-y-3 p-3 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-black">βテスター用の招待コード</h2>
-            <p className="mt-1 text-[13px] leading-5 text-theme-muted">βテスターに共有する招待コードを作成・確認できます。<br />招待コードは、紹介経路を記録するために使います。</p>
+            <h2 className="text-sm font-black">{inviteOnly ? t('inviteCodes.createSectionTitle') : 'βテスター用の招待コード'}</h2>
+            <p className="mt-1 text-[13px] leading-5 text-theme-muted">{inviteOnly ? t('inviteCodes.createSectionBody') : <>βテスターに共有する招待コードを作成・確認できます。<br />招待コードは、紹介経路を記録するために使います。</>}</p>
           </div>
-          <Button aria-label="招待コード候補を生成" className="shrink-0 px-3" disabled={inviteLoading} onClick={handleGenerateInviteCodeCandidate} title="招待コード候補を生成" type="button" variant="secondary">
+          <Button aria-label="招待コード候補を生成" className="shrink-0 px-3" disabled={inviteLoading || inviteLimitReached} onClick={handleGenerateInviteCodeCandidate} title="招待コード候補を生成" type="button" variant="secondary">
             <RefreshCw size={15} />
-            <span className="hidden sm:inline">候補を作る</span>
+            <span className="hidden sm:inline">{t('inviteCodes.generateCandidate')}</span>
           </Button>
         </div>
 
         {!isSupabaseMode ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">デモ表示では招待コードは保存されません。画面確認用として表示しています。</div> : null}
         {isSupabaseMode && !isAuthenticated ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">招待コードを作成・確認するにはGoogleログインしてください。</div> : null}
-        {isFounder ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark">Founder 管理者として、招待コードを無制限に発行できます。</div> : <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted"><p>招待枠: 残り{remainingInviteSlots}人</p><p className="mt-1 text-xs">ConnectBloomは、信頼できる紹介から少しずつ広がる場所です。<br />本当に一緒に使いたい人へ招待を送ってください。</p></div>}
-        {inviteLimitReached ? <div className="rounded-[1.15rem] bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-700">招待枠を使い切りました。<br />追加の招待が必要な場合は、管理者に相談してください。</div> : null}
+        {!inviteOnly && (isFounder ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark">Founder 管理者として、招待コードを無制限に発行できます。</div> : <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted"><p>招待枠: 残り{remainingInviteSlots}人</p><p className="mt-1 text-xs">ConnectBloomは、信頼できる紹介から少しずつ広がる場所です。<br />本当に一緒に使いたい人へ招待を送ってください。</p></div>)}
+        {inviteLimitReached ? <div className="rounded-[1.15rem] bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-700">{t('inviteCodes.usedAllSlots')}</div> : null}
         {inviteError ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{inviteError}</div> : null}
         {inviteNotice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{inviteNotice}</div> : null}
 
         <form className="space-y-3" onSubmit={handleCreateInviteCode}>
-          <Input helperText="βテスターに共有する招待コードです。英数字・ハイフン推奨で、保存時に大文字化します。" label="招待コード" name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="MYPACE-2026" value={form.code} />
-          <div className="rounded-[1.15rem] bg-theme-background/70 p-3">
-            <label className="flex items-center gap-2 text-sm font-black text-theme-text">
-              <input checked={form.unlimited} className="size-4 accent-theme-main" onChange={(event) => updateForm('unlimited', event.target.checked)} type="checkbox" />
-              利用人数を制限しない
+          <Input helperText={inviteOnly && !isFounder ? t('inviteCodes.inputHelperGeneral') : 'βテスターに共有する招待コードです。英数字・ハイフン推奨で、保存時に大文字化します。'} label={t('inviteCodes.codeLabel')} name="code" onChange={(event) => updateForm('code', event.target.value.toUpperCase())} placeholder="BLOOM-2026" value={form.code} />
+          {inviteOnly && !isFounder ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-xs font-bold leading-5 text-theme-muted">{t('inviteCodes.generalLimitHint')}</p> : (<>
+            <div className="rounded-[1.15rem] bg-theme-background/70 p-3">
+              <label className="flex items-center gap-2 text-sm font-black text-theme-text">
+                <input checked={form.unlimited} className="size-4 accent-theme-main" onChange={(event) => updateForm('unlimited', event.target.checked)} type="checkbox" />
+                利用人数を制限しない
+              </label>
+              <p className="mt-1.5 text-xs leading-5 text-theme-muted">ONの場合、同じ招待コードを人数制限なしで使えます。利用回数は自動で記録されます。</p>
+            </div>
+            <Input disabled={form.unlimited} helperText="無制限チェックをOFFにした場合のみ有効です。" label="利用上限" min={1} name="maxUses" onChange={(event) => updateForm('maxUses', event.target.value)} placeholder="10" type="number" value={form.maxUses} />
+            <Input helperText="未入力なら期限なしです。" label="有効期限" name="expiresAt" onChange={(event) => updateForm('expiresAt', event.target.value)} type="datetime-local" value={form.expiresAt} />
+            <label className="flex items-center gap-2 rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-black text-theme-text">
+              <input checked={form.isActive} className="size-4 accent-theme-main" onChange={(event) => updateForm('isActive', event.target.checked)} type="checkbox" />
+              有効にする
             </label>
-            <p className="mt-1.5 text-xs leading-5 text-theme-muted">ONの場合、同じ招待コードを人数制限なしで使えます。利用回数は自動で記録されます。</p>
-          </div>
-          <Input disabled={form.unlimited} helperText="無制限チェックをOFFにした場合のみ有効です。" label="利用上限" min={1} name="maxUses" onChange={(event) => updateForm('maxUses', event.target.value)} placeholder="10" type="number" value={form.maxUses} />
-          <Input helperText="未入力なら期限なしです。" label="有効期限" name="expiresAt" onChange={(event) => updateForm('expiresAt', event.target.value)} type="datetime-local" value={form.expiresAt} />
-          <label className="flex items-center gap-2 rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-black text-theme-text">
-            <input checked={form.isActive} className="size-4 accent-theme-main" onChange={(event) => updateForm('isActive', event.target.checked)} type="checkbox" />
-            有効にする
-          </label>
+          </>)}
           <Button className="w-full" disabled={inviteLoading || inviteLimitReached} type="submit">
             <KeyRound size={16} />
-            {inviteLoading ? '保存中...' : '招待コードを作成'}
+            {inviteLoading ? t('inviteCodes.creating') : (inviteLimitReached ? t('inviteCodes.usedAllSlots') : t('inviteCodes.createButton'))}
           </Button>
         </form>
       </Card>
@@ -545,43 +571,48 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       </Card>
 
       <Card className="space-y-2.5 p-3 shadow-sm">
-        <h2 className="text-sm font-black">作成済みの招待コード</h2>
-        <p className="text-[13px] leading-5 text-theme-muted">有効な招待コードをβテスターに共有してください。<br />各コードから、コード単体または参加ページ付きの招待文をコピーできます。</p>
-        {inviteCodes.length === 0 ? <p className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted">まだ招待コードはありません。まずはβテスター向けのコードを1つ作成してください。</p> : null}
+        <h2 className="text-sm font-black">{t('inviteCodes.createdCodesTitle')}</h2>
+        <p className="text-[13px] leading-5 text-theme-muted">{t('inviteCodes.createdCodesBody')}</p>
+        {inviteCodes.length === 0 ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm leading-6 text-theme-muted"><p className="font-black text-theme-text">{t('inviteCodes.emptyTitle')}</p><p>{t('inviteCodes.emptyBody')}</p><p>{t('inviteCodes.emptyLimit')}</p></div> : null}
         {inviteCodes.map((inviteCode) => {
           const isManaging = managingInviteCodeId === inviteCode.id;
-          const canDelete = inviteCode.is_active && inviteCode.used_count === 0;
+          const canDelete = !inviteOnly && inviteCode.is_active && inviteCode.used_count === 0;
           const actionDisabled = inviteLoading || isManaging || !inviteCode.is_active;
+          const inviteCodeUsed = inviteCode.used_count > 0;
+          const inviteCodeLimitReached = inviteCode.max_uses !== null && inviteCode.used_count >= inviteCode.max_uses;
+          const inviteCodeShareable = inviteCode.is_active && !inviteCodeLimitReached;
+          const statusLabel = !inviteCode.is_active ? t('inviteCodes.statusInactive') : (inviteCodeShareable ? t('inviteCodes.statusShareable') : t('inviteCodes.statusUsed'));
+          const referralRoute = inviteCode.code.split('-')[0] || '';
 
           return (
             <div className={`space-y-2.5 rounded-[1.15rem] bg-theme-accent-soft/45 p-3 ${inviteCode.is_active ? '' : 'opacity-70'}`} key={inviteCode.id}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-black text-theme-main-dark">{inviteCode.code}</span>
+                <div><p className="text-[11px] font-black uppercase tracking-[0.16em] text-theme-muted">{t('inviteCodes.codeLabel')}</p><span className="font-black text-theme-main-dark">{inviteCode.code}</span></div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Button className="min-h-8 px-2.5 py-1 text-xs" onClick={() => void handleCopyInviteCode(inviteCode)} type="button" variant="secondary">
                     <Copy size={14} />
-                    コードをコピー
+                    {t('inviteCodes.copyCode')}
                   </Button>
                   <Button className="min-h-8 px-2.5 py-1 text-xs" onClick={() => void handleCopyInviteMessage(inviteCode)} type="button" variant="secondary">
                     <Copy size={14} />
-                    招待文をコピー
+                    {t('inviteCodes.copyInvitationMessage')}
                   </Button>
-                  <Badge className={inviteCode.is_active ? '' : 'bg-red-50 text-red-600'}>{inviteCode.is_active ? '有効' : '無効'}</Badge>
+                  <Badge className={inviteCodeShareable ? '' : 'bg-red-50 text-red-600'}>{statusLabel}</Badge>
                 </div>
               </div>
               {(copiedInviteCodeId === inviteCode.id || copiedInviteMessageId === inviteCode.id) ? (
                 <div className="flex flex-wrap gap-2 text-xs font-black text-theme-main-dark">
-                  {copiedInviteCodeId === inviteCode.id ? <span className="rounded-full bg-white/70 px-2.5 py-1">招待コードをコピーしました</span> : null}
-                  {copiedInviteMessageId === inviteCode.id ? <span className="rounded-full bg-white/70 px-2.5 py-1">招待文をコピーしました</span> : null}
+                  {copiedInviteCodeId === inviteCode.id ? <span className="rounded-full bg-white/70 px-2.5 py-1">{t('inviteCodes.copiedCode')}</span> : null}
+                  {copiedInviteMessageId === inviteCode.id ? <span className="rounded-full bg-white/70 px-2.5 py-1">{t('inviteCodes.copiedInvitationMessage')}</span> : null}
                 </div>
               ) : null}
               <div className="grid gap-2 text-xs font-bold text-theme-muted sm:grid-cols-2">
-                <span>使用状況: {inviteCode.used_count} / {inviteCode.max_uses ?? '上限なし'}</span>
-                <span>紹介経路: {inviteCode.code.split('-')[0] || '未設定'}</span>
-                <span>発行者: ログイン中の管理者</span>
-                <span>状態: {inviteCode.is_active ? '共有できます' : '停止中'}</span>
-                <span>有効期限: {formatDateTime(inviteCode.expires_at)}</span>
-                <span>作成日時: {formatDateTime(inviteCode.created_at)}</span>
+                <span>{t('inviteCodes.status')}: {statusLabel}</span>
+                <span>{t('inviteCodes.usage')}: {inviteCodeUsed ? t('inviteCodes.used') : t('inviteCodes.unused')}</span>
+                <span>{t('inviteCodes.usageCount')}: {inviteCode.used_count} / {inviteCode.max_uses ?? t('inviteCodes.noLimit')}</span>
+                {referralRoute ? <span>{t('inviteCodes.referralRoute')}: {referralRoute}</span> : null}
+                <span>{t('inviteCodes.expiresAt')}: {formatDateTime(inviteCode.expires_at, t('inviteCodes.noExpiry'), locale)}</span>
+                <span>{t('inviteCodes.createdAt')}: {formatDateTime(inviteCode.created_at, t('inviteCodes.noExpiry'), locale)}</span>
               </div>
               <div className="flex justify-end">
                 {canDelete ? (
@@ -590,7 +621,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
                   </Button>
                 ) : (
                   <Button className="min-h-9 px-3 py-1.5" disabled={actionDisabled} onClick={() => handleDeactivateInviteCode(inviteCode)} type="button" variant={inviteCode.is_active ? 'secondary' : 'ghost'}>
-                    {inviteCode.is_active ? (isManaging ? '無効化中...' : '無効化') : '無効化済み'}
+                    {inviteCode.is_active ? (isManaging ? t('inviteCodes.deactivating') : t('inviteCodes.deactivate')) : t('inviteCodes.deactivated')}
                   </Button>
                 )}
               </div>
