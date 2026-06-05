@@ -186,10 +186,15 @@ export async function sendChatRoomMessage(roomId: string, body: string): Promise
   if (!trimmedBody) throw new Error('メッセージを入力してください。');
   if (trimmedBody.length > 2000) throw new Error('メッセージは2000文字以内で入力してください。');
 
+  const resolvedRoom = looksLikeUuid(roomId) ? await getChatRoomById(roomId) : await getChatRoomBySlug(roomId);
+  const resolvedRoomId = resolvedRoom?.id ?? (looksLikeUuid(roomId) ? roomId : '');
+  console.info('[ConnectBloom] chat room message room resolved', { inputLooksUuid: looksLikeUuid(roomId), resolved: Boolean(resolvedRoomId) });
+  if (!resolvedRoomId) throw new Error('ルームを確認できませんでした。');
+
   const { data, error } = await requireSupabaseClient()
     .from('chat_room_messages')
-    .insert({ room_id: roomId, sender_id: senderId, body: trimmedBody })
-    .select(chatRoomMessageWithProfileColumns)
+    .insert({ room_id: resolvedRoomId, sender_id: senderId, body: trimmedBody })
+    .select(chatRoomMessageColumns)
     .single<ChatRoomMessageRow>();
 
   if (error) {

@@ -8,7 +8,7 @@ import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { activityPostCategories } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
-import { getShortErrorMessage } from '../lib/errorMessage';
+import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { canEditActivityPost, getActivityPostById, updateActivityPost } from '../lib/activityBoardApi';
 import type { ActivityPostEditFormState, ActivityPostMode, ActivityPostStatus } from '../types/activityBoard';
 
@@ -161,6 +161,7 @@ export function ActivityBoardEditPage() {
       });
       navigate(`/board/${postId}`, { state: { message: '募集内容を保存しました' } });
     } catch (caughtError) {
+      console.warn('[ConnectBloom] activity post update page failed', getSafeErrorLog(caughtError, 'activity_post_update_page_failed'));
       setError(getShortErrorMessage(caughtError, '募集内容の保存に失敗しました。時間を置いてもう一度お試しください。'));
     } finally {
       setSaving(false);

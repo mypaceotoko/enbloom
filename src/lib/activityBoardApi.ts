@@ -13,7 +13,7 @@ import type {
 } from '../types/activityBoard';
 import { ensureConversationForActivityInterest } from './matchApi';
 import { getMyProfile, profileRowToUserProfile, type ProfileRow } from './profileApi';
-import { isMissingColumnError } from './dbError';
+import { isMissingColumnError, isSchemaRelationshipError } from './dbError';
 import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
 
@@ -308,31 +308,67 @@ export async function createActivityPost(input: ActivityPostInput): Promise<Acti
     room_id: roomId,
   };
 
-  const { data, error } = await requireSupabaseClient()
+  const insertPost = (columns: string) => requireSupabaseClient()
     .from('activity_posts')
     .insert(payload)
-    .select(activityPostWithAuthorColumns)
+    .select(columns)
     .single<ActivityPostRow>();
 
-  if (error) throw error;
+  let { data, error } = await insertPost(activityPostColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] activity post create fallback used', getSafeErrorLog(error, 'activity_post_create_missing_column_fallback'));
+    ({ data, error } = await insertPost(legacyActivityPostColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] activity post create failed', getSafeErrorLog(error, 'activity_post_create_failed'));
+    throw error;
+  }
+  if (!data) throw new Error('募集の保存結果を確認できませんでした。');
+
   console.info('[ConnectBloom] activity post created', { success: true });
-  return mapPost(data, { interest_count: 0, accepted_count: 0 });
+  const createdPost = await getActivityPostById(data.id).catch((caughtError) => {
+    if (isSchemaRelationshipError(caughtError)) {
+      console.warn('[ConnectBloom] activity post create readback fallback used', getSafeErrorLog(caughtError, 'activity_post_create_readback_fallback'));
+      return null;
+    }
+    throw caughtError;
+  });
+  return createdPost ?? mapPost(data, { interest_count: 0, accepted_count: 0 });
 }
 
 
 export async function updateActivityPost(postId: string, input: ActivityPostUpdateInput): Promise<ActivityPostWithAuthor> {
   const payload = buildActivityPostUpdatePayload(input);
 
-  const { data, error } = await requireSupabaseClient()
+  const updatePost = (columns: string) => requireSupabaseClient()
     .from('activity_posts')
     .update(payload)
     .eq('id', postId)
-    .select(activityPostWithAuthorColumns)
+    .select(columns)
     .single<ActivityPostRow>();
 
-  if (error) throw error;
+  let { data, error } = await updatePost(activityPostColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] activity post update fallback used', getSafeErrorLog(error, 'activity_post_update_missing_column_fallback'));
+    ({ data, error } = await updatePost(legacyActivityPostColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] activity post update failed', getSafeErrorLog(error, 'activity_post_update_failed'));
+    throw error;
+  }
+  if (!data) throw new Error('募集の保存結果を確認できませんでした。');
+
   console.info('[ConnectBloom] activity post updated', { success: true });
-  return mapPost(data);
+  const updatedPost = await getActivityPostById(data.id).catch((caughtError) => {
+    if (isSchemaRelationshipError(caughtError)) {
+      console.warn('[ConnectBloom] activity post update readback fallback used', getSafeErrorLog(caughtError, 'activity_post_update_readback_fallback'));
+      return null;
+    }
+    throw caughtError;
+  });
+  return updatedPost ?? mapPost(data);
 }
 
 export async function canEditActivityPost(postId: string, userId: string): Promise<boolean> {

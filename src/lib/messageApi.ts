@@ -1,6 +1,8 @@
 import type { Message, MessageMatch, SendMessageResult } from '../types/message';
 import { getPrimaryProfilePhoto } from './profilePhotoApi';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
+import { isMissingColumnError } from './dbError';
+import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
 
 type MessageRow = {
@@ -29,7 +31,13 @@ type SendMatchMessageRpcRow = {
   message?: string | null;
 };
 
-const profileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
+const legacyProfileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const profileColumns = `${legacyProfileColumns},account_status`;
+const legacyMessageMatchColumns = [
+  'id,user1_id,user2_id,created_at,last_message_at',
+  `user1_profile:profiles!matches_user1_id_fkey(${legacyProfileColumns})`,
+  `user2_profile:profiles!matches_user2_id_fkey(${legacyProfileColumns})`,
+].join(',');
 const messageMatchColumns = [
   'id,user1_id,user2_id,created_at,last_message_at',
   `user1_profile:profiles!matches_user1_id_fkey(${profileColumns})`,
@@ -67,14 +75,23 @@ export async function getMessageMatchById(matchId: string): Promise<MessageMatch
   const currentUserId = await getCurrentUserId();
   console.info('[ConnectBloom] matchId exists', { exists: Boolean(matchId) });
 
-  const { data, error } = await requireSupabaseClient()
+  const queryMatch = (columns: string) => requireSupabaseClient()
     .from('matches')
-    .select(messageMatchColumns)
+    .select(columns)
     .eq('id', matchId)
     .eq('status', 'active')
     .maybeSingle<MatchMessageRow>();
 
-  if (error) throw error;
+  let { data, error } = await queryMatch(messageMatchColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] message match fetch fallback used', getSafeErrorLog(error, 'message_match_missing_column_fallback'));
+    ({ data, error } = await queryMatch(legacyMessageMatchColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] message match fetch failed', getSafeErrorLog(error, 'message_match_fetch_failed'));
+    throw error;
+  }
 
   const isParticipant = Boolean(data && (data.user1_id === currentUserId || data.user2_id === currentUserId));
   console.info('[ConnectBloom] is match participant', { isParticipant });
@@ -151,8 +168,11 @@ export async function sendMessage(matchId: string, body: string): Promise<SendMe
 
   if (!isMissingRpcError(rpcError)) {
     console.info('[ConnectBloom] send message success', { success: false });
+    console.warn('[ConnectBloom] send message rpc failed', getSafeErrorLog(rpcError, 'send_message_rpc_failed'));
     throw rpcError;
   }
+
+  console.warn('[ConnectBloom] send message rpc fallback used', getSafeErrorLog(rpcError, 'send_message_rpc_missing_fallback'));
 
   const { data, error } = await requireSupabaseClient()
     .from('messages')
@@ -162,7 +182,10 @@ export async function sendMessage(matchId: string, body: string): Promise<SendMe
 
   const success = !error;
   console.info('[ConnectBloom] send message success', { success });
-  if (error) throw error;
+  if (error) {
+    console.warn('[ConnectBloom] send message insert failed', getSafeErrorLog(error, 'send_message_insert_failed'));
+    throw error;
+  }
 
   return {
     success: true,

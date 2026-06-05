@@ -190,6 +190,7 @@ export function MessagesPage() {
       }
       setDraft('');
     } catch (caughtError) {
+      console.warn('[ConnectBloom] message send failed', getSafeErrorLog(caughtError, 'message_send_failed'));
       setSendError(getShortErrorMessage(caughtError, t('messages.sendFailed')));
     } finally {
       setSending(false);

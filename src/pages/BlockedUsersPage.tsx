@@ -9,6 +9,7 @@ import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { getBlockedUsersWithProfiles, unblockUser as unblockSupabaseUser } from '../lib/blockApi';
+import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import type { BlockedUserWithProfile } from '../types/block';
 import type { UserProfile } from '../types/user';
 
@@ -80,7 +81,8 @@ export function BlockedUsersPage() {
         setBlockedUsers(supabaseRowsToListItems(rows));
       } catch (caughtError) {
         if (!active) return;
-        setErrorMessage(caughtError instanceof Error ? `ブロック中のユーザーを取得できませんでした: ${caughtError.message}` : 'ブロック中のユーザーを取得できませんでした。');
+        console.warn('[ConnectBloom] blocked users page fetch failed', getSafeErrorLog(caughtError, 'blocked_users_page_fetch_failed'));
+        setErrorMessage(getShortErrorMessage(caughtError, 'ブロック中のユーザーを取得できませんでした。'));
       } finally {
         if (active) setLoading(false);
       }
@@ -115,8 +117,9 @@ export function BlockedUsersPage() {
 
       setBlockedUsers((current) => current.filter((item) => item.targetUserId !== targetUserId));
       setNotice(unblockSuccessMessage);
-    } catch {
-      setErrorMessage(unblockErrorMessage);
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] unblock user failed', getSafeErrorLog(caughtError, 'unblock_user_failed'));
+      setErrorMessage(getShortErrorMessage(caughtError, unblockErrorMessage));
       console.info('[ConnectBloom] unblock user success', { success: false });
     } finally {
       setUnblockingUserId('');

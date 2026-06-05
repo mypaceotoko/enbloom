@@ -1,13 +1,16 @@
 import type { Block, BlockInsertResult, BlockedUserWithProfile } from '../types/block';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoApi';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
+import { isMissingColumnError } from './dbError';
+import { getSafeErrorLog } from './errorMessage';
 import { isSupabaseConfigured, requireSupabaseClient, supabase } from './supabase';
 
 const localAppStateKey = 'connectbloom.appState.v1';
 const legacyStoragePrefix = 'en' + 'bloom';
 const legacyLocalAppStateKey = `${legacyStoragePrefix}.appState.v1`;
 const blockColumns = 'id,blocker_id,blocked_id,created_at';
-const blockedProfileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,account_status,invited_by,invite_code_used';
+const legacyBlockedProfileColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
+const blockedProfileColumns = `${legacyBlockedProfileColumns},account_status`;
 
 type BlockRow = Block;
 type BlockedUserProfileJoinRow = BlockRow & {
@@ -68,7 +71,10 @@ export async function getBlockedUserIds(userId?: string): Promise<string[]> {
     .select('blocked_id')
     .eq('blocker_id', currentUserId);
 
-  if (error) throw error;
+  if (error) {
+    console.warn('[ConnectBloom] blocked ids fetch failed', getSafeErrorLog(error, 'blocked_ids_fetch_failed'));
+    throw error;
+  }
   const blockedIds = (data ?? []).map((row) => row.blocked_id as string);
   console.info('[ConnectBloom] blocked ids count', { count: blockedIds.length });
   return blockedIds;
@@ -95,7 +101,10 @@ export async function getBlockedUsers(userId?: string): Promise<Block[]> {
     .eq('blocker_id', currentUserId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.warn('[ConnectBloom] blocked users fetch failed', getSafeErrorLog(error, 'blocked_users_fetch_failed'));
+    throw error;
+  }
   const blocks = (data ?? []) as unknown as Block[];
   console.info('[ConnectBloom] blocked users count', { count: blocks.length });
   return blocks;
@@ -110,13 +119,22 @@ export async function getBlockedUsersWithProfiles(userId?: string): Promise<Bloc
   }
 
   const currentUserId = userId ?? await getCurrentUserId();
-  const { data, error } = await requireSupabaseClient()
+  const queryBlockedUsers = (profileColumns: string) => requireSupabaseClient()
     .from('blocks')
-    .select(`${blockColumns},blocked_profile:profiles!blocks_blocked_id_fkey(${blockedProfileColumns})`)
+    .select(`${blockColumns},blocked_profile:profiles!blocks_blocked_id_fkey(${profileColumns})`)
     .eq('blocker_id', currentUserId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  let { data, error } = await queryBlockedUsers(blockedProfileColumns);
+  if (error && isMissingColumnError(error)) {
+    console.warn('[ConnectBloom] blocked users fetch fallback used', getSafeErrorLog(error, 'blocked_users_missing_column_fallback'));
+    ({ data, error } = await queryBlockedUsers(legacyBlockedProfileColumns));
+  }
+
+  if (error) {
+    console.warn('[ConnectBloom] blocked users fetch failed', getSafeErrorLog(error, 'blocked_users_fetch_failed'));
+    throw error;
+  }
 
   const blockedUsers = ((data ?? []) as unknown as BlockedUserProfileJoinRow[]).map(blockRowToBlockedUser);
   const profiles = blockedUsers.map((item) => item.profile).filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
