@@ -8,9 +8,11 @@ import { PageShell } from '../components/PageShell';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
+import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
-import { createInviteCode, deactivateInviteCode, deleteInviteCode, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
+import { createInviteCode, deactivateInviteCode, deleteInviteCode, getManagedInviteCodes, getMyInviteCodes, type InviteCodeRow } from '../lib/inviteCodeApi';
 import { archiveReport, getAdminReports, unarchiveReport, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
+import { GENERAL_USER_INVITE_CODE_LIMIT } from '../lib/admin';
 import type { ReportStatus, ReportWithProfiles } from '../types/report';
 
 type InviteCodeForm = {
@@ -65,9 +67,10 @@ function formatDateTime(value: string | null, emptyLabel = '期限なし') {
   }).format(new Date(value));
 }
 
-export function AdminPage() {
+export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {}) {
   const { reportedUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
+  const { isFounder } = useAdmin();
   const [inviteCodes, setInviteCodes] = useState<InviteCodeRow[]>([]);
   const [supabaseReports, setSupabaseReports] = useState<ReportWithProfiles[]>([]);
   const [reportError, setReportError] = useState('');
@@ -97,18 +100,21 @@ export function AdminPage() {
   const displayedReportStats = isSupabaseMode && isAuthenticated
     ? reportStats
     : { total: reportedUserIds.length, open: reportedUserIds.length, reviewing: 0, resolved: 0, dismissed: 0 };
+  const ownInviteCodeCount = useMemo(() => inviteCodes.filter((inviteCode) => inviteCode.created_by === user?.id).length, [inviteCodes, user?.id]);
+  const remainingInviteSlots = Math.max(GENERAL_USER_INVITE_CODE_LIMIT - ownInviteCodeCount, 0);
+  const inviteLimitReached = !isFounder && ownInviteCodeCount >= GENERAL_USER_INVITE_CODE_LIMIT;
   const inviteCountLabel = useMemo(() => {
     if (!isSupabaseMode) return 'デモ表示';
     if (!isAuthenticated) return '未ログイン';
-    return `${inviteCodes.length}件`;
-  }, [inviteCodes.length, isAuthenticated, isSupabaseMode]);
+    return isFounder ? `${inviteCodes.length}件` : `${ownInviteCodeCount}/${GENERAL_USER_INVITE_CODE_LIMIT}件`;
+  }, [inviteCodes.length, isAuthenticated, isFounder, isSupabaseMode, ownInviteCodeCount]);
   const adminCards = [
     { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: 'βテスターに共有する招待コードを作成・確認できます。\n招待コードは、紹介経路を記録するために使います。' },
     { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: '届いた通報を確認し、必要に応じて対応できます。' },
   ];
 
   useEffect(() => {
-    if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
+    if (!isFounder || !isSupabaseMode || !isAuthenticated || !user) return undefined;
 
     let ignore = false;
     getAdminReports({ includeArchived: includeArchivedReports })
@@ -125,13 +131,13 @@ export function AdminPage() {
     return () => {
       ignore = true;
     };
-  }, [includeArchivedReports, isAuthenticated, isSupabaseMode, user]);
+  }, [includeArchivedReports, isAuthenticated, isFounder, isSupabaseMode, user]);
 
   useEffect(() => {
     if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
 
     let ignore = false;
-    getMyInviteCodes(user.id)
+    (isFounder ? getManagedInviteCodes() : getMyInviteCodes(user.id))
       .then((nextInviteCodes) => {
         if (!ignore) setInviteCodes(nextInviteCodes);
       })
@@ -142,7 +148,7 @@ export function AdminPage() {
     return () => {
       ignore = true;
     };
-  }, [isAuthenticated, isSupabaseMode, user]);
+  }, [isAuthenticated, isFounder, isSupabaseMode, user]);
 
   function updateForm(field: keyof InviteCodeForm, value: string | boolean) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -205,6 +211,11 @@ export function AdminPage() {
 
     if (!isAuthenticated || !user) {
       setInviteError('招待コードを作成するにはログインしてください。');
+      return;
+    }
+
+    if (inviteLimitReached) {
+      setInviteError('招待枠を使い切りました。追加の招待が必要な場合は、管理者に相談してください。');
       return;
     }
 
@@ -423,12 +434,23 @@ export function AdminPage() {
     }
   }
 
+  if (!isFounder && !inviteOnly) {
+    return (
+      <PageShell description="このページは管理者のみ利用できます。" eyebrow="Admin" title="管理者専用ページです">
+        <Card className="space-y-3 p-4 text-center shadow-sm">
+          <p className="text-sm font-bold leading-6 text-theme-muted">このページは管理者のみ利用できます。</p>
+          <Button className="mx-auto" onClick={() => { window.location.href = '/settings'; }} type="button" variant="secondary">設定へ戻る</Button>
+        </Card>
+      </PageShell>
+    );
+  }
+
   return (
-    <PageShell description={<>βテスター用の招待コード作成と、届いた通報の確認を行えます。<br />作成済みコードは、コードだけでも招待文でもコピーできます。</>} eyebrow="Admin" title="管理画面">
-      {adminCards.map((item) => {
+    <PageShell description={inviteOnly ? <>招待コードを作成・確認できます。<br />ConnectBloomは、信頼できる紹介から少しずつ広がる場所です。</> : <>βテスター用の招待コード作成と、届いた通報の確認を行えます。<br />将来的に不適切な募集・ルーム発言・通報ユーザー・アカウント停止などを管理できるよう拡張する前提です。</>} eyebrow={inviteOnly ? 'Invite slots' : 'Admin'} title={inviteOnly ? '招待コード' : '管理画面'}>
+      {!inviteOnly ? adminCards.map((item) => {
         const Icon = item.icon;
         return <Card className="space-y-2.5 p-3 shadow-sm" key={item.title}><div className="flex items-center justify-between gap-2"><span className="flex items-center gap-2.5"><span className="flex size-9 items-center justify-center rounded-xl bg-theme-accent-soft text-theme-main-dark"><Icon size={18} /></span><span className="text-sm font-black">{item.title}</span></span><Badge>{item.count}</Badge></div><p className="whitespace-pre-line text-[13px] leading-5 text-theme-muted">{item.body}</p></Card>;
-      })}
+      }) : null}
 
       <Card className="space-y-3 p-3 shadow-sm">
         <div className="flex items-start justify-between gap-3">
@@ -444,6 +466,8 @@ export function AdminPage() {
 
         {!isSupabaseMode ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">デモ表示では招待コードは保存されません。画面確認用として表示しています。</div> : null}
         {isSupabaseMode && !isAuthenticated ? <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted">招待コードを作成・確認するにはGoogleログインしてください。</div> : null}
+        {isFounder ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold leading-6 text-theme-main-dark">Founder 管理者として、招待コードを無制限に発行できます。</div> : <div className="rounded-[1.15rem] bg-theme-background/70 p-3 text-sm font-bold leading-6 text-theme-muted"><p>招待枠: 残り{remainingInviteSlots}人</p><p className="mt-1 text-xs">ConnectBloomは、信頼できる紹介から少しずつ広がる場所です。<br />本当に一緒に使いたい人へ招待を送ってください。</p></div>}
+        {inviteLimitReached ? <div className="rounded-[1.15rem] bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-700">招待枠を使い切りました。<br />追加の招待が必要な場合は、管理者に相談してください。</div> : null}
         {inviteError ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-600">{inviteError}</div> : null}
         {inviteNotice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-sm font-bold text-theme-main-dark">{inviteNotice}</div> : null}
 
@@ -462,7 +486,7 @@ export function AdminPage() {
             <input checked={form.isActive} className="size-4 accent-theme-main" onChange={(event) => updateForm('isActive', event.target.checked)} type="checkbox" />
             有効にする
           </label>
-          <Button className="w-full" disabled={inviteLoading} type="submit">
+          <Button className="w-full" disabled={inviteLoading || inviteLimitReached} type="submit">
             <KeyRound size={16} />
             {inviteLoading ? '保存中...' : '招待コードを作成'}
           </Button>
@@ -529,7 +553,7 @@ export function AdminPage() {
         })}
       </Card>
 
-      <Card className="space-y-2.5 p-3 shadow-sm">
+      {!inviteOnly ? <Card className="space-y-2.5 p-3 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-black">通報管理</h2>
@@ -670,7 +694,7 @@ export function AdminPage() {
             ))}
           </>
         )}
-      </Card>
+      </Card> : null}
     </PageShell>
   );
 }

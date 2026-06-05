@@ -7,6 +7,7 @@ import { Card } from '../components/Card';
 import { SETTINGS_SCROLL_STORAGE_KEY } from '../components/BackToSettingsLink';
 import { PageShell } from '../components/PageShell';
 import { useAppState } from '../hooks/useAppState';
+import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import type { TranslationKey } from '../lib/i18n';
@@ -19,6 +20,7 @@ export function SettingsPage() {
   const { language, setLanguage, t } = useLanguage();
   const { resetDemoState } = useAppState();
   const { isAuthenticated, isSupabaseMode, signOut } = useAuth();
+  const { isFounder } = useAdmin();
   const [notice, setNotice] = useState('');
   const [noticeKind, setNoticeKind] = useState<'success' | 'error'>('success');
   const [signingOut, setSigningOut] = useState(false);
@@ -148,9 +150,20 @@ export function SettingsPage() {
         </div>
         <SettingsLink body={t('settings.safety.body')} icon={<ShieldCheck size={18} />} onClick={() => navigateFromSettings('/safety')} title={t('settings.safety.title')} />
         <SettingsLink body={t('settings.blockedUsers.body')} icon={<ShieldMinus size={18} />} onClick={() => navigateFromSettings('/blocked-users')} title={t('settings.blockedUsers.title')} />
-        <SettingsLink body={t('settings.inviteCodes.body')} icon={<Ticket size={18} />} onClick={() => navigateFromSettings('/admin')} title={t('settings.inviteCodes.title')} />
-        <SettingsLink body={t('settings.reports.body')} icon={<Flag size={18} />} onClick={() => navigateFromSettings('/admin')} title={t('settings.reports.title')} />
+        <SettingsLink body={t('settings.inviteSlots.body')} icon={<Ticket size={18} />} onClick={() => navigateFromSettings('/invite-codes')} title={t('settings.inviteSlots.title')} />
       </section>
+
+      {isFounder ? (
+        <section className="space-y-3">
+          <div className="px-1">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-theme-main-dark">{t('settings.adminMenu.eyebrow')}</p>
+            <h2 className="text-lg font-black text-theme-text">{t('settings.adminMenu.title')}</h2>
+            <p className="mt-1 text-xs leading-5 text-theme-muted">{t('settings.adminMenu.description')}</p>
+          </div>
+          <SettingsLink body={t('settings.inviteCodes.body')} icon={<Ticket size={18} />} onClick={() => navigateFromSettings('/admin')} title={t('settings.inviteCodes.title')} />
+          <SettingsLink body={t('settings.reports.body')} icon={<Flag size={18} />} onClick={() => navigateFromSettings('/admin')} title={t('settings.reports.title')} />
+        </section>
+      ) : null}
 
       <section className="space-y-3">
         <div className="px-1">

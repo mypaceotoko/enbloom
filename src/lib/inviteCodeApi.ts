@@ -91,6 +91,7 @@ function formatSupabaseInviteError(message: string) {
   if (message.includes('INVITE_CODE_CREATOR_NOT_FOUND')) return 'この招待コードの紹介者を確認できません。紹介者に確認してください。';
   if (isInviteCodeSelfUseError(message)) return '自分で作成した招待コードは利用できません。別の紹介者のコードを入力してください。';
   if (message.includes('INVITE_CODE_AUTH_REQUIRED')) return 'ログイン後に招待コードを利用してください。';
+  if (message.includes('INVITE_CODE_LIMIT_PER_USER_REACHED')) return '招待枠を使い切りました。追加の招待が必要な場合は、管理者に相談してください。';
   if (message.includes('duplicate key')) return '紹介情報はすでに保存されています。画面を更新してもう一度お試しください。';
   return message || '招待コードを確認できませんでした。入力内容をもう一度お確かめください。';
 }
@@ -174,6 +175,17 @@ export async function createInviteCode(params: InviteCodeCreateParams): Promise<
 
   if (error) throw new Error(formatSupabaseInviteError(error.message));
   return data;
+}
+
+export async function getManagedInviteCodes(): Promise<InviteCodeRow[]> {
+  const { data, error } = await requireSupabaseClient()
+    .from('invite_codes')
+    .select(inviteCodeColumns)
+    .order('created_at', { ascending: false })
+    .returns<InviteCodeRow[]>();
+
+  if (error) throw new Error(formatSupabaseInviteError(error.message));
+  return data ?? [];
 }
 
 export async function getMyInviteCodes(userId: string): Promise<InviteCodeRow[]> {

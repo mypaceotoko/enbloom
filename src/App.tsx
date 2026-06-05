@@ -11,6 +11,7 @@ import { BlockedUsersPage } from './pages/BlockedUsersPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { HomePage } from './pages/HomePage';
 import { LandingPage } from './pages/LandingPage';
+import { InviteCodesPage } from './pages/InviteCodesPage';
 import { LikesPage } from './pages/LikesPage';
 import { LoginPage } from './pages/LoginPage';
 import { MatchesPage } from './pages/MatchesPage';
@@ -60,6 +61,7 @@ export default function App() {
           <Route element={<NotificationsPage />} path="notifications" />
           <Route element={<BlockedUsersPage />} path="blocked-users" />
           <Route element={<SettingsPage />} path="settings" />
+          <Route element={<InviteCodesPage />} path="invite-codes" />
         </Route>
         <Route element={<SettingsThemePage />} path="settings/theme" />
         <Route element={<TestGuidePage />} path="test-guide" />
