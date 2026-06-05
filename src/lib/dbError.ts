@@ -35,6 +35,30 @@ export function isMissingColumnError(error: unknown): boolean {
     || (errorText.includes('relationship') && errorText.includes('reports_target_chat_room_id_fkey'));
 }
 
+export function isMissingFunctionError(error: unknown): boolean {
+  const errorLike = error && typeof error === 'object' ? (error as SupabaseErrorLike) : {};
+  const code = typeof errorLike.code === 'string' ? errorLike.code : '';
+  const errorText = getErrorText(error);
+
+  return code === '42883'
+    || code === 'PGRST202'
+    || errorText.includes('function does not exist')
+    || errorText.includes('could not find the function')
+    || errorText.includes('schema cache') && errorText.includes('function')
+    || errorText.includes('update_report_review');
+}
+
+export function isPermissionDeniedError(error: unknown): boolean {
+  const errorLike = error && typeof error === 'object' ? (error as SupabaseErrorLike) : {};
+  const code = typeof errorLike.code === 'string' ? errorLike.code : '';
+  const errorText = getErrorText(error);
+
+  return code === '42501'
+    || errorText.includes('permission denied')
+    || errorText.includes('row-level security')
+    || errorText.includes('violates row-level security policy');
+}
+
 export function isSchemaRelationshipError(error: unknown): boolean {
   const errorText = getErrorText(error);
   return isMissingColumnError(error)

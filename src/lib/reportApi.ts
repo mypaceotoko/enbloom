@@ -2,7 +2,7 @@ import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoA
 import type { ProfileRow } from './profileApi';
 import { profileRowToUserProfile } from './profileApi';
 import { isSupabaseConfigured, requireSupabaseClient, supabase } from './supabase';
-import { isMissingColumnError } from './dbError';
+import { isMissingColumnError, isMissingFunctionError, isPermissionDeniedError } from './dbError';
 import { getSafeErrorLog } from './errorMessage';
 import type { Report, ReportStatus, ReportWithProfiles } from '../types/report';
 
@@ -45,6 +45,12 @@ type UpdateReportReviewResult = {
   report_id: string;
   status: ReportStatus;
   reviewed_at: string;
+};
+
+type ReportReviewUpdateRow = {
+  id: string;
+  status: ReportStatus;
+  reviewed_at: string | null;
 };
 
 type ArchiveReportResult = {
@@ -262,14 +268,70 @@ export async function updateReportReview(reportId: string, review: UpdateReportR
   const success = !error && Boolean(data?.success);
   if (updatesStatus) console.info('[ConnectBloom] report status update success', success);
   if (updatesAdminNote) console.info('[ConnectBloom] report admin note update success', success);
-  if (error) throw error;
+  if (error) {
+    console.error('[reportApi] failed to update report review', getSafeErrorLog(error, 'report_review_rpc_failed'));
+    throw error;
+  }
   if (!data?.success) throw new Error('通報レビューの更新に失敗しました。');
 
   return data;
 }
 
+async function updateReportStatusDirect(reportId: string, status: ReportStatus): Promise<UpdateReportReviewResult> {
+  const reviewedBy = await getCurrentUserId();
+  const reviewedAt = new Date().toISOString();
+  const { data, error } = await requireSupabaseClient()
+    .from('reports')
+    .update({
+      status,
+      reviewed_by: reviewedBy,
+      reviewed_at: reviewedAt,
+    })
+    .eq('id', reportId)
+    .select('id,status,reviewed_at')
+    .single<ReportReviewUpdateRow>();
+
+  if (error) {
+    console.error('[reportApi] failed to update report status', getSafeErrorLog(error, 'report_status_direct_update_failed'));
+    throw error;
+  }
+
+  if (!data) throw new Error('通報レビューの更新に失敗しました。');
+
+  return {
+    success: true,
+    report_id: data.id,
+    status: data.status,
+    reviewed_at: data.reviewed_at ?? reviewedAt,
+  };
+}
+
 export async function updateReportStatus(reportId: string, status: ReportStatus): Promise<UpdateReportReviewResult> {
-  return updateReportReview(reportId, { status });
+  console.info('[ConnectBloom] report status update started');
+  console.info('[ConnectBloom] reportId exists', Boolean(reportId));
+
+  if (!reportId) {
+    console.info('[ConnectBloom] report status update success', false);
+    throw new Error('通報IDを確認できませんでした。');
+  }
+
+  assertReportStatus(status);
+
+  try {
+    const result = await updateReportStatusDirect(reportId, status);
+    console.info('[ConnectBloom] report status update success', true);
+    return result;
+  } catch (directUpdateError) {
+    if (!isMissingColumnError(directUpdateError) && !isMissingFunctionError(directUpdateError) && !isPermissionDeniedError(directUpdateError)) {
+      console.info('[ConnectBloom] report status update success', false);
+      throw directUpdateError;
+    }
+
+    console.warn('[reportApi] report status direct update fallback used', getSafeErrorLog(directUpdateError, 'report_status_direct_update_fallback'));
+    const result = await updateReportReview(reportId, { status });
+    console.info('[ConnectBloom] report status update success', true);
+    return result;
+  }
 }
 
 export async function updateReportAdminNote(reportId: string, adminNote: string): Promise<UpdateReportReviewResult> {

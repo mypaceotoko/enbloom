@@ -340,7 +340,7 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
       )));
       setReportNotice('ステータスを更新しました');
     } catch (caughtError) {
-      console.warn('[ConnectBloom] report status update failed', getSafeErrorLog(caughtError, 'report_status_update_failed'));
+      console.error('[AdminPage] failed to update report status', getSafeErrorLog(caughtError, 'report_status_update_failed'));
       setReportError('ステータス更新に失敗しました');
     } finally {
       setUpdatingReportStatusId(null);
