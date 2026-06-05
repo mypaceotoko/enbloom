@@ -7,6 +7,8 @@ import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { mockActivityPosts } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
+import type { TranslationKey } from '../lib/i18n';
 import { archiveActivityPost, closeActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
@@ -17,15 +19,16 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('ja-JP', { dateStyle: 'medium', timeStyle: value.includes('T') ? 'short' : undefined }).format(new Date(value));
 }
 
-function getStatusLabel(status: ActivityPostStatus) {
-  if (status === 'closed') return '締切済み';
-  if (status === 'archived') return 'アーカイブ';
-  return '募集中';
+function getStatusLabel(status: ActivityPostStatus, t: (key: TranslationKey) => string) {
+  if (status === 'closed') return t('board.closed');
+  if (status === 'archived') return t('board.archived');
+  return t('board.open');
 }
 
 export function MyBoardPage() {
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
+  const { language, t } = useLanguage();
   const [posts, setPosts] = useState<ActivityPostWithStats[]>([]);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -177,14 +180,14 @@ export function MyBoardPage() {
   }
 
   return (
-    <PageShell description="作成した募集を管理できます。" eyebrow="My Activity Board" title="自分の募集">
+    <PageShell description={t('myBoard.description')} eyebrow="My Activity Board" title={t('myBoard.title')}>
       {notice ? <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">{notice}</div> : null}
       {error ? <div className="rounded-[1.15rem] bg-red-50 p-3 text-sm font-bold text-red-700">{error}</div> : null}
 
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/82 p-4 backdrop-blur">
-          <Badge className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark"><UsersRound size={13} />紹介から広がるつながり</Badge>
-          <p className="mt-2 text-sm leading-6 text-theme-muted">参加希望が届いたら、詳細ページで承認できます。</p>
+          <Badge className="bg-gradient-to-r from-theme-yellow/85 to-theme-sky/45 text-theme-main-dark"><UsersRound size={13} />{t('board.badge')}</Badge>
+          <p className="mt-2 text-sm leading-6 text-theme-muted">{t('myBoard.hint')}</p>
         </div>
       </Card>
 
@@ -205,34 +208,34 @@ export function MyBoardPage() {
                 <Badge>{post.category}</Badge>
                 <h2 className="mt-2 text-lg font-black leading-tight text-theme-text">{post.title}</h2>
               </div>
-              <Badge className="bg-theme-card shadow-sm">{getStatusLabel(post.status)}</Badge>
+              <Badge className="bg-theme-card shadow-sm">{getStatusLabel(post.status, t)}</Badge>
             </div>
             <div className="flex flex-wrap gap-2 text-xs font-bold text-theme-muted">
               <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><MapPin size={14} />{post.area || '活動エリア未設定'}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><CalendarDays size={14} />作成 {formatDate(post.created_at)}</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UsersRound size={14} />参加希望 {post.interest_count}</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UsersRound size={14} />承認済み {post.accepted_count}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UsersRound size={14} />{t('board.interests')} {post.interest_count}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-theme-accent-soft/60 px-2.5 py-1"><UsersRound size={14} />{t('board.accepted')} {post.accepted_count}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">{post.tags.map((item) => <Badge key={item}>#{item}</Badge>)}</div>
             {acceptedInterestsByPostId[post.id]?.length ? (
               <div className="rounded-2xl border border-cyan-100 bg-cyan-50/45 p-3">
-                <p className="text-xs font-black text-cyan-700">承認済み。会話を始められます</p>
+                <p className="text-xs font-black text-cyan-700">{t('board.accepted')}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {acceptedInterestsByPostId[post.id].map((interest) => (
-                    <Button className="!min-h-9 !rounded-full border-theme-sky/25 bg-gradient-to-r from-theme-yellow/65 to-theme-sky/35 !px-3 !py-1.5 !text-xs text-theme-main-dark shadow-sm shadow-theme-sky/10" disabled={openingInterestId === interest.id} key={interest.id} onClick={() => void handleOpenConversation(post.id, interest)} variant="secondary"><MessageSquareText size={15} />{openingInterestId === interest.id ? '会話を準備中…' : `${interest.profile?.name ?? '参加者'}さんと会話`}</Button>
+                    <Button className="!min-h-9 !rounded-full border-theme-sky/25 bg-gradient-to-r from-theme-yellow/65 to-theme-sky/35 !px-3 !py-1.5 !text-xs text-theme-main-dark shadow-sm shadow-theme-sky/10" disabled={openingInterestId === interest.id} key={interest.id} onClick={() => void handleOpenConversation(post.id, interest)} variant="secondary"><MessageSquareText size={15} />{openingInterestId === interest.id ? '会話を準備中…' : language === 'en' ? t('myBoard.message') : `${interest.profile?.name ?? '参加者'}${t('myBoard.message')}`}</Button>
                   ))}
                 </div>
               </div>
             ) : null}
             <div className="space-y-2 border-t border-white/60 pt-3">
               <div className="grid gap-2 sm:grid-cols-2">
-                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-3 py-2 text-[13px] font-black text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />管理する</Link>
-                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-3 py-2 text-[13px] font-black text-theme-text" to={`/board/${post.id}/edit`}><Pencil size={16} />編集する</Link>
+                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-3 py-2 text-[13px] font-black text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />{t('myBoard.manage')}</Link>
+                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-3 py-2 text-[13px] font-black text-theme-text" to={`/board/${post.id}/edit`}><Pencil size={16} />{t('myBoard.edit')}</Link>
               </div>
               <div className="grid gap-2 text-xs sm:grid-cols-3">
-                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={15} />締切</Button>
-                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'open'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={15} />再開</Button>
-                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'archived'} onClick={() => void handleArchive(post)} variant="danger"><Archive size={15} />アーカイブ</Button>
+                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={15} />{t('myBoard.close')}</Button>
+                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'open'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={15} />{t('myBoard.reopen')}</Button>
+                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'archived'} onClick={() => void handleArchive(post)} variant="danger"><Archive size={15} />{t('myBoard.archive')}</Button>
               </div>
             </div>
           </Card>

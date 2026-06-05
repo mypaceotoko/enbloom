@@ -10,10 +10,10 @@ import { ProfileAvatar } from '../components/ProfileAvatar';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { getActivityPostById } from '../lib/activityBoardApi';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { blockUser as blockSupabaseUser, hasSafetyBlockBetween } from '../lib/blockApi';
-import { formatConversationFailureMessage } from '../lib/matchApi';
 import { getMessageMatchById, getMessagesByMatchId, sendMessage as sendSupabaseMessage } from '../lib/messageApi';
 import { notifyDirectMessageReceived } from '../lib/notificationApi';
 import { reportUser as reportSupabaseUser } from '../lib/reportApi';
@@ -34,6 +34,7 @@ export function MessagesPage() {
   const demoUser = mockUsers.find((mockUser) => mockUser.id === matchId);
   const { blockUser, ensureMatchMessages, isMatched, messagesByMatchId, reportUser, sendMessage: sendDemoMessage } = useAppState();
   const { isAuthenticated, isSupabaseMode, user: authUser } = useAuth();
+  const { t } = useLanguage();
   const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState('');
   const [fetchError, setFetchError] = useState('');
@@ -92,12 +93,11 @@ export function MessagesPage() {
         setSupabaseMessages(nextMessages);
       } catch (caughtError) {
         if (!mounted) return;
-        const message = caughtError instanceof Error ? caughtError.message : 'unknown';
         console.error('[ConnectBloom] messages fetch failed', getSafeErrorLog(caughtError, 'messages_load_failed'));
         setMessageMatch(null);
         setBlockedConversation(false);
         setSupabaseMessages([]);
-        setFetchError(formatConversationFailureMessage('messages_load_failed', message));
+        setFetchError(getShortErrorMessage(caughtError, t('messages.loadFailed')));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -108,7 +108,7 @@ export function MessagesPage() {
     return () => {
       mounted = false;
     };
-  }, [matchId, useSupabaseMessages]);
+  }, [matchId, t, useSupabaseMessages]);
 
   const activeMatchId = matchId ?? '';
   const demoMessages = messagesByMatchId[activeMatchId] ?? [];
@@ -140,11 +140,7 @@ export function MessagesPage() {
     };
   }, [activityPostId, useSupabaseMessages]);
 
-  const emptyText = useMemo(() => (
-    useSupabaseMessages
-      ? 'まだ会話はありません。まずはゆっくり、安心できるひと言から始めましょう。'
-      : 'まだ会話はありません。デモの会話を送ってみましょう。'
-  ), [useSupabaseMessages]);
+  const emptyText = useMemo(() => t('messages.empty'), [t]);
 
   if (!useSupabaseMessages) {
     if (!demoUser || !matchId) {
@@ -182,7 +178,7 @@ export function MessagesPage() {
     try {
       const result = await sendSupabaseMessage(activeMatchId, trimmedDraft);
       if (!result.success || !result.message) {
-        setSendError(result.errorMessage ?? '会話の送信に失敗しました。');
+        setSendError(result.errorMessage ?? t('messages.sendFailed'));
         return;
       }
 
@@ -194,7 +190,7 @@ export function MessagesPage() {
       }
       setDraft('');
     } catch (caughtError) {
-      setSendError(getShortErrorMessage(caughtError, '会話の送信に失敗しました。時間を置いてもう一度お試しください。'));
+      setSendError(getShortErrorMessage(caughtError, t('messages.sendFailed')));
     } finally {
       setSending(false);
     }
@@ -261,7 +257,7 @@ export function MessagesPage() {
   }
 
   return (
-    <PageShell description={headerDescription} eyebrow="Message" title={titleName ? `${titleName}さんとの会話` : 'ゆっくり会話'}>
+    <PageShell description={headerDescription} eyebrow={t('messages.messages')} title={titleName ? `${titleName} / ${t('messages.title')}` : t('messages.title')}>
       <Card className="space-y-2.5 bg-theme-accent-soft/45 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
@@ -274,8 +270,8 @@ export function MessagesPage() {
 
       {activityPostId ? (
         <Card className="space-y-1 bg-cyan-50/70 shadow-sm">
-          <p className="text-sm font-black text-cyan-800">募集ボードからつながった会話です。</p>
-          <p className="text-xs font-bold leading-5 text-cyan-700">{activityContextTitle ? `この会話は「${activityContextTitle}」への参加から始まりました。` : 'まずは日程や進め方を相談してみましょう。'}</p>
+          <p className="text-sm font-black text-cyan-800">{t('messages.fromBoard')}</p>
+          <p className="text-xs font-bold leading-5 text-cyan-700">{activityContextTitle ? t('messages.fromPost').replace('{title}', activityContextTitle) : 'まずは日程や進め方を相談してみましょう。'}</p>
         </Card>
       ) : null}
 
@@ -318,18 +314,18 @@ export function MessagesPage() {
           {blockedConversation ? <p className="rounded-xl bg-theme-accent-soft/60 px-3 py-2 text-xs font-bold text-theme-text">ブロック中または相手からブロックされているため、この会話では送信できません。</p> : null}
           {sendError ? <p className="rounded-xl bg-theme-accent-soft/60 px-3 py-2 text-xs font-bold text-theme-text">{sendError}</p> : null}
           <div className="flex items-end gap-2 border-t border-theme-main/10 pt-3">
-            <Input className="min-h-10" disabled={sending || loading || blockedConversation} name="message" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleSendMessage(); }} placeholder="焦らず、丁寧にひと言を書く" value={draft} />
+            <Input className="min-h-10" disabled={sending || loading || blockedConversation} name="message" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void handleSendMessage(); }} placeholder={t('messages.placeholder')} value={draft} />
             <Button className="min-h-10 px-4" disabled={sending || loading || blockedConversation || !draft.trim()} onClick={() => { void handleSendMessage(); }}>
               {sending ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
-              <span className="sr-only">送信</span>
+              <span className="sr-only">{t('messages.send')}</span>
             </Button>
           </div>
         </Card>
       ) : null}
 
       <Card className="grid grid-cols-2 gap-2 bg-theme-background/65 p-3.5 shadow-none">
-        <Button disabled={savingSafety || !safetyTargetUserId} onClick={() => { void handleBlock(); }} variant="ghost"><Ban size={15} />ブロック</Button>
-        <Button disabled={savingSafety || !safetyTargetUserId} onClick={() => { void handleReport(); }} variant="danger"><Flag size={15} />通報</Button>
+        <Button disabled={savingSafety || !safetyTargetUserId} onClick={() => { void handleBlock(); }} variant="ghost"><Ban size={15} />{t('messages.block')}</Button>
+        <Button disabled={savingSafety || !safetyTargetUserId} onClick={() => { void handleReport(); }} variant="danger"><Flag size={15} />{t('messages.report')}</Button>
       </Card>
     </PageShell>
   );

@@ -6,13 +6,15 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
+import type { TranslationKey } from '../lib/i18n';
 import { getMyNotifications, getNotificationErrorMessage, markAllNotificationsRead, markNotificationRead } from '../lib/notificationApi';
 import type { AppNotification, NotificationType } from '../types/notification';
 
-function getTypeLabel(type: NotificationType) {
-  if (type === 'activity_interest_received') return '参加希望';
-  if (type === 'activity_interest_accepted') return '承認';
-  return 'メッセージ';
+function getTypeLabel(type: NotificationType, t: (key: TranslationKey) => string) {
+  if (type === 'activity_interest_received') return t('notifications.type.interest');
+  if (type === 'activity_interest_accepted') return t('notifications.type.accepted');
+  return t('notifications.type.message');
 }
 
 function getTypeIcon(type: NotificationType) {
@@ -31,6 +33,7 @@ function formatNotificationDate(value: string) {
 export function NotificationsPage() {
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode } = useAuth();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -130,17 +133,17 @@ export function NotificationsPage() {
   }
 
   return (
-    <PageShell description="あなたへの反応や、進行中のつながりを確認できます。" eyebrow="Notifications" title="通知">
+    <PageShell description={t('notifications.description')} eyebrow="Notifications" title={t('notifications.pageTitle')}>
       <Card className="flower-gradient border-0 p-1 shadow-sm">
         <div className="rounded-[1.15rem] bg-theme-card/84 p-3.5 backdrop-blur">
           <div>
             <div className="min-w-0">
-              <Badge className="bg-theme-main text-white"><Bell size={13} />通知センター</Badge>
-              <h2 className="mt-2.5 text-lg font-black tracking-[-0.04em] text-theme-text sm:text-xl">つながりの反応を、やさしくキャッチ。</h2>
+              <Badge className="bg-theme-main text-white"><Bell size={13} />{t('notifications.title')}</Badge>
+              <h2 className="mt-2.5 text-lg font-black tracking-[-0.04em] text-theme-text sm:text-xl">{t('notifications.catch')}</h2>
               <p className="mt-2 text-[13px] leading-5 text-theme-muted">
-                参加希望・承認・DMの通知を確認できます。
+                {t('notifications.check')}
                 <br />
-                大切な反応を見逃さないための場所です。
+                {t('notifications.keepTrack')}
               </p>
             </div>
           </div>
@@ -151,7 +154,7 @@ export function NotificationsPage() {
         <Card className="space-y-3 border-theme-main/10 bg-theme-card/84 text-center shadow-sm">
           <Inbox className="mx-auto text-theme-main" size={28} />
           <div>
-            <p className="text-sm font-black text-theme-text">ログインすると通知を確認できます</p>
+            <p className="text-sm font-black text-theme-text">{t('notifications.login')}</p>
             <p className="mt-1 text-xs leading-5 text-theme-muted">ログインしていない場合は、通知一覧を空状態で表示します。</p>
           </div>
           <Button className="mx-auto" onClick={() => navigate('/login')} variant="secondary">ログインへ</Button>
@@ -162,10 +165,10 @@ export function NotificationsPage() {
 
 
       <div className="flex items-center justify-between rounded-full bg-theme-card/76 px-3.5 py-2.5 shadow-sm backdrop-blur">
-        <span className="flex items-center gap-1.5 text-[13px] font-black text-theme-main-dark"><MailCheck size={16} />未読 {unreadCount}件</span>
+        <span className="flex items-center gap-1.5 text-[13px] font-black text-theme-main-dark"><MailCheck size={16} />{unreadCount === 0 ? t('notifications.unreadCount') : `${t('notifications.unread')} ${unreadCount}件`}</span>
         <Button className="min-h-8 px-3 text-xs" disabled={!canUseSupabaseNotifications || unreadCount === 0 || updatingAll} onClick={() => void handleMarkAllRead()} variant="secondary">
           {updatingAll ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
-          すべて既読にする
+          {t('notifications.markAllRead')}
         </Button>
       </div>
 
@@ -180,7 +183,7 @@ export function NotificationsPage() {
           <Sparkles className="mx-auto text-theme-main" size={30} />
           <div>
             <p className="text-sm font-black leading-5 text-theme-text">
-              まだ通知はありません。
+              {t('notifications.empty')}
               <br />
               参加希望やメッセージが届くと、ここに表示されます。
             </p>
@@ -202,13 +205,13 @@ export function NotificationsPage() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-1.5">
-                    <Badge className={notification.isRead ? 'bg-theme-background/80 text-theme-muted' : 'bg-theme-main text-white'}>{getTypeLabel(notification.type)}</Badge>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${notification.isRead ? 'bg-slate-100 text-slate-500' : 'bg-yellow-100 text-yellow-700'}`}>{notification.isRead ? '既読' : '未読'}</span>
+                    <Badge className={notification.isRead ? 'bg-theme-background/80 text-theme-muted' : 'bg-theme-main text-white'}>{getTypeLabel(notification.type, t)}</Badge>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${notification.isRead ? 'bg-slate-100 text-slate-500' : 'bg-yellow-100 text-yellow-700'}`}>{notification.isRead ? t('notifications.read') : t('notifications.unread')}</span>
                     <span className="text-[11px] font-bold text-theme-muted">{formatNotificationDate(notification.createdAt)}</span>
                   </span>
                   <span className="mt-1.5 block text-sm font-black leading-5 text-theme-text">{notification.title}</span>
                   <span className="mt-0.5 block whitespace-pre-wrap break-words text-[13px] leading-5 text-theme-muted">{notification.body}</span>
-                  {notification.linkPath ? <span className="mt-1.5 flex items-center gap-1 text-xs font-black text-theme-main-dark">関連ページへ移動 <ChevronRight size={14} /></span> : null}
+                  {notification.linkPath ? <span className="mt-1.5 flex items-center gap-1 text-xs font-black text-theme-main-dark">{t('notifications.openRelated')} <ChevronRight size={14} /></span> : null}
                 </span>
               </div>
             </button>
@@ -216,7 +219,7 @@ export function NotificationsPage() {
               <div className="flex justify-end">
                 <Button className="min-h-8 px-3 text-xs" disabled={updatingId === notification.id} onClick={() => void handleMarkRead(notification.id)} variant="secondary">
                   {updatingId === notification.id ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
-                  既読にする
+                  {t('notifications.markRead')}
                 </Button>
               </div>
             ) : null}
