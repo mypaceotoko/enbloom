@@ -11,6 +11,7 @@ import type { TranslationKey } from '../lib/i18n';
 import { getShortErrorMessage } from '../lib/errorMessage';
 import { getActivityPosts } from '../lib/activityBoardApi';
 import type { ActivityPostWithAuthor } from '../types/activityBoard';
+import { isDemoModeEnabled } from '../lib/demoSession';
 
 function formatDate(value: string | null) {
   if (!value) return '未定';
@@ -43,7 +44,7 @@ export function ActivityBoardPage() {
   const [tag, setTag] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
-  const useSupabaseBoard = isSupabaseMode && isAuthenticated;
+  const useSupabaseBoard = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
   const allTags = useMemo(() => [...new Set(posts.flatMap((post) => post.tags))].slice(0, 12), [posts]);
 
   useEffect(() => {

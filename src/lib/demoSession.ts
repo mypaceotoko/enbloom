@@ -14,3 +14,10 @@ export function clearDemoMode() {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(DEMO_MODE_STORAGE_KEY);
 }
+
+
+export function assertNotDemoMode(actionLabel = 'この操作') {
+  if (isDemoModeEnabled()) {
+    throw new Error(`${actionLabel}はデモ閲覧中は利用できません。`);
+  }
+}

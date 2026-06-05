@@ -15,6 +15,7 @@ import { getMyMatches } from '../lib/matchApi';
 import type { LikeWithProfile } from '../types/like';
 import type { MatchWithProfile } from '../types/match';
 import type { UserProfile } from '../types/user';
+import { isDemoModeEnabled } from '../lib/demoSession';
 
 export function LikesPage() {
   const { blockedUserIds, likedUserIds, matchedUserIds: demoMatchedUserIds, receivedLikeUserIds } = useAppState();
@@ -25,7 +26,7 @@ export function LikesPage() {
   const [hiddenUserIds, setHiddenUserIds] = useState<string[]>([]);
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
-  const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
+  const useSupabaseLikes = isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && Boolean(user);
   const demoSent = mockUsers.filter((profile) => likedUserIds.includes(profile.id) && !blockedUserIds.includes(profile.id));
   const demoReceived = mockUsers.filter((profile) => receivedLikeUserIds.includes(profile.id) && !blockedUserIds.includes(profile.id));
   const visibleSentLikes = useMemo(() => sentLikes.filter((like) => like.profile && !hiddenUserIds.includes(like.profile.id)), [hiddenUserIds, sentLikes]);

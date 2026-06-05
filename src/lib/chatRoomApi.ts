@@ -3,6 +3,7 @@ import { isSchemaRelationshipError } from './dbError';
 import { getSafeErrorLog } from './errorMessage';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { requireSupabaseClient } from './supabase';
+import { assertNotDemoMode } from './demoSession';
 
 type ChatRoomMessageRow = ChatRoomMessage & {
   profile?: ProfileRow | ProfileRow[] | null;
@@ -181,6 +182,7 @@ export async function getChatRoomMessages(roomId: string): Promise<ChatRoomMessa
 }
 
 export async function sendChatRoomMessage(roomId: string, body: string): Promise<ChatRoomMessageWithProfile> {
+  assertNotDemoMode('ルーム投稿');
   const senderId = await getCurrentUserId();
   const trimmedBody = body.trim();
   if (!trimmedBody) throw new Error('メッセージを入力してください。');
@@ -191,7 +193,8 @@ export async function sendChatRoomMessage(roomId: string, body: string): Promise
   console.info('[ConnectBloom] chat room message room resolved', { inputLooksUuid: looksLikeUuid(roomId), resolved: Boolean(resolvedRoomId) });
   if (!resolvedRoomId) throw new Error('ルームを確認できませんでした。');
 
-  const { data, error } = await requireSupabaseClient()
+  const client = requireSupabaseClient();
+  const { data, error } = await client
     .from('chat_room_messages')
     .insert({ room_id: resolvedRoomId, sender_id: senderId, body: trimmedBody })
     .select(chatRoomMessageColumns)
@@ -201,19 +204,56 @@ export async function sendChatRoomMessage(roomId: string, body: string): Promise
     console.warn('[ConnectBloom] chat room message send failed', getSafeErrorLog(error, 'chat_room_message_send'));
     throw error;
   }
-  console.info('[ConnectBloom] chat room message sent', { success: true });
+
+  const profileResult = await client
+    .from('chat_room_messages')
+    .select(chatRoomMessageWithProfileColumns)
+    .eq('id', data.id)
+    .maybeSingle<ChatRoomMessageRow>();
+
+  if (!profileResult.error && profileResult.data) {
+    console.info('[ConnectBloom] chat room message sent', { success: true, profileAttached: Boolean(firstProfile(profileResult.data.profile)) });
+    return mapMessage(profileResult.data);
+  }
+
+  console.warn('[ConnectBloom] chat room message send profile readback failed', getSafeErrorLog(profileResult.error, 'chat_room_message_send_profile_readback'));
+  if (profileResult.error && isSchemaRelationshipError(profileResult.error)) {
+    const fallbackResult = await client
+      .from('chat_room_messages')
+      .select(chatRoomMessageWithProfileFallbackColumns)
+      .eq('id', data.id)
+      .maybeSingle<ChatRoomMessageRow>();
+
+    if (!fallbackResult.error && fallbackResult.data) {
+      console.warn('[ConnectBloom] chat room message send profile fallback used', getSafeErrorLog(profileResult.error, 'chat_room_message_send_profile_fallback'));
+      return mapMessage(fallbackResult.data);
+    }
+    console.warn('[ConnectBloom] chat room message send profile fallback failed', getSafeErrorLog(fallbackResult.error, 'chat_room_message_send_profile_fallback_failed'));
+  }
+
+  console.info('[ConnectBloom] chat room message sent', { success: true, profileAttached: false });
   return mapMessage(data);
+
 }
 
 export async function deleteChatRoomMessage(messageId: string): Promise<void> {
-  const { error } = await requireSupabaseClient()
+  assertNotDemoMode('ルームメッセージ削除');
+  if (!looksLikeUuid(messageId)) throw new Error('削除対象のメッセージを確認できませんでした。');
+  const { data, error } = await requireSupabaseClient()
     .from('chat_room_messages')
     .delete()
-    .eq('id', messageId);
+    .eq('id', messageId)
+    .select('id')
+    .maybeSingle<{ id: string }>();
 
   if (error) {
     console.warn('[ConnectBloom] chat room message delete failed', getSafeErrorLog(error, 'chat_room_message_delete'));
     throw error;
+  }
+  if (!data) {
+    const notDeletedError = new Error('メッセージを削除できませんでした。権限または削除対象を確認してください。');
+    console.warn('[ConnectBloom] chat room message delete affected no rows', getSafeErrorLog(notDeletedError, 'chat_room_message_delete_no_rows'));
+    throw notDeletedError;
   }
   console.info('[ConnectBloom] chat room message deleted', { success: true });
 }

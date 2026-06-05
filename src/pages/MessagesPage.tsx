@@ -12,6 +12,7 @@ import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { getActivityPostById } from '../lib/activityBoardApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { blockUser as blockSupabaseUser, hasSafetyBlockBetween } from '../lib/blockApi';
 import { getMessageMatchById, getMessagesByMatchId, sendMessage as sendSupabaseMessage } from '../lib/messageApi';
@@ -46,7 +47,7 @@ export function MessagesPage() {
   const [supabaseMessages, setSupabaseMessages] = useState<Message[]>([]);
   const [messageMatch, setMessageMatch] = useState<MessageMatch | null>(null);
   const [activityContextTitle, setActivityContextTitle] = useState('');
-  const useSupabaseMessages = isSupabaseMode && isAuthenticated && Boolean(authUser);
+  const useSupabaseMessages = isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && Boolean(authUser);
   const activityPostId = searchParams.get('postId') ?? '';
 
   useEffect(() => {

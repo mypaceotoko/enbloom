@@ -4,6 +4,7 @@ import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { isMissingColumnError } from './dbError';
 import { getSafeErrorLog } from './errorMessage';
 import { isSupabaseConfigured, requireSupabaseClient, supabase } from './supabase';
+import { assertNotDemoMode } from './demoSession';
 
 const localAppStateKey = 'connectbloom.appState.v1';
 const legacyStoragePrefix = 'en' + 'bloom';
@@ -204,6 +205,7 @@ export async function hasSafetyBlockBetween(targetUserId: string): Promise<boole
 }
 
 export async function blockUser(targetUserId: string): Promise<BlockInsertResult> {
+  assertNotDemoMode('ブロック');
   console.info('[ConnectBloom] block user started', { targetUserIdExists: Boolean(targetUserId) });
   const blockerId = await getCurrentUserId();
 
@@ -232,6 +234,7 @@ export async function blockUser(targetUserId: string): Promise<BlockInsertResult
 }
 
 export async function unblockUser(targetUserId: string): Promise<boolean> {
+  assertNotDemoMode('ブロック解除');
   console.info('[ConnectBloom] unblock user started', { targetUserIdExists: Boolean(targetUserId) });
   const blockerId = await getCurrentUserId();
   if (blockerId === targetUserId) {

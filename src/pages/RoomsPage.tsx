@@ -9,6 +9,7 @@ import { demoChatRooms, roomTags } from '../data/mockChatRooms';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { getChatRooms } from '../lib/chatRoomApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog } from '../lib/errorMessage';
 import { getRoomVisual } from '../lib/roomVisual';
 import type { ChatRoomWithStats } from '../types/chatRoom';
@@ -43,7 +44,7 @@ export function RoomsPage() {
   const [rooms, setRooms] = useState<ChatRoomWithStats[]>(demoChatRooms);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
-  const canUseSupabaseRooms = isSupabaseMode && isAuthenticated;
+  const canUseSupabaseRooms = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
 
   useEffect(() => {
     let mounted = true;

@@ -5,6 +5,7 @@ import { createMatchIfMutualLike } from './matchApi';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoApi';
 import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { requireSupabaseClient } from './supabase';
+import { assertNotDemoMode } from './demoSession';
 
 type LikeRow = {
   id: string;
@@ -139,6 +140,7 @@ export async function hasLiked(senderId: string, receiverId: string): Promise<bo
 }
 
 export async function createLike(receiverId: string): Promise<Like & { matched: boolean; matchId?: string; matchCheckError?: string }> {
+  assertNotDemoMode('話してみたい');
   const senderId = await getCurrentUserId();
   console.info('[ConnectBloom] like create started', { receiverIdExists: Boolean(receiverId) });
 
@@ -189,6 +191,7 @@ export async function createLike(receiverId: string): Promise<Like & { matched: 
 }
 
 export async function deleteLike(receiverId: string): Promise<boolean> {
+  assertNotDemoMode('話してみたい解除');
   const senderId = await getCurrentUserId();
   const { error } = await requireSupabaseClient()
     .from('likes')
@@ -203,6 +206,7 @@ export async function deleteLike(receiverId: string): Promise<boolean> {
 }
 
 export async function toggleLike(receiverId: string): Promise<{ liked: boolean; matched: boolean; matchId?: string; matchCheckError?: string; like: Like | null }> {
+  assertNotDemoMode('話してみたい');
   const senderId = await getCurrentUserId();
   if (senderId === receiverId) {
     throw new Error('自分自身には「話してみたい」を送れません。');

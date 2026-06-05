@@ -10,6 +10,7 @@ import { useAdmin } from '../hooks/useAdmin';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { deleteChatRoomMessage, getChatRoomByIdentifier, getChatRoomMessages, sendChatRoomMessage } from '../lib/chatRoomApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { getRoomVisual } from '../lib/roomVisual';
 import type { ChatRoom, ChatRoomMessageWithProfile } from '../types/chatRoom';
@@ -69,7 +70,8 @@ export function RoomDetailPage() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState('');
-  const canUseSupabaseRooms = isSupabaseMode && isAuthenticated;
+  const isDemoMode = isDemoModeEnabled();
+  const canUseSupabaseRooms = isSupabaseMode && isAuthenticated && !isDemoMode;
 
   useEffect(() => {
     let mounted = true;
@@ -133,7 +135,23 @@ export function RoomDetailPage() {
     setNotice('');
     try {
       const sentMessage = await sendChatRoomMessage(room.id, trimmedBody);
-      setMessages((currentMessages) => [...currentMessages, sentMessage]);
+      const fallbackName = getCurrentUserDisplayName();
+      setMessages((currentMessages) => [...currentMessages, sentMessage.profile || !fallbackName ? sentMessage : {
+        ...sentMessage,
+        profile: {
+          id: sentMessage.sender_id,
+          name: fallbackName,
+          age: 18,
+          location: '',
+          occupation: '',
+          bio: '',
+          interests: [],
+          datingTemperature: '',
+          relationshipGoal: '',
+          introducedBy: '',
+          gradient: 'from-sky-100 via-cyan-50 to-blue-100',
+        },
+      }]);
       setMessageBody('');
     } catch (caughtError) {
       console.warn('[ConnectBloom] room message send failed', getSafeErrorLog(caughtError, 'room_message_send_failed'));
@@ -160,7 +178,19 @@ export function RoomDetailPage() {
   }
 
   function handleCreateBoardPost() {
+    if (!canUseSupabaseRooms) {
+      setNotice('デモ閲覧中は募集作成できません。');
+      return;
+    }
     navigate(`/board/new?roomId=${encodeURIComponent(roomId)}`);
+  }
+
+  function getCurrentUserDisplayName() {
+    const metadata = user?.user_metadata as { full_name?: unknown; name?: unknown } | undefined;
+    const fullName = typeof metadata?.full_name === 'string' ? metadata.full_name.trim() : '';
+    const name = typeof metadata?.name === 'string' ? metadata.name.trim() : '';
+    const emailName = user?.email?.split('@')[0]?.trim() ?? '';
+    return fullName || name || emailName;
   }
 
   function formatDateTime(value: string) {
@@ -274,7 +304,7 @@ export function RoomDetailPage() {
           </label>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             {!canUseSupabaseRooms ? <p className="text-xs font-bold leading-5 text-theme-muted">{t('roomDetail.login')}</p> : null}
-            <Button className="min-h-10 w-full px-3 py-2 text-xs sm:w-auto" disabled={sending} type="submit"><Send size={15} />{t('roomDetail.send')}</Button>
+            <Button className="min-h-10 w-full px-3 py-2 text-xs sm:w-auto" disabled={sending || !canUseSupabaseRooms} type="submit"><Send size={15} />{t('roomDetail.send')}</Button>
           </div>
         </form>
       </Card>

@@ -23,6 +23,7 @@ import {
   reopenActivityPost,
 } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { notifyActivityInterestAccepted, notifyActivityInterestReceived } from '../lib/notificationApi';
 import { getChatRoomById } from '../lib/chatRoomApi';
@@ -91,7 +92,7 @@ export function ActivityBoardDetailPage() {
   const [saving, setSaving] = useState(false);
   const [updatingInterestId, setUpdatingInterestId] = useState<string | null>(null);
   const [openingConversationId, setOpeningConversationId] = useState<string | null>(null);
-  const useSupabaseBoard = isSupabaseMode && isAuthenticated;
+  const useSupabaseBoard = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
   const isOwnPost = Boolean(user?.id && post?.created_by === user.id);
   const canUseFounderPostModeration = Boolean(isFounder && useSupabaseBoard && post);
 

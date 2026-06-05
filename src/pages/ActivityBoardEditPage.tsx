@@ -8,6 +8,7 @@ import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { activityPostCategories } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { canEditActivityPost, getActivityPostById, updateActivityPost } from '../lib/activityBoardApi';
 import type { ActivityPostEditFormState, ActivityPostMode, ActivityPostStatus } from '../types/activityBoard';
@@ -46,7 +47,7 @@ export function ActivityBoardEditPage() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [canEdit, setCanEdit] = useState(false);
-  const useSupabaseBoard = isSupabaseMode && isAuthenticated;
+  const useSupabaseBoard = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
 
   useEffect(() => {
     let mounted = true;

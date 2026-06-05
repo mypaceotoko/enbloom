@@ -13,6 +13,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import type { TranslationKey } from '../lib/i18n';
 import { LANGUAGE_LABELS, type AppLanguage } from '../lib/language';
 import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ export function SettingsPage() {
     setNotice('');
 
     try {
-      if (isSupabaseMode && isAuthenticated) {
+      if (isSupabaseMode && isAuthenticated && !isDemoModeEnabled()) {
         await signOut();
       } else {
         resetDemoState();

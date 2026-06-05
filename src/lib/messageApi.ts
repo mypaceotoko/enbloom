@@ -4,6 +4,7 @@ import { profileRowToUserProfile, type ProfileRow } from './profileApi';
 import { isMissingColumnError } from './dbError';
 import { getSafeErrorLog } from './errorMessage';
 import { requireSupabaseClient } from './supabase';
+import { assertNotDemoMode } from './demoSession';
 
 type MessageRow = {
   id: string;
@@ -129,6 +130,7 @@ export async function getMessagesByMatchId(matchId: string): Promise<Message[]> 
 }
 
 export async function sendMessage(matchId: string, body: string): Promise<SendMessageResult> {
+  assertNotDemoMode('DM送信');
   const trimmedBody = body.trim();
   console.info('[ConnectBloom] send message started', { matchIdExists: Boolean(matchId), bodyExists: Boolean(trimmedBody) });
 

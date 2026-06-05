@@ -14,6 +14,7 @@ import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
 import { safeGetUnreadNotificationCount } from '../lib/notificationApi';
+import { isDemoModeEnabled } from '../lib/demoSession';
 import { getSafeErrorLog } from '../lib/errorMessage';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from '../lib/profilePhotoApi';
 import { getPublicProfiles, profileRowToUserProfile } from '../lib/profileApi';
@@ -34,7 +35,7 @@ export function HomePage() {
   const homeState = location.state as { profileSaved?: boolean; message?: string } | null;
   const profileSaved = Boolean(homeState?.profileSaved);
   const profileSavedMessage = homeState?.message ?? 'プロフィールを保存しました。今日のつながりを見てみましょう。';
-  const useSupabaseLikes = isSupabaseMode && isAuthenticated && Boolean(user);
+  const useSupabaseLikes = isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && Boolean(user);
   const sourceUsers = useSupabaseLikes ? supabaseUsers : mockUsers;
   const safetyHiddenIds = useSupabaseLikes ? hiddenUserIds : blockedUserIds;
   const todaysUsers = sourceUsers.filter((profile) => !safetyHiddenIds.includes(profile.id)).slice(0, 3);
