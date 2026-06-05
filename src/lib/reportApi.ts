@@ -260,8 +260,8 @@ export async function updateReportReview(reportId: string, review: UpdateReportR
   const { data, error } = await requireSupabaseClient()
     .rpc('update_report_review', {
       p_report_id: reportId,
-      new_status: review.status ?? null,
-      new_admin_note: updatesAdminNote ? review.adminNote ?? '' : null,
+      p_status: review.status ?? null,
+      p_admin_note: updatesAdminNote ? review.adminNote ?? '' : null,
     })
     .single<UpdateReportReviewResult>();
 
@@ -322,15 +322,54 @@ export async function updateReportStatus(reportId: string, status: ReportStatus)
     console.info('[ConnectBloom] report status update success', true);
     return result;
   } catch (directUpdateError) {
-    if (!isMissingColumnError(directUpdateError) && !isMissingFunctionError(directUpdateError) && !isPermissionDeniedError(directUpdateError)) {
-      console.info('[ConnectBloom] report status update success', false);
-      throw directUpdateError;
-    }
+    const shouldNoteExpectedFallback = isMissingColumnError(directUpdateError)
+      || isMissingFunctionError(directUpdateError)
+      || isPermissionDeniedError(directUpdateError);
+    const directErrorLog = getSafeErrorLog(directUpdateError, 'report_status_direct_update_failed');
+    console.warn(
+      shouldNoteExpectedFallback
+        ? '[reportApi] report status direct update fallback used'
+        : '[reportApi] report status direct update failed; trying RPC fallback',
+      directErrorLog,
+    );
 
-    console.warn('[reportApi] report status direct update fallback used', getSafeErrorLog(directUpdateError, 'report_status_direct_update_fallback'));
-    const result = await updateReportReview(reportId, { status });
-    console.info('[ConnectBloom] report status update success', true);
-    return result;
+    try {
+      const { data, error: rpcError } = await requireSupabaseClient()
+        .rpc('update_report_review', {
+          p_report_id: reportId,
+          p_status: status,
+          p_admin_note: null,
+        })
+        .single<UpdateReportReviewResult>();
+
+      const success = !rpcError && Boolean(data?.success);
+      if (rpcError) {
+        console.error('[reportApi] report status RPC fallback failed', {
+          directError: directErrorLog,
+          rpcError: getSafeErrorLog(rpcError, 'report_status_rpc_fallback_failed'),
+        });
+        throw rpcError;
+      }
+      if (!data?.success) {
+        const rpcResultError = new Error('通報レビューの更新に失敗しました。');
+        console.error('[reportApi] report status RPC fallback returned unsuccessful result', {
+          directError: directErrorLog,
+          rpcError: getSafeErrorLog(rpcResultError, 'report_status_rpc_fallback_unsuccessful'),
+          rpcSuccess: success,
+        });
+        throw rpcResultError;
+      }
+
+      console.info('[ConnectBloom] report status update success', true);
+      return data;
+    } catch (rpcFallbackError) {
+      console.error('[reportApi] failed to update report status after RPC fallback', {
+        directError: directErrorLog,
+        rpcError: getSafeErrorLog(rpcFallbackError, 'report_status_rpc_fallback_failed'),
+      });
+      console.info('[ConnectBloom] report status update success', false);
+      throw rpcFallbackError;
+    }
   }
 }
 
