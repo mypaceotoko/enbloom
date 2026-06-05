@@ -11,13 +11,14 @@ import { ThemeSwitcher } from '../components/ThemeSwitcher';
 import { useTheme } from '../context/ThemeProvider';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
+import { getSafeErrorLog } from '../lib/errorMessage';
 import { isFounderInviteCode, isInviteCodeSelfUseError, validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
 import { clearPendingInviteCode, getPendingInviteCode } from '../lib/inviteSession';
 import { upsertMyProfile } from '../lib/profileApi';
 import { DEFAULT_DATING_TEMPERATURE, type CurrentUserProfile } from '../types/user';
 
 const tags = ['AI', 'ブログ', '音声配信', 'ラジオ', 'YouTube', 'ダンス', '歌', '音楽', 'ライブ', '映画', '怪談', '漫画', 'アニメ', 'ゲーム', 'ゲーム制作', 'イベント同行', '地域交流', '海外', '旅行', 'カフェ', '読書', '作業仲間', '企画仲間', '相談相手', 'コラボ', '創作', '写真', '動画制作'];
-const steps = ['基本情報', 'スタンス', '活動タグ', '招待コード'];
 
 type OnboardingForm = {
   name: string;
@@ -58,6 +59,7 @@ export function OnboardingPage() {
   const navigate = useNavigate();
   const { currentUser, completeOnboarding } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
+  const { t } = useLanguage();
   const { themeId } = useTheme();
   const [form, setForm] = useState<OnboardingForm>({
     name: currentUser.name,
@@ -129,31 +131,31 @@ export function OnboardingPage() {
     const ageInputExists = form.age.trim().length > 0;
 
     if (!normalizedForm.displayName) {
-      nextValidationErrors.displayName = '表示名を入力してください';
+      nextValidationErrors.displayName = t('onboarding.validation.displayName');
     }
 
     if (!ageInputExists) {
-      nextValidationErrors.age = '年齢を入力してください';
+      nextValidationErrors.age = t('onboarding.validation.ageRequired');
     } else if (!Number.isFinite(normalizedForm.age)) {
-      nextValidationErrors.age = '年齢を半角数字で入力してください';
+      nextValidationErrors.age = t('onboarding.validation.ageNumber');
     } else if (normalizedForm.age < 18) {
-      nextValidationErrors.age = '年齢を18歳以上で入力してください';
+      nextValidationErrors.age = t('onboarding.validation.ageAdult');
     }
 
     if (!normalizedForm.location) {
-      nextValidationErrors.location = '活動エリアを入力してください';
+      nextValidationErrors.location = t('onboarding.validation.location');
     }
 
     if (!normalizedForm.datingTemperature) {
-      nextValidationErrors.datingTemperature = 'つながり方のスタンスを選択してください';
+      nextValidationErrors.datingTemperature = t('onboarding.validation.temperature');
     }
 
     if (normalizedForm.selectedInterestTags.length === 0) {
-      nextValidationErrors.interests = '活動ジャンル / 興味タグを1つ以上選んでください';
+      nextValidationErrors.interests = t('onboarding.validation.interests');
     }
 
     if (isSupabaseMode && isAuthenticated && user && !normalizedForm.inviteCode) {
-      nextValidationErrors.inviteCode = '招待コードを入力してください';
+      nextValidationErrors.inviteCode = t('onboarding.validation.inviteCode');
     }
 
     const firstMissingStep = fieldStepOrder.find(({ field }) => nextValidationErrors[field])?.step ?? null;
@@ -211,7 +213,7 @@ export function OnboardingPage() {
 
     if (validationResult.missingMessages.length > 0) {
       setValidationErrors(validationResult.errors);
-      showError('まだ入力が足りない項目があります。以下を確認してください。');
+      showError(t('onboarding.validation.summary'));
       scrollToStep(validationResult.firstMissingStep);
       return;
     }
@@ -232,24 +234,25 @@ export function OnboardingPage() {
 
     setSaving(true);
     setError('');
-    setStatusMessage('保存を開始しています。');
+    setStatusMessage(t('onboarding.status.startSaving'));
 
     try {
       if (isSupabaseMode && isAuthenticated && user) {
         const usingFounderInviteCode = isFounderInviteCode(normalizedForm.inviteCode);
 
-        setStatusMessage('招待コードを確認しています。');
+        setStatusMessage(t('onboarding.status.checkingInvite'));
         const inviteValidation = await validateInviteCode(normalizedForm.inviteCode);
         logOnboardingStep('validateInviteCode success', { success: inviteValidation.ok, inviteCodeExists: Boolean(normalizedForm.inviteCode), founderInviteCode: usingFounderInviteCode });
         if (!inviteValidation.ok) {
-          setValidationErrors({ inviteCode: inviteValidation.error });
-          showError(inviteValidation.error);
+          console.warn('[Onboarding] invite code validation failed', { success: false, inviteCodeExists: Boolean(normalizedForm.inviteCode), founderInviteCode: usingFounderInviteCode });
+          setValidationErrors({ inviteCode: t('onboarding.error.inviteCode') });
+          showError(t('onboarding.error.inviteCode'));
           scrollToStep('inviteCode');
           logOnboardingStep('validateInviteCode success', { success: false });
           return;
         }
 
-        setStatusMessage('招待コードを確認しました。プロフィールを仮保存しています。');
+        setStatusMessage(t('onboarding.status.inviteConfirmedDraft'));
         try {
           await upsertMyProfile({
             id: user.id,
@@ -267,26 +270,26 @@ export function OnboardingPage() {
           });
           logOnboardingStep('profile draft save success', { success: true });
         } catch (profileError) {
-          const message = profileError instanceof Error ? profileError.message : '';
-          const userMessage = message ? `プロフィール保存に失敗しました。${message}` : 'プロフィール保存に失敗しました。少し時間を置いてもう一度お試しください。';
-          showError(userMessage);
+          console.error('[Onboarding] profile draft save failed', getSafeErrorLog(profileError, 'profile_draft_save'));
+          showError(t('onboarding.error.profileSave'));
           logOnboardingStep('profile draft save success', { success: false });
           return;
         }
 
-        setStatusMessage('プロフィールを仮保存しました。紹介情報を保存しています。');
+        setStatusMessage(t('onboarding.status.savingInvite'));
         const inviteUse = await redeemInviteCode(inviteValidation.inviteCode.code, user.id);
         const founderSelfInviteFallback = !inviteUse.ok && usingFounderInviteCode && isInviteCodeSelfUseError(inviteUse.error);
         logOnboardingStep('useInviteCode success', { success: inviteUse.ok, founderInviteCode: usingFounderInviteCode, founderSelfInviteFallback });
         if (!inviteUse.ok && !founderSelfInviteFallback) {
-          setValidationErrors({ inviteCode: inviteUse.error });
-          showError(inviteUse.error);
+          console.warn('[Onboarding] invite code use failed', { success: false, founderInviteCode: usingFounderInviteCode, founderSelfInviteFallback });
+          setValidationErrors({ inviteCode: t('onboarding.error.inviteSave') });
+          showError(t('onboarding.error.inviteSave'));
           scrollToStep('inviteCode');
           return;
         }
         setStatusMessage(founderSelfInviteFallback
-          ? '創設者コードを確認しました。正式参加を完了します。'
-          : '紹介情報を確認しました。正式参加としてプロフィールを保存しています。');
+          ? t('onboarding.status.founderConfirmed')
+          : t('onboarding.status.savingOfficialProfile'));
         const officialInviteCode = inviteUse.ok ? inviteUse.code : inviteValidation.inviteCode.code;
         const officialIntroducerId = inviteUse.ok ? inviteUse.introducerId : null;
         await upsertMyProfile({
@@ -306,18 +309,18 @@ export function OnboardingPage() {
           invite_code_used: officialInviteCode,
         });
         clearPendingInviteCode();
-        setStatusMessage(founderSelfInviteFallback ? '正式参加を完了しました。今日のつながりへ進みます。' : '紹介情報を保存しました。今日のつながりへ進みます。');
+        setStatusMessage(founderSelfInviteFallback ? t('onboarding.status.completeFounder') : t('onboarding.status.completeInvite'));
       }
 
       completeOnboarding(profile);
       logOnboardingStep('navigate home', { success: true });
-      setStatusMessage('プロフィールを保存しました。今日のつながりへ進みます。');
+      setStatusMessage(t('onboarding.status.profileSaved'));
       setTimeout(() => {
-        navigate('/home', { state: { profileSaved: true, message: 'プロフィールを保存しました。今日のつながりへ進みます。' } });
+        navigate('/home', { state: { profileSaved: true, message: t('onboarding.status.profileSaved') } });
       }, 350);
     } catch (caughtError) {
-      const message = caughtError instanceof Error ? caughtError.message : '通信に失敗しました。少し時間を置いてもう一度お試しください。';
-      showError(message);
+      console.error('[Onboarding] unexpected save failed', getSafeErrorLog(caughtError, 'onboarding_complete'));
+      showError(t('onboarding.error.unexpected'));
       logOnboardingStep('unexpected error', { success: false });
     } finally {
       setSaving(false);
@@ -325,14 +328,15 @@ export function OnboardingPage() {
   }
 
   const missingMessages = Object.values(validationErrors).filter((message): message is string => Boolean(message));
+  const steps = [t('onboarding.step.basic'), t('onboarding.step.temperature'), t('onboarding.step.interests'), t('onboarding.step.inviteCode')];
 
   return (
-    <PageShell description="まずは、あなたのプロフィールを作りましょう。ここで入力した内容はマイプロフィールに保存され、あとから編集できます。" eyebrow="プロフィール作成" title="はじめてのプロフィール">
+    <PageShell description={t('onboarding.description')} eyebrow={t('onboarding.eyebrow')} title={t('onboarding.title')}>
       <Card className="flower-gradient border-0 p-1">
         <div className="rounded-[1.25rem] bg-theme-card/78 p-3.5 backdrop-blur">
-          <div className="flex items-center gap-1.5 text-sm font-black text-theme-main-dark"><Flower2 size={18} />まずは、あなたのプロフィールを作りましょう</div>
-          <p className="mt-2 text-[13px] leading-6 text-theme-muted">ここで入力した内容は、あなたのマイプロフィールに保存されます。正式参加のプロフィールとして保存されます。</p>
-          <p className="mt-1 text-[13px] leading-6 text-theme-muted">登録後は今日のつながりへ進みます。プロフィールは、あとから設定やマイプロフィールで確認・編集できます。</p>
+          <div className="flex items-center gap-1.5 text-sm font-black text-theme-main-dark"><Flower2 size={18} />{t('onboarding.heroTitle')}</div>
+          <p className="mt-2 text-[13px] leading-6 text-theme-muted">{t('onboarding.heroBody1')}</p>
+          <p className="mt-1 text-[13px] leading-6 text-theme-muted">{t('onboarding.heroBody2')}</p>
           <div className="mt-3 grid grid-cols-4 gap-2">
             {steps.map((step, index) => (
               <div className="rounded-xl bg-theme-card/80 p-2.5 text-center" key={step}>
@@ -346,32 +350,32 @@ export function OnboardingPage() {
 
       <div ref={basicStepRef}>
         <Card className="space-y-4">
-          <SectionTitle icon={<UserRound size={18} />} label="Step 1" title="基本情報" />
-          <Input helperText="アプリ内で表示される名前です。あとからマイプロフィールで編集できます。" label="表示名" name="displayName" onChange={(event) => updateField('name', event.target.value)} placeholder="マイペース男" value={form.name} />
+          <SectionTitle icon={<UserRound size={18} />} label="Step 1" title={t('onboarding.basic.title')} />
+          <Input helperText={t('onboarding.basic.displayNameHelper')} label={t('onboarding.basic.displayName')} name="displayName" onChange={(event) => updateField('name', event.target.value)} placeholder="マイペース男" value={form.name} />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Input helperText="18歳未満は利用できません。" label="年齢" name="age" onChange={(event) => updateField('age', event.target.value)} placeholder="39" type="number" value={form.age} />
+              <Input helperText="18歳未満は利用できません。" label={t('onboarding.basic.age')} name="age" onChange={(event) => updateField('age', event.target.value)} placeholder="39" type="number" value={form.age} />
             </div>
             <div className="space-y-2">
-              <Input helperText="大まかな活動エリアでOKです。前後の空白は保存時に自動で整理します。" label="活動エリア" name="location" onChange={(event) => updateField('location', event.target.value)} placeholder="東京都・世田谷区 / オンライン" value={form.location} />
+              <Input helperText="大まかな活動エリアでOKです。前後の空白は保存時に自動で整理します。" label={t('onboarding.basic.location')} name="location" onChange={(event) => updateField('location', event.target.value)} placeholder="東京都・世田谷区 / オンライン" value={form.location} />
             </div>
           </div>
-          <Input helperText="未入力でも大丈夫です。できること・活動ジャンルの補足としてあとから編集できます。" label="できること" name="occupation" onChange={(event) => updateField('occupation', event.target.value)} placeholder="例：AIアプリ制作 / ブログ作業 / イベント企画" value={form.occupation} />
+          <Input helperText={t('onboarding.basic.occupationHelper')} label={t('onboarding.basic.occupation')} name="occupation" onChange={(event) => updateField('occupation', event.target.value)} placeholder="例：AIアプリ制作 / ブログ作業 / イベント企画" value={form.occupation} />
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
-            <span>自己紹介</span>
+            <span>{t('onboarding.basic.bio')}</span>
             <textarea className="min-h-24 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 py-3 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('bio', event.target.value)} placeholder="例：一緒にやりたいこと、話したいテーマ、探している仲間を書いてください。" value={form.bio} />
-            <span className="block text-xs font-medium leading-5 text-theme-muted">自己紹介には「興味のあること」「一緒にやりたいこと」「話したいテーマ」を書けます。</span>
+            <span className="block text-xs font-medium leading-5 text-theme-muted">{t('onboarding.basic.bioHelper')}</span>
           </label>
         </Card>
       </div>
 
       <div ref={temperatureStepRef}>
         <Card className="space-y-4">
-          <SectionTitle icon={<MapPin size={18} />} label="Step 2" title="つながり方のスタンス" />
+          <SectionTitle icon={<MapPin size={18} />} label="Step 2" title={t('onboarding.temperature.title')} />
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
-            <span>今の気持ちに近いもの</span>
-            <p className="text-xs font-medium leading-5 text-theme-muted">どんなきっかけでつながりたいかに近いものを1つ選んでください。</p>
-            <p className="text-xs font-bold leading-5 text-theme-main-dark">迷ったら“まずはゆっくり話したい”のままで大丈夫です。あとからマイプロフィールで変更できます。</p>
+            <span>{t('onboarding.temperature.label')}</span>
+            <p className="text-xs font-medium leading-5 text-theme-muted">{t('onboarding.temperature.body')}</p>
+            <p className="text-xs font-bold leading-5 text-theme-main-dark">{t('onboarding.temperature.editLater')}</p>
             <select className="min-h-11 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
               <option value={DEFAULT_DATING_TEMPERATURE}>{DEFAULT_DATING_TEMPERATURE}</option>
               <option>共通の趣味でつながりたい</option>
@@ -385,10 +389,10 @@ export function OnboardingPage() {
 
       <div ref={interestsStepRef}>
         <Card className="space-y-4">
-          <SectionTitle icon={<Tags size={18} />} label="Step 3" title="活動ジャンル / 興味タグ" />
+          <SectionTitle icon={<Tags size={18} />} label="Step 3" title={t('onboarding.interests.title')} />
           <div className="space-y-2.5">
-            <p className="flex items-center gap-1.5 text-sm font-black"><Tags size={16} />活動ジャンル / 興味タグ</p>
-            <p className="text-xs leading-5 text-theme-muted">活動ジャンルや興味のあることを1つ以上選んでください。選んだタグはマイプロフィールに保存され、あとから編集できます。</p>
+            <p className="flex items-center gap-1.5 text-sm font-black"><Tags size={16} />{t('onboarding.interests.title')}</p>
+            <p className="text-xs leading-5 text-theme-muted">{t('onboarding.interests.body')}</p>
             <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => {
                 const selected = form.interests.includes(tag);
@@ -401,35 +405,35 @@ export function OnboardingPage() {
 
       <div ref={inviteCodeStepRef}>
         <Card className="space-y-4">
-          <SectionTitle icon={<Ticket size={18} />} label="Step 4" title="招待コード" />
+          <SectionTitle icon={<Ticket size={18} />} label="Step 4" title={t('onboarding.inviteCode.title')} />
           <Input
-            helperText={isSupabaseMode ? '紹介者から受け取った招待コードを入力してください。正式参加には必須です。入力値は保存前に大文字化します。' : 'デモ表示では任意です。MYPACE-2026 のようなサンプルコードも入力できます。'}
-            label="招待コード"
+            helperText={isSupabaseMode ? t('onboarding.inviteCode.helper') : t('onboarding.inviteCode.demoHelper')}
+            label={t('onboarding.inviteCode.title')}
             name="inviteCode"
             onChange={(event) => updateField('inviteCode', event.target.value.toUpperCase())}
             placeholder="例：MYPACE-2026"
             value={form.inviteCode}
           />
           <div className="rounded-[1.15rem] bg-theme-accent-soft/45 p-3 text-xs font-bold leading-5 text-theme-main-dark">
-            招待コードは1回限りのチケットではなく、紹介者に紐づいた参加ルートです。同じコードで参加した方は、紹介者からのご縁として記録されます。
+            {t('onboarding.inviteCode.body')}
           </div>
         </Card>
       </div>
 
       <Card className="space-y-4">
-        <SectionTitle icon={<Palette size={18} />} label="Step 5" title="テーマを選ぶ" />
-        <p className="text-sm leading-6 text-theme-muted">画面の雰囲気を選べます。テーマはプロフィール登録後も設定から変更できます。</p>
+        <SectionTitle icon={<Palette size={18} />} label="Step 5" title={t('onboarding.theme.title')} />
+        <p className="text-sm leading-6 text-theme-muted">{t('onboarding.theme.body')}</p>
         <ThemeSwitcher />
-        <Badge className="w-fit">現在のテーマ: {themeId}</Badge>
+        <Badge className="w-fit">{t('onboarding.theme.current')}: {themeId}</Badge>
       </Card>
 
       <div className="sticky bottom-24 z-10 rounded-[1.25rem] border border-white/60 bg-theme-card/90 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
-        <p className="mb-2 px-1 text-center text-xs font-bold leading-5 text-theme-muted">入力内容を保存して、今日のつながりを見に行きます。プロフィールはあとから編集できます。</p>
+        <p className="mb-2 px-1 text-center text-xs font-bold leading-5 text-theme-muted">{t('onboarding.footer.note')}</p>
         {error ? <ValidationSummary compact message={error} missingMessages={missingMessages} /> : null}
         {statusMessage ? <div className="mb-2 rounded-xl bg-theme-accent-soft/60 p-2.5 text-xs font-bold leading-5 text-theme-main-dark" role="status">{statusMessage}</div> : null}
         <Button className="w-full" disabled={saving} onClick={handleComplete}>
           <CheckCircle2 size={16} />
-          {saving ? '保存中...' : '今日のつながりへ進む'}
+          {saving ? t('onboarding.button.saving') : t('onboarding.button.goToday')}
           <ArrowRight size={16} />
         </Button>
       </div>
