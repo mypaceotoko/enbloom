@@ -279,6 +279,7 @@ export async function updateReportReview(reportId: string, review: UpdateReportR
 
 type ReportStatusUpdateDebugContext = {
   reportId: string;
+  reportIdLooksLikeUuid: boolean;
   status: ReportStatus;
   authUid: string;
   authUidExists: boolean;
@@ -287,6 +288,10 @@ type ReportStatusUpdateDebugContext = {
   rpcReached: boolean;
 };
 
+function looksLikeUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 async function getReportStatusUpdateDebugContext(
   reportId: string,
   status: ReportStatus,
@@ -294,6 +299,7 @@ async function getReportStatusUpdateDebugContext(
 ): Promise<ReportStatusUpdateDebugContext> {
   const context: ReportStatusUpdateDebugContext = {
     reportId,
+    reportIdLooksLikeUuid: looksLikeUuid(reportId),
     status,
     authUid,
     authUidExists: Boolean(authUid),
@@ -353,6 +359,18 @@ export async function updateReportStatus(reportId: string, status: ReportStatus)
   const debugContext = await getReportStatusUpdateDebugContext(reportId, status, authUid);
   console.info('[reportApi] report status update diagnostic', debugContext);
 
+  const directUpdatePayload = {
+    reportId,
+    status,
+    reviewed_by: authUid,
+  };
+  console.info('[reportApi] report status direct update payload', {
+    ...directUpdatePayload,
+    currentUserId: authUid,
+    authUidExists: Boolean(authUid),
+    reportIdLooksLikeUuid: looksLikeUuid(reportId),
+  });
+
   try {
     const result = await updateReportStatusDirect(reportId, status, authUid);
     console.info('[ConnectBloom] report status update success', true);
@@ -368,36 +386,57 @@ export async function updateReportStatus(reportId: string, status: ReportStatus)
         : '[reportApi] report status direct update failed; trying RPC fallback',
       {
         ...debugContext,
+        directErrorCode: directErrorLog.code,
+        directErrorMessage: directErrorLog.message,
+        directErrorDetails: directErrorLog.details,
+        directErrorHint: directErrorLog.hint,
         directError: directErrorLog,
       },
     );
 
     try {
       debugContext.rpcReached = true;
-      console.info('[reportApi] update_report_review RPC fallback calling', debugContext);
+      const rpcPayload = {
+        p_report_id: reportId,
+        p_status: status,
+        p_admin_note: null,
+      };
+      console.info('[reportApi] update_report_review RPC fallback reached', debugContext);
+      console.info('[reportApi] update_report_review RPC fallback payload', {
+        ...rpcPayload,
+        reportIdLooksLikeUuid: looksLikeUuid(reportId),
+        authUid,
+        authUidExists: Boolean(authUid),
+      });
       const { data, error: rpcError } = await requireSupabaseClient()
-        .rpc('update_report_review', {
-          p_report_id: reportId,
-          p_status: status,
-          p_admin_note: null,
-        })
+        .rpc('update_report_review', rpcPayload)
         .single<UpdateReportReviewResult>();
 
       const success = !rpcError && Boolean(data?.success);
       if (rpcError) {
+        const rpcErrorLog = getSafeErrorLog(rpcError, 'report_status_rpc_fallback_failed');
         console.error('[reportApi] report status RPC fallback failed', {
           ...debugContext,
           directError: directErrorLog,
-          rpcError: getSafeErrorLog(rpcError, 'report_status_rpc_fallback_failed'),
+          rpcErrorCode: rpcErrorLog.code,
+          rpcErrorMessage: rpcErrorLog.message,
+          rpcErrorDetails: rpcErrorLog.details,
+          rpcErrorHint: rpcErrorLog.hint,
+          rpcError: rpcErrorLog,
         });
         throw rpcError;
       }
       if (!data?.success) {
         const rpcResultError = new Error('通報レビューの更新に失敗しました。');
+        const rpcErrorLog = getSafeErrorLog(rpcResultError, 'report_status_rpc_fallback_unsuccessful');
         console.error('[reportApi] report status RPC fallback returned unsuccessful result', {
           ...debugContext,
           directError: directErrorLog,
-          rpcError: getSafeErrorLog(rpcResultError, 'report_status_rpc_fallback_unsuccessful'),
+          rpcErrorCode: rpcErrorLog.code,
+          rpcErrorMessage: rpcErrorLog.message,
+          rpcErrorDetails: rpcErrorLog.details,
+          rpcErrorHint: rpcErrorLog.hint,
+          rpcError: rpcErrorLog,
           rpcSuccess: success,
         });
         throw rpcResultError;
@@ -406,10 +445,15 @@ export async function updateReportStatus(reportId: string, status: ReportStatus)
       console.info('[ConnectBloom] report status update success', true);
       return data;
     } catch (rpcFallbackError) {
+      const rpcErrorLog = getSafeErrorLog(rpcFallbackError, 'report_status_rpc_fallback_failed');
       console.error('[reportApi] failed to update report status after RPC fallback', {
         ...debugContext,
         directError: directErrorLog,
-        rpcError: getSafeErrorLog(rpcFallbackError, 'report_status_rpc_fallback_failed'),
+        rpcErrorCode: rpcErrorLog.code,
+        rpcErrorMessage: rpcErrorLog.message,
+        rpcErrorDetails: rpcErrorLog.details,
+        rpcErrorHint: rpcErrorLog.hint,
+        rpcError: rpcErrorLog,
       });
       console.info('[ConnectBloom] report status update success', false);
       throw rpcFallbackError;
