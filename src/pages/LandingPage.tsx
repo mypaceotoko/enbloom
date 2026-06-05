@@ -16,9 +16,9 @@ export function LandingPage() {
       <div className="pointer-events-none absolute bottom-12 left-1/2 size-72 -translate-x-1/2 rounded-full bg-theme-cyan/10 blur-3xl" />
 
       <div className="relative mx-auto flex max-w-md flex-col gap-4">
-        <header className="flex items-center justify-center gap-2 rounded-full border border-white/60 bg-theme-card/72 px-3 py-2.5 shadow-lg shadow-theme-sky/10 backdrop-blur">
-          <BrandLogo className="min-w-0 max-w-[250px] flex-1 justify-center" imageClassName="max-h-[3.75rem] w-full" variant="default" />
-          <span className="shrink-0 rounded-full bg-theme-accent-soft px-2.5 py-1 text-[10px] font-black text-theme-main-dark sm:px-3 sm:text-[11px]">{t('landing.inviteOnly')}</span>
+        <header className="flex items-center justify-center gap-1.5 rounded-full border border-white/60 bg-theme-card/72 px-2.5 py-2 shadow-lg shadow-theme-sky/10 backdrop-blur sm:gap-2 sm:px-3 sm:py-2.5">
+          <BrandLogo className="min-w-0 max-w-[280px] flex-[1_1_auto] justify-center" imageClassName="max-h-[3.55rem] w-full sm:max-h-[3.9rem]" variant="default" />
+          <span className="shrink-0 rounded-full bg-theme-accent-soft px-2 py-0.5 text-[9px] font-black text-theme-main-dark sm:px-2.5 sm:py-1 sm:text-[10px]">{t('landing.inviteOnly')}</span>
         </header>
 
         <div className="flower-gradient soft-shadow relative overflow-hidden rounded-[1.7rem] p-1">

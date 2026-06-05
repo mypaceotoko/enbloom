@@ -186,7 +186,7 @@ export function HomePage() {
         <div className="absolute -bottom-10 left-8 size-24 rounded-full bg-theme-accent-soft/50 blur-2xl" />
         <div className="relative space-y-3 rounded-[1.25rem] bg-theme-card/78 p-4 backdrop-blur">
           <div className="flex flex-wrap gap-2">
-            <Badge className="bg-theme-main text-white"><Sparkles size={13} />{t('home.next.title')}</Badge>
+            <Badge className="bg-theme-main text-white"><Sparkles size={13} />{t('home.next.badge')}</Badge>
             <Badge className="bg-theme-card/80"><ShieldCheck size={13} />紹介制コネクトSNS</Badge>
           </div>
           <div>
