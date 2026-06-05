@@ -302,44 +302,74 @@ export async function adminDeleteChatRoomMessage(
 
   if (!messageIdLooksUuid) throw new Error('削除対象のメッセージを確認できませんでした。');
 
+  const rpcName = 'admin_delete_chat_room_message';
+  const rpcPayload = { p_message_id: messageId };
   const dbAdminStatus = await getDatabaseAdminStatus(diagnostics.currentUserId);
+  const safeAdminStatusErrorLog = dbAdminStatus.error ? getSafeErrorLog(dbAdminStatus.error, 'admin_delete_room_message_is_admin_rpc') : null;
   console.info('[ConnectBloom] admin room message delete db admin check', {
     ...diagnostics,
+    messageIdLooksUuid,
     publicIsAdminAuthUid: dbAdminStatus.isAdmin,
-    publicIsAdminRpcError: dbAdminStatus.error ? getSafeErrorLog(dbAdminStatus.error, 'admin_delete_room_message_is_admin_rpc') : null,
+    rpcName,
+    rpcPayload,
+    publicIsAdminRpcError: safeAdminStatusErrorLog,
   });
 
-  if (!dbAdminStatus.isAdmin) throw new Error('削除に失敗しました。');
+  if (!dbAdminStatus.isAdmin) {
+    console.error('[ConnectBloom] admin room message delete failed before rpc', {
+      ...diagnostics,
+      messageIdLooksUuid,
+      publicIsAdminAuthUid: dbAdminStatus.isAdmin,
+      rpcName,
+      rpcPayload,
+      rpcError: {
+        code: safeAdminStatusErrorLog?.code,
+        message: safeAdminStatusErrorLog?.message ?? 'public.is_admin returned false',
+        details: safeAdminStatusErrorLog?.details,
+        hint: safeAdminStatusErrorLog?.hint,
+      },
+    });
+    throw new Error('削除に失敗しました。');
+  }
 
-  const { data, error } = await requireSupabaseClient().rpc('admin_delete_chat_room_message', { p_message_id: messageId });
+  const { data, error } = await requireSupabaseClient().rpc(rpcName, rpcPayload);
   const deletedId = typeof data === 'string' ? data : null;
   const deletedRowCount = deletedId ? 1 : 0;
   const safeDeleteErrorLog = error ? getSafeErrorLog(error, 'admin_delete_room_message_rpc') : null;
+  const baseDeleteLog = {
+    ...diagnostics,
+    messageIdLooksUuid,
+    publicIsAdminAuthUid: dbAdminStatus.isAdmin,
+    rpcName,
+    rpcPayload,
+    rpcError: safeDeleteErrorLog ? {
+      code: safeDeleteErrorLog.code,
+      message: safeDeleteErrorLog.message,
+      details: safeDeleteErrorLog.details,
+      hint: safeDeleteErrorLog.hint,
+    } : null,
+  };
 
   console.info('[ConnectBloom] admin room message delete result', {
-    ...diagnostics,
-    publicIsAdminAuthUid: dbAdminStatus.isAdmin,
+    ...baseDeleteLog,
     deleteData: data ?? null,
-    deleteErrorCode: safeDeleteErrorLog?.code,
-    deleteErrorMessage: safeDeleteErrorLog?.message,
-    deleteErrorDetails: safeDeleteErrorLog?.details,
-    deleteErrorHint: safeDeleteErrorLog?.hint,
-    deleteError: safeDeleteErrorLog,
     deletedRowCount,
   });
 
   if (error) {
-    console.error('[ConnectBloom] admin room message delete failed', getSafeErrorLog(error, 'admin_delete_room_message_rpc'));
+    console.error('[ConnectBloom] admin room message delete failed', baseDeleteLog);
     throw error;
   }
 
   if (!deletedId) {
     const notDeletedError = new Error('メッセージを削除できませんでした。権限または削除対象を確認してください。');
     console.error('[ConnectBloom] delete_zero_rows_or_rls_denied', {
-      ...diagnostics,
-      publicIsAdminAuthUid: dbAdminStatus.isAdmin,
+      ...baseDeleteLog,
       deletedRowCount,
-      ...getSafeErrorLog(notDeletedError, 'admin_delete_room_message_zero_rows'),
+      rpcError: {
+        ...baseDeleteLog.rpcError,
+        message: getSafeErrorLog(notDeletedError, 'admin_delete_room_message_zero_rows').message,
+      },
     });
     throw notDeletedError;
   }
