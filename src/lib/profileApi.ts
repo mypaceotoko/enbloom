@@ -26,6 +26,7 @@ export type ProfileRow = {
 
 export type ProfileUpsert = Partial<Omit<ProfileRow, 'id'>> & {
   id: string;
+  talkTopics?: string | null;
 };
 
 
@@ -66,8 +67,9 @@ const profileColumns = [
   ...baseProfileColumnList.slice(12),
 ].join(',');
 
+const profileColumnsWithoutAccountStatus = baseProfileColumnList.join(',');
 const legacyProfileColumnList = baseProfileColumnList.filter((column) => column !== 'talk_topics');
-const profileColumnsWithoutOptionalColumns = legacyProfileColumnList.join(',');
+const profileColumnsWithoutTalkTopics = legacyProfileColumnList.join(',');
 
 type ProfileQueryKind = 'getMyProfile' | 'upsertMyProfile' | 'updateMyProfile' | 'getPublicProfiles' | 'getPublicProfileById';
 
@@ -86,11 +88,22 @@ function normalizeProfileRow(profile: ProfileRow): ProfileRow {
   };
 }
 
-function isMissingOptionalProfileColumnError(error: unknown) {
+function getMissingOptionalProfileColumn(error: unknown): 'account_status' | 'talk_topics' | null {
   const errorLike = error && typeof error === 'object' ? (error as SupabaseErrorLike) : {};
   const searchableText = [errorLike.message, errorLike.details, errorLike.hint, errorLike.code].filter(Boolean).join(' ');
-  return /(account_status|talk_topics)/i.test(searchableText)
-    && (/column|schema cache|could not find|not found|does not exist|42703|PGRST204/i.test(searchableText));
+  const isMissingColumnError = /column|schema cache|could not find|not found|does not exist|42703|PGRST204/i.test(searchableText);
+  if (!isMissingColumnError) return null;
+  if (/account_status/i.test(searchableText)) return 'account_status';
+  if (/talk_topics/i.test(searchableText)) return 'talk_topics';
+  return null;
+}
+
+function isMissingOptionalProfileColumnError(error: unknown) {
+  return getMissingOptionalProfileColumn(error) !== null;
+}
+
+function getFallbackProfileColumns(error: unknown) {
+  return getMissingOptionalProfileColumn(error) === 'talk_topics' ? profileColumnsWithoutTalkTopics : profileColumnsWithoutAccountStatus;
 }
 
 function logOptionalProfileColumnsFallback(error: unknown, phase: ProfileQueryKind) {
@@ -118,11 +131,31 @@ function logTalkTopicsSaveDiagnostics(params: {
   });
 }
 
-function omitOptionalProfileColumns<TProfile extends { account_status?: ProfileRow['account_status']; talk_topics?: ProfileRow['talk_topics'] }>(profile: TProfile): Omit<TProfile, 'account_status' | 'talk_topics'> {
-  const { account_status: _accountStatus, talk_topics: _talkTopics, ...profileWithoutOptionalColumns } = profile;
+function normalizeTalkTopicsInput(talkTopics: string | null | undefined) {
+  if (typeof talkTopics !== 'string') return null;
+  const trimmedTalkTopics = talkTopics.trim().slice(0, 160);
+  return trimmedTalkTopics || null;
+}
+
+function normalizeProfileWritePayload(profile: ProfileUpsert): ProfileUpsert {
+  const { talkTopics, ...profileWithoutAlias } = profile;
+  return {
+    ...profileWithoutAlias,
+    talk_topics: normalizeTalkTopicsInput(profile.talk_topics ?? talkTopics),
+  };
+}
+
+function omitUnavailableProfileColumns<TProfile extends { account_status?: ProfileRow['account_status']; talk_topics?: ProfileRow['talk_topics'] }>(profile: TProfile, error: unknown) {
+  if (getMissingOptionalProfileColumn(error) === 'talk_topics') {
+    const { account_status: _accountStatus, talk_topics: _talkTopics, ...profileWithoutOptionalColumns } = profile;
+    void _accountStatus;
+    void _talkTopics;
+    return profileWithoutOptionalColumns;
+  }
+
+  const { account_status: _accountStatus, ...profileWithoutAccountStatus } = profile;
   void _accountStatus;
-  void _talkTopics;
-  return profileWithoutOptionalColumns;
+  return profileWithoutAccountStatus;
 }
 
 export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
@@ -139,7 +172,7 @@ export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
   logOptionalProfileColumnsFallback(error, 'getMyProfile');
   const fallbackResult = await client
     .from('profiles')
-    .select(profileColumnsWithoutOptionalColumns)
+    .select(getFallbackProfileColumns(error))
     .eq('id', userId)
     .maybeSingle<ProfileRow>();
 
@@ -149,43 +182,45 @@ export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
 
 export async function upsertMyProfile(profile: ProfileUpsert): Promise<ProfileRow> {
   assertNotDemoMode('プロフィール保存');
+  const normalizedPayload = normalizeProfileWritePayload(profile);
   const client = requireSupabaseClient();
   const { data, error } = await client
     .from('profiles')
-    .upsert(profile, { onConflict: 'id' })
+    .upsert(normalizedPayload, { onConflict: 'id' })
     .select(profileColumns)
     .single<ProfileRow>();
 
   if (!error) {
     const normalizedProfile = normalizeProfileRow(data);
-    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, savedProfile: normalizedProfile });
+    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: normalizedPayload.id, payload: normalizedPayload, savedProfile: normalizedProfile });
     return normalizedProfile;
   }
   if (!isMissingOptionalProfileColumnError(error)) {
-    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, error });
+    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: normalizedPayload.id, payload: normalizedPayload, error });
     throw error;
   }
 
-  logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, error });
+  logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: normalizedPayload.id, payload: normalizedPayload, error });
   logOptionalProfileColumnsFallback(error, 'upsertMyProfile');
   const fallbackResult = await client
     .from('profiles')
-    .upsert(omitOptionalProfileColumns(profile), { onConflict: 'id' })
-    .select(profileColumnsWithoutOptionalColumns)
+    .upsert(omitUnavailableProfileColumns(normalizedPayload, error), { onConflict: 'id' })
+    .select(getFallbackProfileColumns(error))
     .single<ProfileRow>();
 
   if (fallbackResult.error) {
-    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, error: fallbackResult.error });
+    logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: normalizedPayload.id, payload: normalizedPayload, error: fallbackResult.error });
     throw fallbackResult.error;
   }
   const normalizedProfile = normalizeProfileRow(fallbackResult.data);
-  logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: profile.id, payload: profile, savedProfile: normalizedProfile });
+  logTalkTopicsSaveDiagnostics({ phase: 'upsertMyProfile', currentUserId: normalizedPayload.id, payload: normalizedPayload, savedProfile: normalizedProfile });
   return normalizedProfile;
 }
 
 export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRow> {
   assertNotDemoMode('プロフィール更新');
-  const { id, ...updates } = profile;
+  const normalizedPayload = normalizeProfileWritePayload(profile);
+  const { id, ...updates } = normalizedPayload;
   const client = requireSupabaseClient();
   const { data, error } = await client
     .from('profiles')
@@ -208,9 +243,9 @@ export async function updateMyProfile(profile: ProfileUpsert): Promise<ProfileRo
   logOptionalProfileColumnsFallback(error, 'updateMyProfile');
   const fallbackResult = await client
     .from('profiles')
-    .update(omitOptionalProfileColumns(updates))
+    .update(omitUnavailableProfileColumns(updates, error))
     .eq('id', id)
-    .select(profileColumnsWithoutOptionalColumns)
+    .select(getFallbackProfileColumns(error))
     .single<ProfileRow>();
 
   if (fallbackResult.error) {
@@ -290,7 +325,7 @@ export async function getPublicProfiles(currentUserId?: string, limit = 24): Pro
   logOptionalProfileColumnsFallback(error, 'getPublicProfiles');
   let fallbackQuery = client
     .from('profiles')
-    .select(profileColumnsWithoutOptionalColumns)
+    .select(getFallbackProfileColumns(error))
     .eq('visibility', 'public')
     .eq('onboarding_completed', true)
     .order('created_at', { ascending: false })
@@ -321,7 +356,7 @@ export async function getPublicProfileById(profileId: string): Promise<ProfileRo
   logOptionalProfileColumnsFallback(error, 'getPublicProfileById');
   const fallbackResult = await client
     .from('profiles')
-    .select(profileColumnsWithoutOptionalColumns)
+    .select(getFallbackProfileColumns(error))
     .eq('id', profileId)
     .eq('visibility', 'public')
     .maybeSingle<ProfileRow>();

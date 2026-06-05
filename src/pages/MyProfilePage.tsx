@@ -10,7 +10,7 @@ import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
 import { ProfileAvatar } from '../components/ProfileAvatar';
 import { isDemoModeEnabled } from '../lib/demoSession';
-import { getShortErrorMessage } from '../lib/errorMessage';
+import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import { getMyPrimaryProfilePhoto, uploadProfilePhoto } from '../lib/profilePhotoApi';
 import { getMyProfile, profileRowToCurrentUser, updateMyProfile } from '../lib/profileApi';
 
@@ -180,8 +180,10 @@ export function MyProfilePage() {
     setNotice('');
 
     try {
+      let savedProfileForState = nextProfile;
+
       if (isSupabaseMode && isAuthenticated && !isDemoModeEnabled() && user) {
-        await updateMyProfile({
+        const payload = {
           id: user.id,
           display_name: nextProfile.name,
           age: nextProfile.age,
@@ -193,13 +195,34 @@ export function MyProfilePage() {
           talk_topics: nextProfile.talkTopics || null,
           dating_temperature: nextProfile.datingTemperature,
           onboarding_completed: true,
+        };
+        const payloadKeys = Object.keys(payload);
+
+        console.info('[profile_talk_topics_save:start]', {
+          currentUserId: user.id,
+          talkTopicsLength: nextProfile.talkTopics.length,
+          talkTopicsPreview: nextProfile.talkTopics.slice(0, 20),
+          hasTalkTopicsInPayload: Object.prototype.hasOwnProperty.call(payload, 'talk_topics'),
+          payloadKeys,
+        });
+
+        const savedProfile = await updateMyProfile(payload);
+        const syncedProfile = profileRowToCurrentUser(savedProfile, themeId);
+        savedProfileForState = { ...nextProfile, talkTopics: syncedProfile.talkTopics ?? '' };
+
+        console.info('[profile_talk_topics_save:result]', {
+          currentUserId: user.id,
+          savedProfileTalkTopicsExists: Boolean(savedProfile.talk_topics?.trim()),
+          savedProfileTalkTopicsLength: savedProfile.talk_topics?.length ?? 0,
         });
       }
 
-      saveCurrentUserProfile({ ...nextProfile, photoUrl: photoUrl || currentUser.photoUrl });
+      saveCurrentUserProfile({ ...savedProfileForState, photoUrl: photoUrl || currentUser.photoUrl });
+      setForm((current) => ({ ...current, talkTopics: savedProfileForState.talkTopics ?? '' }));
       setNotice('プロフィールを保存しました。');
     } catch (caughtError) {
-      setNotice(getShortErrorMessage(caughtError, '保存に失敗しました。時間を置いてもう一度お試しください。'));
+      console.error('[profile_talk_topics_save:failed]', getSafeErrorLog(caughtError, 'profile_talk_topics_save_failed'));
+      setNotice('プロフィールの保存に失敗しました');
     } finally {
       setSaving(false);
     }
