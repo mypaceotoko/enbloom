@@ -9,6 +9,7 @@ import { ProfileCard } from '../components/ProfileCard';
 import { mockUsers } from '../data/mockUsers';
 import { useAppState } from '../hooks/useAppState';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { getSafetyHiddenUserIds } from '../lib/blockApi';
 import { createLike, deleteLike, getLikedUserIds } from '../lib/likeApi';
 import { getMatchedUserIds } from '../lib/matchApi';
@@ -20,6 +21,7 @@ import type { UserProfile } from '../types/user';
 export function HomePage() {
   const { blockedUserIds } = useAppState();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
+  const { t } = useLanguage();
   const [supabaseUsers, setSupabaseUsers] = useState<UserProfile[]>([]);
   const [likedUserIds, setLikedUserIds] = useState<string[]>([]);
   const [matchedUserIds, setMatchedUserIds] = useState<string[]>([]);
@@ -140,12 +142,12 @@ export function HomePage() {
     <PageShell
       description={(
         <>
-          <span className="block">共通の興味や紹介から、話してみたい人を見つけましょう。</span>
-          <span className="block">今日は3人だけ、丁寧につながる設計です。</span>
+          <span className="block">{t('home.description1')}</span>
+          <span className="block">{t('home.description2')}</span>
         </>
       )}
       eyebrow="Home"
-      title="今日のつながり"
+      title={t('home.title')}
     >
       {profileSaved ? (
         <div className="rounded-[1.15rem] bg-theme-accent-soft/70 p-3 text-sm font-bold text-theme-text">
@@ -171,36 +173,36 @@ export function HomePage() {
         <div className="absolute -bottom-10 left-8 size-24 rounded-full bg-theme-accent-soft/50 blur-2xl" />
         <div className="relative space-y-3 rounded-[1.25rem] bg-theme-card/78 p-4 backdrop-blur">
           <div className="flex flex-wrap gap-2">
-            <Badge className="bg-theme-main text-white"><Sparkles size={13} />次にすること</Badge>
+            <Badge className="bg-theme-main text-white"><Sparkles size={13} />{t('home.next.title')}</Badge>
             <Badge className="bg-theme-card/80"><ShieldCheck size={13} />紹介制コネクトSNS</Badge>
           </div>
           <div>
-            <h2 className="text-[1.25rem] font-black leading-tight tracking-[-0.03em]">次にすること</h2>
+            <h2 className="text-[1.25rem] font-black leading-tight tracking-[-0.03em]">{t('home.next.title')}</h2>
             <p className="mt-2 text-[13px] leading-6 text-theme-muted">
-              <span className="block">ルームで話す、募集を探す、参加希望を確認する。</span>
-              <span className="block">今の動きに合わせて進めます。</span>
+              <span className="block">{t('home.next.description1')}</span>
+              <span className="block">{t('home.next.description2')}</span>
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Link to="/discover"><Button className="min-h-10 w-full px-3 text-sm"><Compass size={16} />人を探す</Button></Link>
-            <Link to="/board"><Button className="min-h-10 w-full px-3 text-sm"><ClipboardList size={16} />募集を探す</Button></Link>
-            <Link to="/rooms"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><DoorOpen size={16} />ルームに入る</Button></Link>
-            <Link to="/my-activity"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><Sparkles size={16} />活動を確認</Button></Link>
+            <Link to="/discover"><Button className="min-h-10 w-full px-3 text-sm"><Compass size={16} />{t('home.findPeople')}</Button></Link>
+            <Link to="/board"><Button className="min-h-10 w-full px-3 text-sm"><ClipboardList size={16} />{t('home.exploreBoards')}</Button></Link>
+            <Link to="/rooms"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><DoorOpen size={16} />{t('home.joinRooms')}</Button></Link>
+            <Link to="/my-activity"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><Sparkles size={16} />{t('home.checkActivity')}</Button></Link>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-theme-text">
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><Flower2 className="mx-auto mb-1 text-theme-main" size={16} />自然体</span>
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><HeartHandshake className="mx-auto mb-1 text-theme-main" size={16} />会話</span>
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><UsersRound className="mx-auto mb-1 text-theme-main" size={16} />紹介経由</span>
+            <span className="rounded-xl bg-theme-background/80 p-2.5"><Flower2 className="mx-auto mb-1 text-theme-main" size={16} />{t('home.natural')}</span>
+            <span className="rounded-xl bg-theme-background/80 p-2.5"><HeartHandshake className="mx-auto mb-1 text-theme-main" size={16} />{t('home.conversation')}</span>
+            <span className="rounded-xl bg-theme-background/80 p-2.5"><UsersRound className="mx-auto mb-1 text-theme-main" size={16} />{t('home.introduction')}</span>
           </div>
         </div>
       </Card>
 
       <Card className="flex flex-col gap-2 border-theme-main/15 bg-theme-card/86 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <span className="min-w-0">
-          <span className="block text-sm font-black text-theme-text">βテスト中です</span>
-          <span className="mt-1 block text-xs leading-5 text-theme-muted">気づいた点があれば、スクリーンショットと一緒に共有してください。</span>
+          <span className="block text-sm font-black text-theme-text">{t('home.beta.title')}</span>
+          <span className="mt-1 block text-xs leading-5 text-theme-muted">{t('home.beta.body')}</span>
         </span>
-        <Link className="shrink-0" to="/test-guide"><Button className="min-h-9 w-full px-3 text-xs sm:w-auto" variant="secondary">テスターガイドを見る</Button></Link>
+        <Link className="shrink-0" to="/test-guide"><Button className="min-h-9 w-full px-3 text-xs sm:w-auto" variant="secondary">{t('home.beta.guide')}</Button></Link>
       </Card>
 
       <div className="flex items-center justify-between rounded-full bg-theme-card/70 px-3.5 py-2.5 shadow-sm backdrop-blur">

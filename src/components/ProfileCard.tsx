@@ -2,6 +2,7 @@ import { Heart, Leaf, MapPin, MessageCircleHeart, Sparkles, Sprout, Tags, UserRo
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppState } from '../hooks/useAppState';
+import { useLanguage } from '../hooks/useLanguage';
 import { cn } from '../lib/utils';
 import type { UserProfile } from '../types/user';
 import { Badge } from './Badge';
@@ -20,6 +21,7 @@ export type ProfileCardProps = {
 
 export function ProfileCard({ user, compact = false, liked: likedOverride, matched: matchedOverride, isCurrentUser = false, onToggleLike }: ProfileCardProps) {
   const { isLiked, isMatched, toggleLike } = useAppState();
+  const { t } = useLanguage();
   const location = useLocation();
   const profileDetailState = { from: location.pathname, profilePreview: user };
   const [showMatch, setShowMatch] = useState(false);
@@ -65,16 +67,16 @@ export function ProfileCard({ user, compact = false, liked: likedOverride, match
           <p className="mt-1 text-xs font-bold text-theme-muted">{user.name}さんとコネクトしました。まずはゆっくり話してみましょう。</p>
         </div>
       ) : null}
-      <Link aria-label={`${user.name}さんの詳細を見る`} className="block" state={profileDetailState} to={`/profile/${user.id}`}>
+      <Link aria-label={`${user.name}: ${t('profileCard.viewProfile')}`} className="block" state={profileDetailState} to={`/profile/${user.id}`}>
         <div className={cn('relative overflow-hidden bg-gradient-to-br', compact ? 'h-36' : 'h-48', user.gradient)}>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.85),transparent_28%),radial-gradient(circle_at_80%_74%,rgba(255,255,255,0.44),transparent_26%)]" />
           <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-black text-theme-main-dark shadow-lg shadow-theme-main/10 backdrop-blur">
             <Sparkles size={13} />
-            今日のつながり
+            {t('profileCard.today')}
           </div>
           <Badge className="absolute right-3 top-3 border border-white/70 bg-white/78 text-theme-text backdrop-blur">
             <UserRoundCheck size={13} />
-            {matched ? 'コネクト済み' : '紹介経由'}
+            {matched ? t('profileCard.connected') : t('profileCard.introduction')}
           </Badge>
           <div className="absolute bottom-3 left-3 flex items-end gap-2.5">
             <ProfileAvatar className={cn('rounded-[1.35rem] border border-white/70 shadow-xl backdrop-blur', compact ? 'size-16' : 'size-20')} fallbackClassName={cn('bg-white/78 font-black', compact ? 'text-2xl' : 'text-3xl')} user={user} />
@@ -106,7 +108,7 @@ export function ProfileCard({ user, compact = false, liked: likedOverride, match
         <div className="space-y-1.5">
           <p className="flex items-center gap-1 text-xs font-black uppercase tracking-[0.14em] text-theme-main-dark">
             <Tags size={13} />
-            活動ジャンル / 共通点
+            {t('profileCard.sharedInterests')}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {user.interests.slice(0, compact ? 3 : user.interests.length).map((interest) => (
@@ -117,11 +119,11 @@ export function ProfileCard({ user, compact = false, liked: likedOverride, match
 
         <div className="grid gap-1.5 rounded-[1rem] border border-theme-main/10 bg-theme-background/70 p-2.5 text-[12px] leading-5">
           <div>
-            <p className="flex items-center gap-1 font-black text-theme-text"><MessageCircleHeart size={14} />つながり方</p>
+            <p className="flex items-center gap-1 font-black text-theme-text"><MessageCircleHeart size={14} />{t('profileCard.connectionStyle')}</p>
             <p className="mt-0.5 text-theme-muted">{user.datingTemperature}</p>
           </div>
           <div className="rounded-xl bg-theme-accent-soft/75 px-2.5 py-1 text-[11px] font-bold text-theme-text">
-            紹介経由: {user.introducedBy}
+            {t('profileCard.introduction')}: {user.introducedBy}
           </div>
         </div>
 
@@ -131,11 +133,11 @@ export function ProfileCard({ user, compact = false, liked: likedOverride, match
           {isCurrentUser ? null : (
             <Button className={`min-h-10 flex-1 whitespace-nowrap px-3 text-xs shadow-lg ${liked ? 'bg-gradient-to-r from-theme-cyan to-theme-main text-white shadow-theme-main/25 hover:saturate-125' : 'bg-theme-accent-soft text-theme-text'}`} disabled={likeSaving} onClick={handleLike} variant="secondary">
               <Heart fill={liked ? 'currentColor' : 'none'} size={15} />
-              {liked ? '送信済み' : '話してみたい'}
+              {liked ? t('profileCard.sent') : t('profileCard.like')}
             </Button>
           )}
           <Link className="flex-1" state={profileDetailState} to={`/profile/${user.id}`}>
-            <Button className="min-h-10 w-full px-3 text-xs">詳細を見る</Button>
+            <Button className="min-h-10 w-full px-3 text-xs">{t('profileCard.viewProfile')}</Button>
           </Link>
         </div>
       </div>
