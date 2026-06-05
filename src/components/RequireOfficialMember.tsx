@@ -4,6 +4,7 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { isDemoModeEnabled } from '../lib/demoSession';
+import { getSafeErrorLog } from '../lib/errorMessage';
 import { getPendingInviteCode } from '../lib/inviteSession';
 import { getMyProfile, type ProfileRow } from '../lib/profileApi';
 import { Button } from './Button';
@@ -143,7 +144,8 @@ export function RequireOfficialMember() {
       try {
         const profile = await getMyProfile(user.id);
         if (!mounted) return;
-        if (profile?.account_status === 'suspended') {
+        const accountStatus = profile?.account_status ?? 'active';
+        if (accountStatus === 'suspended') {
           setState('suspended');
           return;
         }
@@ -160,9 +162,10 @@ export function RequireOfficialMember() {
           ? 'プロフィール作成は確認できましたが、紹介経路の記録がまだ完了していません。招待コードを入力してください。'
           : 'プロフィール作成と招待コードの確認が完了すると、正式参加として主要機能を使えるようになります。');
       } catch (caughtError) {
+        console.error('[RequireOfficialMember] access check failed', getSafeErrorLog(caughtError, 'official_member_check'));
         if (!mounted) return;
         setState('error');
-        setDetail(caughtError instanceof Error ? caughtError.message : '参加状態を確認できませんでした。');
+        setDetail('参加状態を確認できませんでした。時間を置いてもう一度お試しください。');
       }
     }
 
