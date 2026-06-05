@@ -111,8 +111,8 @@ export function LandingPage() {
           <div className="space-y-4">
             <header className="landing-brand-header flex w-full max-w-[44rem] items-center justify-start gap-2 rounded-[2rem] border border-white/75 bg-white/82 px-2.5 py-2.5 pr-4 shadow-xl shadow-theme-sky/14 backdrop-blur-xl sm:gap-3 sm:px-3 sm:py-3 sm:pr-6">
               <BrandLogo
-                className="min-w-0 flex-[1_1_18.5rem] justify-start rounded-[1.45rem] bg-white/95 px-1.5 py-1 shadow-inner shadow-theme-sky/10 ring-1 ring-white/90 sm:max-w-[540px] sm:flex-[0_1_540px] sm:px-2"
-                imageClassName="max-h-[5.9rem] w-full sm:max-h-[6.8rem]"
+                className="isolate min-w-0 flex-[1_1_18.5rem] transform-gpu justify-start overflow-hidden rounded-[1.45rem] bg-white px-1.5 py-1 shadow-inner shadow-theme-sky/10 ring-1 ring-white/90 sm:max-w-[540px] sm:flex-[0_1_540px] sm:px-2"
+                imageClassName="max-h-[5.9rem] w-full bg-transparent drop-shadow-none sm:max-h-[6.8rem]"
                 variant="default"
               />
               <span className="shrink-0 rounded-full bg-gradient-to-r from-theme-yellow/85 via-white to-theme-sky/45 px-2.5 py-1 text-[9px] font-black text-theme-main-dark shadow-sm shadow-theme-sky/15 ring-1 ring-theme-sky/25 sm:px-3.5 sm:py-1.5 sm:text-[11px]">
