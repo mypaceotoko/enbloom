@@ -30,6 +30,9 @@ alter table public.reports
 create index if not exists reports_target_activity_post_id_idx
   on public.reports(target_activity_post_id);
 
+create index if not exists reports_target_chat_room_id_idx
+  on public.reports(target_chat_room_id);
+
 create index if not exists reports_target_chat_room_message_id_idx
   on public.reports(target_chat_room_message_id);
 
