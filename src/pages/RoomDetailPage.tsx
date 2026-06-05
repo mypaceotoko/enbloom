@@ -7,33 +7,44 @@ import { Card } from '../components/Card';
 import { PageShell } from '../components/PageShell';
 import { demoChatRooms, demoRoomMessages, roomTags } from '../data/mockChatRooms';
 import { useAuth } from '../hooks/useAuth';
+import { useLanguage } from '../hooks/useLanguage';
 import { getShortErrorMessage } from '../lib/errorMessage';
 import { getRoomVisual } from '../lib/roomVisual';
 import { deleteChatRoomMessage, getChatRoomBySlug, getChatRoomMessages, sendChatRoomMessage } from '../lib/chatRoomApi';
 import type { ChatRoom, ChatRoomMessageWithProfile } from '../types/chatRoom';
+import type { TranslationKey } from '../lib/i18n';
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+const roomTagTranslationKeys: Record<string, TranslationKey> = {
+  公式: 'rooms.tag.official',
+  共創: 'rooms.tag.coCreate',
+  制作: 'rooms.tag.create',
+  企画: 'rooms.tag.plan',
+  雑談: 'rooms.tag.chat',
+  趣味: 'rooms.tag.hobby',
+  日常: 'rooms.tag.daily',
+  ゆるく話す: 'rooms.tag.slowTalk',
+};
+
+function getRoomNameKey(slug: string): TranslationKey | null {
+  if (slug === 'creative') return 'rooms.creative';
+  if (slug === 'casual') return 'rooms.casual';
+  return null;
 }
 
-function getRoomConversationHint(slug: string) {
-  if (slug === 'creative') return '制作、AI、動画、音声、イベントなどのアイデアを出し合う場所です。';
-  if (slug === 'casual') return '趣味や日常をゆるく話す場所です。';
-  return '会話とアイデア出しをする場所です。';
+function getRoomConversationHintKey(slug: string): TranslationKey {
+  if (slug === 'creative') return 'roomDetail.hint.creative';
+  if (slug === 'casual') return 'roomDetail.hint.casual';
+  return 'roomDetail.hint.default';
 }
 
-function getRoomDetailDescription(room: ChatRoom) {
-  if (room.slug === 'creative') {
-    return 'AI、発信、動画、音声、ゲーム制作、イベント企画など、一緒に何かを作りたい人が集まる部屋です。会話の中で企画の種が見つかったら、募集ボードで仲間を募れます。';
-  }
-  if (room.slug === 'casual') {
-    return '趣味や日常の話から、小さなきっかけを見つけるルームです。ゆるく話しながら、気になるテーマや一緒に楽しめることを探せます。';
-  }
-  return room.description;
+function getRoomDetailDescriptionKey(slug: string): TranslationKey | null {
+  if (slug === 'creative') return 'roomDetail.description.creative';
+  if (slug === 'casual') return 'roomDetail.description.casual';
+  return null;
 }
 
 function SentenceLines({ text }: { text: string }) {
-  const lines = text.split(/(?<=。)/).map((line) => line.trim()).filter(Boolean);
+  const lines = text.split(/(?<=[。.!?])/).map((line) => line.trim()).filter(Boolean);
 
   return (
     <>
@@ -48,6 +59,7 @@ export function RoomDetailPage() {
   const { roomId = '' } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
+  const { language, t } = useLanguage();
   const demoRoom = useMemo(() => demoChatRooms.find((room) => room.slug === roomId) ?? null, [roomId]);
   const [room, setRoom] = useState<ChatRoom | null>(demoRoom);
   const [messages, setMessages] = useState<ChatRoomMessageWithProfile[]>(demoRoomMessages[roomId] ?? []);
@@ -104,7 +116,7 @@ export function RoomDetailPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canUseSupabaseRooms || !room) {
-      setNotice('ログインするとルームで会話できます。');
+      setNotice(t('roomDetail.login'));
       return;
     }
 
@@ -141,10 +153,30 @@ export function RoomDetailPage() {
     navigate(`/board/new?roomId=${encodeURIComponent(roomId)}`);
   }
 
+  function formatDateTime(value: string) {
+    const locale = language === 'en' ? 'en-US' : 'ja-JP';
+    return new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+  }
+
+  function getRoomDisplayName(nextRoom: ChatRoom) {
+    const key = getRoomNameKey(nextRoom.slug);
+    return key ? t(key) : nextRoom.name;
+  }
+
+  function getRoomDetailDescription(nextRoom: ChatRoom) {
+    const key = getRoomDetailDescriptionKey(nextRoom.slug);
+    return key ? t(key) : nextRoom.description;
+  }
+
+  function getRoomTag(tag: string) {
+    const key = roomTagTranslationKeys[tag];
+    return key ? t(key) : tag;
+  }
+
   if (!room) {
     return (
       <PageShell description="指定されたルームは見つかりませんでした。" eyebrow="Rooms" title="ルームが見つかりません">
-        <Link className="inline-flex items-center gap-1 text-sm font-black text-theme-main-dark" to="/rooms"><ArrowLeft size={16} />ルーム一覧へ戻る</Link>
+        <Link className="inline-flex items-center gap-1 text-sm font-black text-theme-main-dark" to="/rooms"><ArrowLeft size={16} />{t('roomDetail.back')}</Link>
         <Card className="space-y-2 text-center">
           <p className="text-base font-black text-theme-text">このルームは利用できません</p>
           <p className="text-sm leading-6 text-theme-muted">公式ルームは「クリエイティブルーム」と「雑談ルーム」の2つです。</p>
@@ -157,8 +189,8 @@ export function RoomDetailPage() {
   const { Icon: RoomIcon, className: roomIconClassName } = getRoomVisual(room);
 
   return (
-    <PageShell description={<SentenceLines text={roomDescription} />} eyebrow="Room" title={room.name}>
-      <Link className="inline-flex items-center gap-1 text-sm font-black text-theme-main-dark" to="/rooms"><ArrowLeft size={16} />ルーム一覧へ戻る</Link>
+    <PageShell description={<SentenceLines text={roomDescription} />} eyebrow="Room" title={getRoomDisplayName(room)}>
+      <Link className="inline-flex items-center gap-1 text-sm font-black text-theme-main-dark" to="/rooms"><ArrowLeft size={16} />{t('roomDetail.back')}</Link>
 
       <Card className="flower-gradient border-0 p-1">
         <div className="space-y-3 rounded-[1.3rem] bg-theme-card/84 p-4 backdrop-blur">
@@ -166,25 +198,25 @@ export function RoomDetailPage() {
             <div className={`flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br shadow-sm ${roomIconClassName}`}><RoomIcon size={21} /></div>
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-black text-theme-text">{room.name}</h2>
+                <h2 className="text-lg font-black text-theme-text">{getRoomDisplayName(room)}</h2>
                 <Badge className="bg-theme-card shadow-sm"><UsersRound size={13} />{messages.length}件</Badge>
               </div>
-              <div className="flex flex-wrap gap-1.5">{(roomTags[room.slug] ?? ['公式']).map((tag) => <Badge key={tag}>#{tag}</Badge>)}</div>
+              <div className="flex flex-wrap gap-1.5">{(roomTags[room.slug] ?? ['公式']).map((tag) => <Badge key={tag}>#{getRoomTag(tag)}</Badge>)}</div>
             </div>
           </div>
-          <p className="rounded-2xl bg-theme-accent-soft/60 px-3 py-2 text-[13px] font-bold leading-5 text-theme-main-dark">{getRoomConversationHint(room.slug)}</p>
+          <p className="rounded-2xl bg-theme-accent-soft/60 px-3 py-2 text-[13px] font-bold leading-5 text-theme-main-dark">{t(getRoomConversationHintKey(room.slug))}</p>
           <div className="flex flex-col gap-2 rounded-2xl bg-white/70 p-3 ring-1 ring-theme-sky/10 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-bold leading-5 text-theme-muted">会話から募集ボードへつなげられます。</p>
-            <Button className="min-h-10 w-full px-3 py-2 text-xs sm:w-auto" onClick={handleCreateBoardPost}><ClipboardList size={15} />この会話から募集を作る</Button>
+            <p className="text-xs font-bold leading-5 text-theme-muted">{t('roomDetail.fromConversation')}</p>
+            <Button className="min-h-10 w-full px-3 py-2 text-xs sm:w-auto" onClick={handleCreateBoardPost}><ClipboardList size={15} />{t('roomDetail.createBoard')}</Button>
           </div>
         </div>
       </Card>
 
       {!canUseSupabaseRooms ? (
         <Card className="space-y-2">
-          <Badge>デモ表示</Badge>
-          <p className="text-sm font-bold text-theme-text">ログインするとルームで会話できます。</p>
-          <p className="text-sm leading-6 text-theme-muted">未ログイン時はルームの雰囲気を確認できます。</p>
+          <Badge>{t('roomDetail.demoView')}</Badge>
+          <p className="text-sm font-bold text-theme-text">{t('roomDetail.login')}</p>
+          <p className="text-sm leading-6 text-theme-muted">{t('roomDetail.demoHint')}</p>
         </Card>
       ) : null}
 
@@ -193,14 +225,14 @@ export function RoomDetailPage() {
 
       <Card className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-black text-theme-text">メッセージ</h2>
+          <h2 className="text-base font-black text-theme-text">{t('roomDetail.messages')}</h2>
           <Badge className="bg-theme-card shadow-sm">{messages.length}件</Badge>
         </div>
 
         {!loading && messages.length === 0 ? (
           <div className="rounded-[1.15rem] bg-theme-accent-soft/55 p-3 text-center">
-            <p className="text-[13px] font-black text-theme-text">まだ会話がありません</p>
-            <p className="mt-1 text-xs leading-5 text-theme-muted">最初のひとことから、企画の種が生まれるかもしれません。</p>
+            <p className="text-[13px] font-black text-theme-text">{t('roomDetail.noMessages')}</p>
+            <p className="mt-1 text-xs leading-5 text-theme-muted">{t('roomDetail.boardHint')}</p>
           </div>
         ) : null}
 
@@ -215,8 +247,8 @@ export function RoomDetailPage() {
                     <p className="text-[11px] font-bold text-theme-muted">{formatDateTime(message.created_at)}</p>
                   </div>
                   <div className="flex gap-1">
-                    <button className="inline-flex size-7 items-center justify-center rounded-full bg-transparent text-theme-muted/65 transition hover:bg-theme-accent-soft" title="通報" type="button"><ShieldAlert size={14} /></button>
-                    {isOwnMessage ? <button className="inline-flex size-7 items-center justify-center rounded-full bg-transparent text-theme-muted/65 transition hover:bg-rose-50 hover:text-rose-600" title="削除" type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} /></button> : null}
+                    <button className="inline-flex size-7 items-center justify-center rounded-full bg-transparent text-theme-muted/65 transition hover:bg-theme-accent-soft" title={t('roomDetail.report')} type="button"><ShieldAlert size={14} /></button>
+                    {isOwnMessage ? <button className="inline-flex size-7 items-center justify-center rounded-full bg-transparent text-theme-muted/65 transition hover:bg-rose-50 hover:text-rose-600" title={t('roomDetail.delete')} type="button" onClick={() => handleDelete(message.id)}><Trash2 size={14} /></button> : null}
                   </div>
                 </div>
                 <p className="whitespace-pre-wrap text-sm leading-5 text-theme-text">{message.body}</p>
@@ -227,12 +259,12 @@ export function RoomDetailPage() {
 
         <form className="space-y-2 border-t border-white/60 pt-3" onSubmit={handleSubmit}>
           <label className="block space-y-2 text-sm font-semibold text-theme-text">
-            <span>メッセージ入力</span>
-            <textarea className="theme-input min-h-16 w-full rounded-xl border px-3 py-2 text-sm leading-5 outline-none" maxLength={2000} placeholder="このルームで話してみる" value={messageBody} onChange={(event) => setMessageBody(event.target.value)} />
+            <span>{t('roomDetail.sendMessage')}</span>
+            <textarea className="theme-input min-h-16 w-full rounded-xl border px-3 py-2 text-sm leading-5 outline-none" maxLength={2000} placeholder={t('roomDetail.talkPlaceholder')} value={messageBody} onChange={(event) => setMessageBody(event.target.value)} />
           </label>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            {!canUseSupabaseRooms ? <p className="text-xs font-bold leading-5 text-theme-muted">ログインするとルームで会話できます。</p> : null}
-            <Button className="min-h-10 w-full px-3 py-2 text-xs sm:w-auto" disabled={sending} type="submit"><Send size={15} />送信</Button>
+            {!canUseSupabaseRooms ? <p className="text-xs font-bold leading-5 text-theme-muted">{t('roomDetail.login')}</p> : null}
+            <Button className="min-h-10 w-full px-3 py-2 text-xs sm:w-auto" disabled={sending} type="submit"><Send size={15} />{t('roomDetail.send')}</Button>
           </div>
         </form>
       </Card>
