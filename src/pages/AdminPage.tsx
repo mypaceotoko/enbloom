@@ -17,6 +17,7 @@ import { restoreProfile, suspendProfile } from '../lib/adminModerationApi';
 import { archiveReport, getAdminReports, unarchiveReport, updateReportAdminNote, updateReportStatus } from '../lib/reportApi';
 import { GENERAL_USER_INVITE_CODE_LIMIT } from '../lib/admin';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
+import { requireSupabaseClient } from '../lib/supabase';
 import type { ReportStatus, ReportWithProfiles } from '../types/report';
 
 type InviteCodeForm = {
@@ -122,6 +123,48 @@ export function AdminPage({ inviteOnly = false }: { inviteOnly?: boolean } = {})
     { icon: KeyRound, title: '招待コード管理', count: inviteCountLabel, body: 'βテスターに共有する招待コードを作成・確認できます。\n招待コードは、紹介経路を記録するために使います。' },
     { icon: ShieldAlert, title: '通報管理', count: `${reportCount}件`, body: '届いた通報を確認し、必要に応じて対応できます。' },
   ];
+
+  useEffect(() => {
+    if (!isSupabaseMode || !isAuthenticated || !user) return undefined;
+
+    let ignore = false;
+    const supabaseClient = requireSupabaseClient();
+
+    Promise.all([
+      supabaseClient.auth.getUser(),
+      supabaseClient.rpc('is_admin'),
+    ])
+      .then(([currentUserResult, isAdminResult]) => {
+        if (ignore) return;
+
+        const currentUserError = currentUserResult.error;
+        const isAdminError = isAdminResult.error;
+        console.info('[AdminPage] admin screen current user diagnostic', {
+          email: currentUserResult.data.user?.email ?? user.email ?? null,
+          currentUserId: currentUserResult.data.user?.id ?? user.id,
+          currentUserIdExists: Boolean(currentUserResult.data.user?.id ?? user.id),
+          isFounder,
+          isAdmin: Boolean(isAdminResult.data),
+          currentUserError: currentUserError ? getSafeErrorLog(currentUserError, 'admin_screen_get_current_user_failed') : undefined,
+          isAdminError: isAdminError ? getSafeErrorLog(isAdminError, 'admin_screen_is_admin_check_failed') : undefined,
+        });
+      })
+      .catch((caughtError: unknown) => {
+        if (ignore) return;
+        console.info('[AdminPage] admin screen current user diagnostic', {
+          email: user.email ?? null,
+          currentUserId: user.id,
+          currentUserIdExists: Boolean(user.id),
+          isFounder,
+          isAdmin: false,
+          diagnosticError: getSafeErrorLog(caughtError, 'admin_screen_diagnostic_failed'),
+        });
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, isFounder, isSupabaseMode, user]);
 
   useEffect(() => {
     if (!isFounder || !isSupabaseMode || !isAuthenticated || !user) return undefined;
