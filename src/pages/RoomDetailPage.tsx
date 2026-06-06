@@ -184,9 +184,11 @@ export function RoomDetailPage() {
         });
       }
 
-      const confirmed = isAdminDelete
-        ? window.confirm('このルーム発言を管理者削除しますか？')
-        : true;
+      const confirmed = window.confirm(
+        isAdminDelete
+          ? 'メッセージを削除しますか？\n\nこの書き込みを管理者削除すると元に戻せません。'
+          : 'メッセージを削除しますか？\n\nこの書き込みを削除すると元に戻せません。',
+      );
       if (!confirmed) return;
 
       if (isAdminDelete && message) {

@@ -70,17 +70,17 @@ export function ProfileCard({ user, compact = false, liked: likedOverride, match
       <Link aria-label={`${user.name}: ${t('profileCard.viewProfile')}`} className="block" state={profileDetailState} to={`/profile/${user.id}`}>
         <div className={cn('relative overflow-hidden bg-gradient-to-br', compact ? 'h-36' : 'h-48', user.gradient)}>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.85),transparent_28%),radial-gradient(circle_at_80%_74%,rgba(255,255,255,0.44),transparent_26%)]" />
-          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-black text-theme-main-dark shadow-lg shadow-theme-main/10 backdrop-blur">
+          <div className="profile-card-hero-label absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-black text-theme-main-dark shadow-lg shadow-theme-main/10 backdrop-blur">
             <Sparkles size={13} />
             {t('profileCard.today')}
           </div>
-          <Badge className="absolute right-3 top-3 border border-white/70 bg-white/78 text-theme-text backdrop-blur">
+          <Badge className="profile-card-hero-badge absolute right-3 top-3 border border-white/70 bg-white/78 text-theme-text backdrop-blur">
             <UserRoundCheck size={13} />
             {matched ? t('profileCard.connected') : t('profileCard.introduction')}
           </Badge>
           <div className="absolute bottom-3 left-3 flex items-end gap-2.5">
             <ProfileAvatar className={cn('rounded-[1.35rem] border border-white/70 shadow-xl backdrop-blur', compact ? 'size-16' : 'size-20')} fallbackClassName={cn('bg-white/78 font-black', compact ? 'text-2xl' : 'text-3xl')} user={user} />
-            <div className="mb-0.5 rounded-[1.1rem] bg-white/72 px-3 py-2 shadow-lg shadow-theme-main/10 backdrop-blur">
+            <div className="profile-card-identity-panel mb-0.5 rounded-[1.1rem] bg-white/72 px-3 py-2 shadow-lg shadow-theme-main/10 backdrop-blur">
               <p className="text-base font-black leading-none text-theme-text">
                 {user.name} <span className="text-xs font-bold text-theme-muted">{user.age}</span>
               </p>
@@ -117,12 +117,12 @@ export function ProfileCard({ user, compact = false, liked: likedOverride, match
           </div>
         </div>
 
-        <div className="grid gap-1.5 rounded-[1rem] border border-theme-main/10 bg-theme-background/70 p-2.5 text-[12px] leading-5">
+        <div className="profile-card-info-panel grid gap-1.5 rounded-[1rem] border border-theme-main/10 bg-theme-background/70 p-2.5 text-[12px] leading-5">
           <div>
             <p className="flex items-center gap-1 font-black text-theme-text"><MessageCircle size={14} />{t('profileCard.connectionStyle')}</p>
             <p className="mt-0.5 text-theme-muted">{user.datingTemperature}</p>
           </div>
-          <div className="rounded-xl bg-theme-accent-soft/75 px-2.5 py-1 text-[11px] font-bold text-theme-text">
+          <div className="profile-card-intro-label rounded-xl bg-theme-accent-soft/75 px-2.5 py-1 text-[11px] font-bold text-theme-text">
             {t('profileCard.introduction')}: {user.introducedBy}
           </div>
         </div>

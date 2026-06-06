@@ -184,10 +184,10 @@ export function HomePage() {
       <Card className="flower-gradient relative overflow-hidden border-0 p-1">
         <div className="absolute -right-8 -top-8 size-28 rounded-full bg-white/30" />
         <div className="absolute -bottom-10 left-8 size-24 rounded-full bg-theme-accent-soft/50 blur-2xl" />
-        <div className="relative space-y-3 rounded-[1.25rem] bg-theme-card/78 p-4 backdrop-blur">
+        <div className="home-next-panel relative space-y-3 rounded-[1.25rem] bg-theme-card/78 p-4 backdrop-blur">
           <div className="flex flex-wrap gap-2">
             <Badge className="bg-theme-main text-white"><Sparkles size={13} />{t('home.next.badge')}</Badge>
-            <Badge className="bg-theme-card/80"><ShieldCheck size={13} />紹介制コネクトSNS</Badge>
+            <Badge className="home-next-badge bg-theme-card/80"><ShieldCheck size={13} />紹介制コネクトSNS</Badge>
           </div>
           <div>
             <h2 className="text-[1.25rem] font-black leading-tight tracking-[-0.03em]">{t('home.next.title')}</h2>
@@ -202,10 +202,10 @@ export function HomePage() {
             <Link to="/rooms"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><DoorOpen size={16} />{t('home.joinRooms')}</Button></Link>
             <Link to="/my-activity"><Button className="min-h-10 w-full px-3 text-sm" variant="secondary"><Sparkles size={16} />{t('home.checkActivity')}</Button></Link>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-theme-text">
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><Flower2 className="mx-auto mb-1 text-theme-main" size={16} />{t('home.natural')}</span>
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><HeartHandshake className="mx-auto mb-1 text-theme-main" size={16} />{t('home.conversation')}</span>
-            <span className="rounded-xl bg-theme-background/80 p-2.5"><UsersRound className="mx-auto mb-1 text-theme-main" size={16} />{t('home.introduction')}</span>
+          <div className="grid grid-cols-3 gap-1.5 text-center text-[11px] font-bold text-theme-muted">
+            <span className="home-static-chip cursor-default select-none rounded-lg border border-theme-border/45 bg-theme-background/45 px-2 py-1.5"><Flower2 className="mx-auto mb-0.5 text-theme-main/80" size={16} />{t('home.natural')}</span>
+            <span className="home-static-chip cursor-default select-none rounded-lg border border-theme-border/45 bg-theme-background/45 px-2 py-1.5"><HeartHandshake className="mx-auto mb-0.5 text-theme-main/80" size={16} />{t('home.conversation')}</span>
+            <span className="home-static-chip cursor-default select-none rounded-lg border border-theme-border/45 bg-theme-background/45 px-2 py-1.5"><UsersRound className="mx-auto mb-0.5 text-theme-main/80" size={16} />{t('home.introduction')}</span>
           </div>
         </div>
       </Card>
@@ -218,7 +218,7 @@ export function HomePage() {
         <Link className="shrink-0" to="/test-guide"><Button className="min-h-9 w-full px-3 text-xs sm:w-auto" variant="secondary">{t('home.beta.guide')}</Button></Link>
       </Card>
 
-      <div className="flex items-center justify-between rounded-full bg-theme-card/70 px-3.5 py-2.5 shadow-sm backdrop-blur">
+      <div className="home-today-summary flex items-center justify-between rounded-full border border-theme-border/45 bg-theme-card/84 px-3.5 py-2.5 shadow-sm backdrop-blur">
         <span className="flex items-center gap-1.5 text-[13px] font-black text-theme-main-dark">
           <CalendarHeart size={16} />
           今日の紹介 {todaysUsers.length}人
