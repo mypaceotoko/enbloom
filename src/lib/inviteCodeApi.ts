@@ -1,9 +1,10 @@
+import { normalizeInviteCodeInput, isFounderInviteCode, FOUNDER_INVITE_CODE } from './inviteCodeNormalize';
 import { requireSupabaseClient } from './supabase';
 
 export type InviteCodeRow = {
   id: string;
   code: string;
-  created_by: string;
+  created_by: string | null;
   max_uses: number | null;
   used_count: number;
   is_active: boolean;
@@ -24,8 +25,79 @@ export type InviteCodeValidationResult =
   | { ok: false; error: string };
 
 export type InviteCodeUseResult =
-  | { ok: true; inviteCodeId: string; introducerId: string; code: string; message?: string }
+  | { ok: true; inviteCodeId: string; introducerId: string | null; code: string; message?: string }
   | { ok: false; error: string };
+
+
+type InviteCodeFailureReason = 'not_found' | 'inactive' | 'expired' | 'max_uses_reached' | 'network' | 'auth_required' | 'creator_not_found' | 'self_use' | 'unknown';
+
+type InviteCodeErrorLike = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
+function getFounderInviteCodeRow(): InviteCodeRow {
+  return {
+    id: 'founder-special-mypace-2026',
+    code: FOUNDER_INVITE_CODE,
+    created_by: null,
+    max_uses: null,
+    used_count: 0,
+    is_active: true,
+    expires_at: null,
+    created_at: '2026-01-01T00:00:00.000Z',
+  };
+}
+
+function getInviteFailureReason(message: string): InviteCodeFailureReason {
+  if (message.includes('INVITE_CODE_NOT_FOUND')) return 'not_found';
+  if (message.includes('INVITE_CODE_INACTIVE')) return 'inactive';
+  if (message.includes('INVITE_CODE_EXPIRED')) return 'expired';
+  if (message.includes('INVITE_CODE_LIMIT_REACHED')) return 'max_uses_reached';
+  if (message.includes('INVITE_CODE_AUTH_REQUIRED')) return 'auth_required';
+  if (message.includes('INVITE_CODE_CREATOR_NOT_FOUND')) return 'creator_not_found';
+  if (isInviteCodeSelfUseError(message)) return 'self_use';
+  return 'unknown';
+}
+
+function getRpcFailureReason(result: InviteCodeRpcResult | null) {
+  return getInviteFailureReason(result?.reason ?? result?.error ?? result?.message ?? '');
+}
+
+function getErrorLog(error: InviteCodeErrorLike | null | undefined) {
+  if (!error) return undefined;
+  return {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+  };
+}
+
+function logInviteCodeVerifyFailed(params: {
+  rawCode: string;
+  normalizedCode: string;
+  isFounderCode: boolean;
+  reason: InviteCodeFailureReason;
+  error?: InviteCodeErrorLike | null;
+  result?: InviteCodeRpcResult | null;
+}) {
+  console.warn('[ConnectBloom] invite code verify failed', {
+    action: 'invite_code_verify_failed',
+    rawCodeLength: params.rawCode.length,
+    normalizedCode: params.normalizedCode,
+    isFounderCode: params.isFounderCode,
+    error: getErrorLog(params.error),
+    rpc: params.result ? {
+      reason: params.result.reason,
+      error: params.result.error,
+      message: params.result.message,
+    } : undefined,
+    reason: params.reason,
+  });
+}
 
 type InviteCodeRpcResult = {
   success?: boolean;
@@ -38,8 +110,6 @@ type InviteCodeRpcResult = {
   introducer_id?: string;
   code?: string;
 };
-
-export const FOUNDER_INVITE_CODE = 'MYPACE-2026';
 
 const selfInviteErrorTokens = [
   'INVITE_CODE_SELF_USE_NOT_ALLOWED',
@@ -57,13 +127,7 @@ const inviteCodeColumns = [
   'created_at',
 ].join(',');
 
-export function normalizeInviteCode(code: string) {
-  return code.trim().toUpperCase();
-}
-
-export function isFounderInviteCode(code: string) {
-  return normalizeInviteCode(code) === FOUNDER_INVITE_CODE;
-}
+export { normalizeInviteCodeInput, isFounderInviteCode, FOUNDER_INVITE_CODE };
 
 export function isInviteCodeSelfUseError(message: string) {
   return selfInviteErrorTokens.some((token) => message.includes(token));
@@ -102,32 +166,51 @@ function inviteErrorFromRpc(result: InviteCodeRpcResult | null, fallback: string
 }
 
 export async function validateInviteCode(code: string): Promise<InviteCodeValidationResult> {
-  const normalizedCode = normalizeInviteCode(code);
+  const normalizedCode = normalizeInviteCodeInput(code);
+  const founderCode = isFounderInviteCode(normalizedCode);
   if (!normalizedCode) return { ok: false, error: '招待コードを入力してください。' };
+  if (founderCode) return { ok: true, inviteCode: getFounderInviteCodeRow() };
 
   const { data, error } = await requireSupabaseClient().rpc('validate_invite_code', {
     invite_code: normalizedCode,
   });
 
-  if (error) return { ok: false, error: formatSupabaseInviteError(error.message) };
+  if (error) {
+    logInviteCodeVerifyFailed({ rawCode: code, normalizedCode, isFounderCode: founderCode, reason: 'network', error });
+    return { ok: false, error: formatSupabaseInviteError(error.message) };
+  }
 
   const result = pickRpcResult(data);
   const isSuccess = result?.success === true || result?.ok === true;
   if (!isSuccess || !result?.invite_code) {
+    const reason = getRpcFailureReason(result);
+    logInviteCodeVerifyFailed({ rawCode: code, normalizedCode, isFounderCode: founderCode, reason, result });
     return { ok: false, error: inviteErrorFromRpc(result, '招待コードを確認できませんでした。入力内容をもう一度お確かめください。') };
   }
 
   const inviteCode = result.invite_code;
-  if (!inviteCode.created_by) return { ok: false, error: 'この招待コードの紹介者を確認できません。紹介者に確認してください。' };
-  if (!inviteCode.is_active) return { ok: false, error: 'この招待コードは現在利用できません。紹介者に確認してください。' };
-  if (isExpired(inviteCode)) return { ok: false, error: 'この招待コードは期限切れです。新しいコードを紹介者に確認してください。' };
-  if (isLimitReached(inviteCode)) return { ok: false, error: 'この招待コードは利用上限に達しています。紹介者に確認してください。' };
+  if (!inviteCode.created_by) {
+    logInviteCodeVerifyFailed({ rawCode: code, normalizedCode, isFounderCode: founderCode, reason: 'creator_not_found', result });
+    return { ok: false, error: 'この招待コードの紹介者を確認できません。紹介者に確認してください。' };
+  }
+  if (!inviteCode.is_active) {
+    logInviteCodeVerifyFailed({ rawCode: code, normalizedCode, isFounderCode: founderCode, reason: 'inactive', result });
+    return { ok: false, error: 'この招待コードは現在利用できません。紹介者に確認してください。' };
+  }
+  if (isExpired(inviteCode)) {
+    logInviteCodeVerifyFailed({ rawCode: code, normalizedCode, isFounderCode: founderCode, reason: 'expired', result });
+    return { ok: false, error: 'この招待コードは期限切れです。新しいコードを紹介者に確認してください。' };
+  }
+  if (isLimitReached(inviteCode)) {
+    logInviteCodeVerifyFailed({ rawCode: code, normalizedCode, isFounderCode: founderCode, reason: 'max_uses_reached', result });
+    return { ok: false, error: 'この招待コードは利用上限に達しています。紹介者に確認してください。' };
+  }
 
   return { ok: true, inviteCode };
 }
 
 export async function useInviteCode(code: string, userId: string): Promise<InviteCodeUseResult> {
-  const normalizedCode = normalizeInviteCode(code);
+  const normalizedCode = normalizeInviteCodeInput(code);
   if (!normalizedCode) return { ok: false, error: '招待コードを入力してください。' };
 
   const { data, error } = await requireSupabaseClient().rpc('use_invite_code', {
@@ -135,25 +218,40 @@ export async function useInviteCode(code: string, userId: string): Promise<Invit
     user_id: userId,
   });
 
-  if (error) return { ok: false, error: `紹介情報の保存に失敗しました。${formatSupabaseInviteError(error.message)}` };
+  const founderCode = isFounderInviteCode(normalizedCode);
+
+  if (error) {
+    return { ok: false, error: `紹介情報の保存に失敗しました。${formatSupabaseInviteError(error.message)}` };
+  }
 
   const result = pickRpcResult(data);
   const isSuccess = result?.success === true || result?.ok === true;
-  if (!isSuccess || !result?.invite_code_id || !result.introducer_id || !result.code) {
+  const hasRequiredResult = Boolean(result?.invite_code_id && result.code && (result.introducer_id || founderCode));
+  if (!isSuccess || !hasRequiredResult) {
+    const reason = getRpcFailureReason(result);
+    if (founderCode && ['not_found', 'creator_not_found', 'self_use'].includes(reason)) {
+      return {
+        ok: true,
+        inviteCodeId: result?.invite_code_id ?? 'founder-special-mypace-2026',
+        introducerId: null,
+        code: FOUNDER_INVITE_CODE,
+        message: result?.message,
+      };
+    }
     return { ok: false, error: `紹介情報の保存に失敗しました。${inviteErrorFromRpc(result, '少し時間を置いてもう一度お試しください。')}` };
   }
 
   return {
     ok: true,
-    inviteCodeId: result.invite_code_id,
-    introducerId: result.introducer_id,
-    code: result.code,
-    message: result.message,
+    inviteCodeId: result?.invite_code_id ?? 'founder-special-mypace-2026',
+    introducerId: result?.introducer_id ?? null,
+    code: result?.code ?? FOUNDER_INVITE_CODE,
+    message: result?.message,
   };
 }
 
 export async function createInviteCode(params: InviteCodeCreateParams): Promise<InviteCodeRow> {
-  const normalizedCode = normalizeInviteCode(params.code);
+  const normalizedCode = normalizeInviteCodeInput(params.code);
   if (!normalizedCode) throw new Error('招待コードを入力してください。');
 
   const maxUses = params.maxUses ?? null;

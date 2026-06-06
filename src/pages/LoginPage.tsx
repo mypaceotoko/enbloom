@@ -47,7 +47,7 @@ export function LoginPage() {
         setStatusMessage(t('login.status.checkingInvite'));
         const inviteValidation = await validateInviteCode(normalizedInviteCode);
         if (!inviteValidation.ok) {
-          console.warn('[Login] invite code validation failed', { success: false, inviteCodeExists: true });
+          console.warn('[Login] invite code validation failed', { success: false, inviteCodeExists: true, normalizedCode: normalizedInviteCode });
           setInviteCodeStatus('invalid');
           setError(t('login.inviteCode.status.invalid'));
           setSubmitting(false);
@@ -103,9 +103,13 @@ export function LoginPage() {
           <Input
             helperText={t('login.inviteCode.helper')}
             label={t('login.inviteCode.label')}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            inputMode="text"
             name="inviteCode"
             onChange={(event) => handleInviteCodeChange(event.target.value)}
             placeholder={t('login.inviteCode.placeholder')}
+            spellCheck={false}
             value={inviteCode}
           />
           <div className={`rounded-[1.15rem] p-3 text-xs font-bold leading-5 ${inviteCodeStatus === 'invalid' ? 'bg-red-50 text-red-600' : inviteCodeStatus === 'confirmed' ? 'bg-theme-accent-soft/70 text-theme-main-dark' : 'bg-theme-background/75 text-theme-muted'}`} role="status">

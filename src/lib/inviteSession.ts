@@ -1,8 +1,8 @@
+import { normalizeInviteCodeInput } from './inviteCodeNormalize';
+
 const PENDING_INVITE_CODE_STORAGE_KEY = 'connectbloom.pendingInviteCode.v1';
 
-export function normalizeInviteCodeInput(code: string) {
-  return code.trim().toUpperCase();
-}
+export { normalizeInviteCodeInput };
 
 export function getPendingInviteCode() {
   if (typeof window === 'undefined') return '';

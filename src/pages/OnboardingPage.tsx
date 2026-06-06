@@ -15,7 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import { getSafeErrorLog } from '../lib/errorMessage';
 import { isFounderInviteCode, isInviteCodeSelfUseError, validateInviteCode, useInviteCode as redeemInviteCode } from '../lib/inviteCodeApi';
-import { clearPendingInviteCode, getPendingInviteCode } from '../lib/inviteSession';
+import { clearPendingInviteCode, getPendingInviteCode, normalizeInviteCodeInput } from '../lib/inviteSession';
 import { upsertMyProfile } from '../lib/profileApi';
 import type { CurrentUserProfile } from '../types/user';
 
@@ -127,7 +127,7 @@ export function OnboardingPage() {
       talkTopics: form.talkTopics.trim().slice(0, 160),
       datingTemperature: normalizeDatingTemperature(form.datingTemperature),
       selectedInterestTags: Array.isArray(form.interests) ? form.interests : [],
-      inviteCode: form.inviteCode.trim().toUpperCase(),
+      inviteCode: normalizeInviteCodeInput(form.inviteCode),
     };
   }
 
@@ -422,8 +422,12 @@ export function OnboardingPage() {
             helperText={isSupabaseMode ? t('onboarding.inviteCode.helper') : t('onboarding.inviteCode.demoHelper')}
             label={t('onboarding.inviteCode.title')}
             name="inviteCode"
-            onChange={(event) => updateField('inviteCode', event.target.value.toUpperCase())}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            inputMode="text"
+            onChange={(event) => updateField('inviteCode', normalizeInviteCodeInput(event.target.value))}
             placeholder="例：MYPACE-2026"
+            spellCheck={false}
             value={form.inviteCode}
           />
           <div className="rounded-[1.15rem] bg-theme-accent-soft/45 p-3 text-xs font-bold leading-5 text-theme-main-dark">
