@@ -80,7 +80,7 @@ export function ActivityBoardDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isSupabaseMode, user } = useAuth();
-  const { isFounder } = useAdmin();
+  const { isAdmin, isFounder } = useAdmin();
   const { language, t } = useLanguage();
   const [post, setPost] = useState<ActivityPostWithAuthor | null>(null);
   const [sourceRoomName, setSourceRoomName] = useState('');
@@ -96,6 +96,7 @@ export function ActivityBoardDetailPage() {
   const useSupabaseBoard = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
   const isOwnPost = Boolean(user?.id && post?.created_by === user.id);
   const canUseFounderPostModeration = Boolean(isFounder && useSupabaseBoard && post);
+  const canOwnerWithdrawPost = Boolean(isOwnPost && !post?.moderation_locked && post?.status === 'open');
 
   useEffect(() => {
     let mounted = true;
@@ -203,7 +204,7 @@ export function ActivityBoardDetailPage() {
 
 
   async function handleOwnerWithdrawPost() {
-    if (!post || !isOwnPost || post.status === 'archived') return;
+    if (!post || !canOwnerWithdrawPost) return;
 
     setInterestError('');
     setNotice('');
@@ -215,6 +216,21 @@ export function ActivityBoardDetailPage() {
       await withdrawActivityPost(post.id);
       navigate('/board', { state: { message: '募集を取り下げました' } });
     } catch (caughtError) {
+      console.warn('[ConnectBloom] activity post owner withdrawal failed', {
+        action: 'owner_withdraw_activity_post',
+        currentUserId: user?.id ?? null,
+        currentUserEmail: user?.email ?? null,
+        postId: post.id,
+        postOwnerId: post.created_by,
+        isOwner: isOwnPost,
+        isFounder,
+        isAdmin,
+        statusBefore: post.status,
+        moderationLocked: Boolean(post.moderation_locked),
+        rpcName: 'owner_withdraw_activity_post',
+        rpcPayloadKeys: ['p_post_id'],
+        ...getSafeErrorLog(caughtError, 'owner_withdraw_activity_post'),
+      });
       setNotice(getShortErrorMessage(caughtError, '募集の取り下げに失敗しました'));
     } finally {
       setSaving(false);
@@ -388,7 +404,7 @@ export function ActivityBoardDetailPage() {
                 <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-main px-4 py-2 text-[13px] font-bold text-white" to={`/board/${post.id}/edit`}><Pencil size={16} />募集内容を編集</Link>
               </div>
             ) : null}
-            {isOwnPost && post.status !== 'archived' ? (
+            {canOwnerWithdrawPost ? (
               <Button className="w-full" disabled={saving || !useSupabaseBoard} onClick={() => { void handleOwnerWithdrawPost(); }} type="button" variant="danger">
                 <Trash2 size={16} />募集を取り下げる
               </Button>

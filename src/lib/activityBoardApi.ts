@@ -32,6 +32,12 @@ type InterestCountRpcRow = {
   interest_count: number;
 };
 
+type ActivityPostWithdrawalResult = {
+  success: boolean;
+  post_id: string;
+  status: ActivityPost['status'];
+};
+
 const legacyActivityPostColumns = [
   'id',
   'created_by',
@@ -678,19 +684,21 @@ export async function reopenActivityPost(postId: string): Promise<ActivityPost> 
   return data;
 }
 
-export async function withdrawActivityPost(postId: string): Promise<ActivityPost> {
+export async function withdrawActivityPost(postId: string): Promise<ActivityPostWithdrawalResult> {
   assertNotDemoMode('募集取り下げ');
+  const rpcName = 'owner_withdraw_activity_post';
+  const rpcPayload = { p_post_id: postId };
   const { data, error } = await requireSupabaseClient()
-    .rpc('owner_withdraw_activity_post', { p_post_id: postId })
-    .single<ActivityPost>();
+    .rpc(rpcName, rpcPayload)
+    .single<ActivityPostWithdrawalResult>();
 
   if (error) throw error;
-  if (!data) throw new Error('募集の取り下げに失敗しました');
-  console.info('[ConnectBloom] activity post withdrawn', { success: true });
+  if (!data?.success) throw new Error('募集の取り下げに失敗しました');
+  console.info('[ConnectBloom] activity post withdrawn', { success: true, action: rpcName, postId, status: data.status });
   return data;
 }
 
-export async function archiveActivityPost(postId: string): Promise<ActivityPost> {
+export async function archiveActivityPost(postId: string): Promise<ActivityPostWithdrawalResult> {
   return withdrawActivityPost(postId);
 }
 
