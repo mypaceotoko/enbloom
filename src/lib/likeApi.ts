@@ -139,6 +139,35 @@ export async function hasLiked(senderId: string, receiverId: string): Promise<bo
   return Boolean(data);
 }
 
+function isUniqueViolation(error: unknown) {
+  return Boolean(error && typeof error === 'object' && 'code' in error && error.code === '23505');
+}
+
+function logLikeSideEffectFailure(senderId: string, receiverId: string, sideEffectName: string, error: unknown, alreadySent: boolean) {
+  console.warn('[like_send_side_effect_failed]', {
+    action: 'send_like',
+    currentUserId: senderId,
+    targetUserId: receiverId,
+    mainInsertSuccess: true,
+    alreadySent,
+    sideEffectName,
+    sideEffectError: getSafeErrorLog(error, sideEffectName),
+    finalUiState: 'sent',
+  });
+}
+
+async function getExistingLike(senderId: string, receiverId: string) {
+  const { data, error } = await requireSupabaseClient()
+    .from('likes')
+    .select(likeColumns)
+    .eq('from_user_id', senderId)
+    .eq('to_user_id', receiverId)
+    .single<LikeRow>();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function createLike(receiverId: string): Promise<Like & { matched: boolean; matchId?: string; matchCheckError?: string }> {
   assertNotDemoMode('話してみたい');
   const senderId = await getCurrentUserId();
@@ -150,16 +179,16 @@ export async function createLike(receiverId: string): Promise<Like & { matched: 
 
   const alreadyLiked = await hasLiked(senderId, receiverId);
   if (alreadyLiked) {
-    const { data, error } = await requireSupabaseClient()
-      .from('likes')
-      .select(likeColumns)
-      .eq('from_user_id', senderId)
-      .eq('to_user_id', receiverId)
-      .single<LikeRow>();
-
-    if (error) throw error;
-    console.info('[ConnectBloom] like create success', { success: true, alreadyLiked: true });
-    return { ...mapLikeRow(data), matched: false };
+    const existingLike = await getExistingLike(senderId, receiverId);
+    console.info('[ConnectBloom] like create success', {
+      action: 'send_like',
+      currentUserId: senderId,
+      targetUserId: receiverId,
+      mainInsertSuccess: true,
+      alreadySent: true,
+      finalUiState: 'sent',
+    });
+    return { ...mapLikeRow(existingLike), matched: false };
   }
 
   const { data, error } = await requireSupabaseClient()
@@ -168,25 +197,48 @@ export async function createLike(receiverId: string): Promise<Like & { matched: 
     .select(likeColumns)
     .single<LikeRow>();
 
+  let savedLike = data;
+  let alreadySent = false;
   if (error) {
-    console.info('[ConnectBloom] like create success', { success: false });
-    throw error;
+    if (!isUniqueViolation(error)) {
+      console.info('[ConnectBloom] like create success', {
+        action: 'send_like',
+        currentUserId: senderId,
+        targetUserId: receiverId,
+        mainInsertSuccess: false,
+        alreadySent: false,
+        finalUiState: 'error',
+      });
+      throw error;
+    }
+
+    savedLike = await getExistingLike(senderId, receiverId);
+    alreadySent = true;
   }
 
-  console.info('[ConnectBloom] like create success', { success: true });
+  if (!savedLike) {
+    throw new Error('話してみたいの保存結果を確認できませんでした。');
+  }
+
+  console.info('[ConnectBloom] like create success', {
+    action: 'send_like',
+    currentUserId: senderId,
+    targetUserId: receiverId,
+    mainInsertSuccess: true,
+    alreadySent,
+    finalUiState: 'sent',
+  });
 
   try {
     const matchResult = await createMatchIfMutualLike(receiverId);
     return {
-      ...mapLikeRow(data),
+      ...mapLikeRow(savedLike),
       matched: matchResult.matched,
       matchId: matchResult.matchId,
     };
   } catch (caughtError) {
-    const message = caughtError instanceof Error ? caughtError.message : 'コネクト確認に失敗しました。';
-    console.info('[ConnectBloom] match create success', { success: false });
-    console.warn('[ConnectBloom] Like was saved, but match check failed.', message);
-    return { ...mapLikeRow(data), matched: false, matchCheckError: '話してみたいは保存しましたが、コネクト確認に失敗しました。' };
+    logLikeSideEffectFailure(senderId, receiverId, 'create_match_if_mutual_like', caughtError, alreadySent);
+    return { ...mapLikeRow(savedLike), matched: false, matchCheckError: '話してみたいを送りました。' };
   }
 }
 

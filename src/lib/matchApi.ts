@@ -1,4 +1,5 @@
 import type { DirectConversationResult, Match, MatchCreateResult, MatchStatus, MatchWithProfile } from '../types/match';
+import { FOUNDER_EMAIL, normalizeEmail } from './admin';
 import { isSchemaRelationshipError } from './dbError';
 import { attachPrimaryPhotoUrls, getPrimaryProfilePhotos } from './profilePhotoApi';
 import { getPublicProfileById, profileRowToUserProfile, type ProfileRow } from './profileApi';
@@ -98,11 +99,15 @@ function mapMatchWithProfile(row: MatchRowWithProfiles, currentUserId: string): 
   };
 }
 
-async function getCurrentUserId() {
+async function getCurrentAuthUser() {
   const { data, error } = await requireSupabaseClient().auth.getUser();
   if (error) throw error;
   if (!data.user) throw new Error('ログイン情報を確認できませんでした。もう一度ログインしてください。');
-  return data.user.id;
+  return data.user;
+}
+
+async function getCurrentUserId() {
+  return (await getCurrentAuthUser()).id;
 }
 
 async function hasProfile(profileId: string) {
@@ -236,6 +241,33 @@ function mapDirectConversationError(error: unknown, fallback: string) {
   })();
 
   return getShortErrorMessage(error, friendlyMessage);
+}
+
+
+async function getAdminConversationDiagnostics(targetUserId: string) {
+  const currentUser = await getCurrentAuthUser();
+  const currentUserEmail = currentUser.email ?? null;
+  const client = requireSupabaseClient();
+
+  const [{ data: profileData }, { data: publicIsAdminData, error: publicIsAdminError }] = await Promise.all([
+    client.from('profiles').select('role').eq('id', currentUser.id).maybeSingle<{ role: string | null }>(),
+    client.rpc('is_admin', { user_id: currentUser.id }).maybeSingle<boolean>(),
+  ]);
+
+  if (publicIsAdminError) {
+    console.warn('[ConnectBloom] admin DM is_admin diagnostic failed', getSafeErrorLog(publicIsAdminError, 'admin_create_direct_conversation_is_admin_check'));
+  }
+
+  return {
+    action: 'admin_create_direct_conversation' as const,
+    currentUserId: currentUser.id,
+    currentUserEmail,
+    targetUserId,
+    isFounder: normalizeEmail(currentUserEmail) === FOUNDER_EMAIL,
+    isAdmin: profileData?.role === 'admin' || normalizeEmail(currentUserEmail) === FOUNDER_EMAIL,
+    publicIsAdminAuthUid: Boolean(publicIsAdminData),
+    method: 'rpc' as const,
+  };
 }
 
 function isMissingRpcError(error: { code?: string; message?: string }) {
@@ -414,11 +446,16 @@ export async function createMatchIfMutualLike(targetUserId: string): Promise<Mat
 
 
 export async function adminCreateOrGetDirectConversation(targetUserId: string): Promise<DirectConversationResult> {
+  const diagnostics = await getAdminConversationDiagnostics(targetUserId);
   const { data, error } = await requireSupabaseClient()
     .rpc('admin_create_or_get_direct_conversation', { p_target_user_id: targetUserId });
 
   if (error) {
     logDmSupabaseError('admin_create_or_get_direct_conversation', error);
+    console.warn('[ConnectBloom] admin direct conversation failed', {
+      ...diagnostics,
+      ...getSafeErrorLog(error, 'admin_create_direct_conversation'),
+    });
     return {
       success: false,
       phase: 'rpc_failed',
@@ -431,6 +468,10 @@ export async function adminCreateOrGetDirectConversation(targetUserId: string): 
   const result = mapDirectConversationResult(data);
   const phase = result.success && result.matchId ? 'admin_create_or_get_direct_conversation' : 'match_id_missing';
   const debugError = phase === 'match_id_missing' ? `rpc data: ${safeStringifyRpcData(data)}` : result.debugError;
+  console.info('[ConnectBloom] admin direct conversation result', {
+    ...diagnostics,
+    createdOrFoundConversationId: result.matchId ?? null,
+  });
   return { ...result, phase, debugError };
 }
 

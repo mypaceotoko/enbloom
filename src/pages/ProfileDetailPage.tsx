@@ -125,7 +125,10 @@ export function ProfileDetailPage() {
         setNotice(likeResult.matchCheckError ?? '話してみたいを送りました。');
       }
     } catch (caughtError) {
-      setErrorNotice(caughtError instanceof Error ? caughtError.message : '通信に失敗しました。少し時間を置いてもう一度お試しください。');
+      const errorMessage = caughtError instanceof Error && /自分自身/.test(caughtError.message)
+        ? caughtError.message
+        : '通信に失敗しました。少し時間を置いてもう一度お試しください。';
+      setErrorNotice(errorMessage);
     }
   }
 
