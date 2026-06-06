@@ -255,7 +255,7 @@ export function MyProfilePage() {
             </div>
           </div>
         </div>
-        <Input helperText="アプリ内で表示される名前です。" label="表示名" name="myName" onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="マイペース男" value={form.name} />
+        <Input helperText="アプリ内で表示される名前です。" label="表示名" name="myName" onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="名前" value={form.name} />
         <div className="grid grid-cols-2 gap-3"><Input helperText="18歳未満は利用できません。" label="年齢" name="myAge" onChange={(event) => setForm((current) => ({ ...current, age: event.target.value }))} placeholder="39" type="number" value={form.age} /><Input helperText="大まかな活動エリアでOKです。" label="活動エリア" name="myLocation" onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} placeholder="東京都・世田谷区 / オンライン" value={form.location} /></div>
         <Input helperText="未入力でも保存できます。あなたらしい一言として編集できます。" label="できること" name="myOccupation" onChange={(event) => setForm((current) => ({ ...current, occupation: event.target.value }))} placeholder="例：AIアプリ制作 / ブログ作業 / 音声配信" value={form.occupation} />
         <label className="block space-y-2 text-sm font-semibold text-theme-text">
@@ -269,12 +269,12 @@ export function MyProfilePage() {
           <span className="block text-xs font-medium leading-5 text-theme-muted">共通の興味から話し始めやすいように、今話してみたいテーマを書いておきましょう。</span>
           <span className="block text-right text-[11px] font-bold text-theme-muted">{form.talkTopics.length}/160</span>
         </label>
-        <label className="block space-y-2 text-sm font-semibold text-theme-text">
+        <label className="block space-y-2 text-[15px] font-semibold text-theme-text sm:text-sm">
           <span className="block text-sm font-black text-theme-text">つながり方のスタンス</span>
-          <span>今の気持ちに近いもの</span>
-          <p className="text-xs font-medium leading-5 text-theme-muted">どんなきっかけでつながりたいかに近いものを1つ選んでください。</p>
-          <p className="text-xs font-bold leading-5 text-theme-main-dark">迷ったら“まずはゆっくり話したい”のままで大丈夫です。あとからマイプロフィールで変更できます。</p>
-          <select className="min-h-11 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => setForm((current) => ({ ...current, datingTemperature: normalizeDatingTemperature(event.target.value) }))} value={form.datingTemperature}>
+          <span className="font-bold">今の気持ちに近いもの</span>
+          <p className="text-[13px] font-semibold leading-6 text-theme-muted sm:text-xs sm:leading-5">どんなきっかけでつながりたいかに近いものを1つ選んでください。</p>
+          <p className="text-[13px] font-bold leading-6 text-theme-main-dark sm:text-xs sm:leading-5">迷ったら“まずはゆっくり話したい”のままで大丈夫です。あとからマイプロフィールで変更できます。</p>
+          <select className="theme-input min-h-11 w-full rounded-xl border px-3.5 text-[15px] font-semibold text-theme-text outline-none transition focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15 sm:text-sm" onChange={(event) => setForm((current) => ({ ...current, datingTemperature: normalizeDatingTemperature(event.target.value) }))} value={form.datingTemperature}>
             {DATING_TEMPERATURE_OPTIONS.map((datingTemperature) => (
               <option key={datingTemperature} value={datingTemperature}>{datingTemperature}</option>
             ))}

@@ -359,7 +359,7 @@ export function OnboardingPage() {
       <div ref={basicStepRef}>
         <Card className="space-y-4">
           <SectionTitle icon={<UserRound size={18} />} label="Step 1" title={t('onboarding.basic.title')} />
-          <Input helperText={t('onboarding.basic.displayNameHelper')} label={t('onboarding.basic.displayName')} name="displayName" onChange={(event) => updateField('name', event.target.value)} placeholder="マイペース男" value={form.name} />
+          <Input helperText={t('onboarding.basic.displayNameHelper')} label={t('onboarding.basic.displayName')} name="displayName" onChange={(event) => updateField('name', event.target.value)} placeholder="名前" value={form.name} />
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Input helperText="18歳未満は利用できません。" label={t('onboarding.basic.age')} name="age" onChange={(event) => updateField('age', event.target.value)} placeholder="39" type="number" value={form.age} />
@@ -386,11 +386,11 @@ export function OnboardingPage() {
       <div ref={temperatureStepRef}>
         <Card className="space-y-4">
           <SectionTitle icon={<MapPin size={18} />} label="Step 2" title={t('onboarding.temperature.title')} />
-          <label className="block space-y-2 text-sm font-semibold text-theme-text">
-            <span>{t('onboarding.temperature.label')}</span>
-            <p className="text-xs font-medium leading-5 text-theme-muted">{t('onboarding.temperature.body')}</p>
-            <p className="text-xs font-bold leading-5 text-theme-main-dark">{t('onboarding.temperature.editLater')}</p>
-            <select className="min-h-11 w-full rounded-xl border border-theme-sky/30 bg-theme-card px-3.5 text-sm text-theme-text outline-none focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
+          <label className="block space-y-2 text-[15px] font-semibold text-theme-text sm:text-sm">
+            <span className="font-bold">{t('onboarding.temperature.label')}</span>
+            <p className="text-[13px] font-semibold leading-6 text-theme-muted sm:text-xs sm:leading-5">{t('onboarding.temperature.body')}</p>
+            <p className="text-[13px] font-bold leading-6 text-theme-main-dark sm:text-xs sm:leading-5">{t('onboarding.temperature.editLater')}</p>
+            <select className="theme-input min-h-11 w-full rounded-xl border px-3.5 text-[15px] font-semibold text-theme-text outline-none transition focus:border-theme-cyan focus:ring-4 focus:ring-theme-cyan/15 sm:text-sm" onChange={(event) => updateField('datingTemperature', event.target.value)} value={form.datingTemperature}>
               {DATING_TEMPERATURE_OPTIONS.map((datingTemperature) => (
                 <option key={datingTemperature} value={datingTemperature}>{datingTemperature}</option>
               ))}
@@ -443,7 +443,7 @@ export function OnboardingPage() {
         <Badge className="w-fit">{t('onboarding.theme.current')}: {themeId}</Badge>
       </Card>
 
-      <div className="sticky bottom-24 z-10 rounded-[1.25rem] border border-white/60 bg-theme-card/90 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
+      <div className="rounded-[1.25rem] border border-white/60 bg-theme-card/90 p-2.5 shadow-2xl shadow-theme-main/15 backdrop-blur">
         <p className="mb-2 px-1 text-center text-xs font-bold leading-5 text-theme-muted">{t('onboarding.footer.note')}</p>
         {error ? <ValidationSummary compact message={error} missingMessages={missingMessages} /> : null}
         {statusMessage ? <div className="mb-2 rounded-xl bg-theme-accent-soft/60 p-2.5 text-xs font-bold leading-5 text-theme-main-dark" role="status">{statusMessage}</div> : null}
