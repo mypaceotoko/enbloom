@@ -9,7 +9,7 @@ import { mockActivityPosts } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import type { TranslationKey } from '../lib/i18n';
-import { archiveActivityPost, closeActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost } from '../lib/activityBoardApi';
+import { closeActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost, withdrawActivityPost } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import type { ActivityPostInterestWithProfile, ActivityPostStatus, ActivityPostWithStats } from '../types/activityBoard';
@@ -163,17 +163,17 @@ export function MyBoardPage() {
 
   async function handleArchive(post: ActivityPostWithStats) {
     if (!useSupabaseBoard) return;
-    const confirmed = window.confirm('この募集をアーカイブしますか？');
+    const confirmed = window.confirm('この募集を取り下げますか？');
     if (!confirmed) return;
 
     setUpdatingPostId(post.id);
     setError('');
     try {
-      const updated = await archiveActivityPost(post.id);
-      applyPostStatus(post.id, updated.status, updated.closed_at);
-      setNotice('募集をアーカイブしました。');
+      await withdrawActivityPost(post.id);
+      setPosts((current) => current.filter((currentPost) => currentPost.id !== post.id));
+      setNotice('募集を取り下げました');
     } catch (caughtError) {
-      setError(getShortErrorMessage(caughtError, '募集のアーカイブに失敗しました。時間を置いてもう一度お試しください。'));
+      setError(getShortErrorMessage(caughtError, '募集の取り下げに失敗しました'));
     } finally {
       setUpdatingPostId(null);
     }
@@ -234,7 +234,7 @@ export function MyBoardPage() {
               </div>
               <div className="grid gap-2 text-xs sm:grid-cols-3">
                 <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={15} />{t('myBoard.close')}</Button>
-                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'open'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={15} />{t('myBoard.reopen')}</Button>
+                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'closed'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={15} />{t('myBoard.reopen')}</Button>
                 <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'archived'} onClick={() => void handleArchive(post)} variant="danger"><Archive size={15} />{t('myBoard.archive')}</Button>
               </div>
             </div>

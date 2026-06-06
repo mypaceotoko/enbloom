@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, ShieldAlert, UsersRound, XCircle } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, ShieldAlert, Trash2, UsersRound, XCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -19,8 +19,9 @@ import {
   getActivityPostById,
   getActivityPostInterestsForOwner,
   getMyActivityPostInterest,
-  archiveActivityPost,
-  reopenActivityPost,
+  archiveActivityPostForAdmin,
+  restoreActivityPostForAdmin,
+  withdrawActivityPost,
 } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
 import { isDemoModeEnabled } from '../lib/demoSession';
@@ -190,11 +191,31 @@ export function ActivityBoardDetailPage() {
 
     setSaving(true);
     try {
-      const updatedPost = willRestore ? await reopenActivityPost(post.id) : await archiveActivityPost(post.id);
+      const updatedPost = willRestore ? await restoreActivityPostForAdmin(post.id) : await archiveActivityPostForAdmin(post.id);
       setPost((current) => (current ? { ...current, ...updatedPost } : current));
       setNotice(willRestore ? '募集を戻しました。' : '募集を非表示にしました。');
     } catch (caughtError) {
       setInterestError(getShortErrorMessage(caughtError, willRestore ? '募集を戻せませんでした。' : '募集を非表示にできませんでした。'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+
+  async function handleOwnerWithdrawPost() {
+    if (!post || !isOwnPost || post.status === 'archived') return;
+
+    setInterestError('');
+    setNotice('');
+    const confirmed = window.confirm('この募集を取り下げますか？');
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      await withdrawActivityPost(post.id);
+      navigate('/board', { state: { message: '募集を取り下げました' } });
+    } catch (caughtError) {
+      setNotice(getShortErrorMessage(caughtError, '募集の取り下げに失敗しました'));
     } finally {
       setSaving(false);
     }
@@ -362,7 +383,18 @@ export function ActivityBoardDetailPage() {
               </div>
             ) : null}
             {isOwnPost ? (
-              <Link className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-theme-main px-4 py-2 text-[13px] font-bold text-white" to={`/board/${post.id}/edit`}><Pencil size={16} />募集を編集</Link>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <a className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-4 py-2 text-[13px] font-bold text-theme-main-dark shadow-sm shadow-theme-sky/15" href="#activity-participants"><UsersRound size={16} />参加者を管理</a>
+                <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-main px-4 py-2 text-[13px] font-bold text-white" to={`/board/${post.id}/edit`}><Pencil size={16} />募集内容を編集</Link>
+              </div>
+            ) : null}
+            {isOwnPost && post.status !== 'archived' ? (
+              <Button className="w-full" disabled={saving || !useSupabaseBoard} onClick={() => { void handleOwnerWithdrawPost(); }} type="button" variant="danger">
+                <Trash2 size={16} />募集を取り下げる
+              </Button>
+            ) : null}
+            {isOwnPost && post.status === 'archived' ? (
+              <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-700">{post.moderation_locked ? 'この募集は管理者により非表示になっています。投稿者から再表示することはできません。' : 'この募集は取り下げ済みです。募集一覧には表示されません。'}</p>
             ) : null}
             {!isOwnPost ? (
               <div className="space-y-2 rounded-2xl border border-theme-sky/20 bg-theme-card/70 p-3">
@@ -391,7 +423,7 @@ export function ActivityBoardDetailPage() {
           </Card>
 
           {isOwnPost ? (
-            <Card className="space-y-4">
+            <Card className="space-y-4" id="activity-participants">
               <div className="space-y-2">
                 <h2 className="flex items-center gap-1.5 text-lg font-black text-theme-text"><UsersRound size={18} />{t('board.detail.interestedPeople')}</h2>
                 <p className="text-sm leading-6 text-theme-muted">この募集に興味を持っている人を確認し、{t('board.detail.accept')} / {t('board.detail.pass')}できます。</p>

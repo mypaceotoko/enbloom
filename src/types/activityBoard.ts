@@ -21,6 +21,9 @@ export type ActivityPost = {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  archived_by?: string | null;
+  archived_at?: string | null;
+  moderation_locked?: boolean;
   room_id?: string | null;
 };
 

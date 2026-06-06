@@ -48,7 +48,7 @@ const legacyActivityPostColumns = [
   'updated_at',
   'closed_at',
 ].join(',');
-const activityPostColumns = `${legacyActivityPostColumns},room_id`;
+const activityPostColumns = `${legacyActivityPostColumns},room_id,archived_by,archived_at,moderation_locked`;
 
 const legacyProfileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used';
 const profileSelectColumns = 'id,display_name,age,location,occupation,bio,interests,relationship_goal,talk_topics,dating_temperature,onboarding_completed,visibility,role,invited_by,invite_code_used,account_status';
@@ -161,6 +161,9 @@ function mapPost(row: ActivityPostRow, stats: Partial<ActivityPostStats> = {}): 
     created_at: row.created_at,
     updated_at: row.updated_at,
     closed_at: row.closed_at,
+    archived_by: row.archived_by ?? null,
+    archived_at: row.archived_at ?? null,
+    moderation_locked: Boolean(row.moderation_locked),
     room_id: row.room_id ?? null,
     author: author ? profileRowToUserProfile(author) : null,
     interest_count: stats.interest_count ?? 0,
@@ -294,7 +297,15 @@ export async function getArchivedActivityPostsForAdmin(): Promise<ActivityPostWi
 }
 
 export async function restoreActivityPostForAdmin(postId: string): Promise<ActivityPost> {
-  return reopenActivityPost(postId);
+  assertNotDemoMode('管理者募集再表示');
+  const { data, error } = await requireSupabaseClient()
+    .rpc('admin_restore_activity_post', { p_post_id: postId })
+    .single<ActivityPost>();
+
+  if (error) throw error;
+  if (!data) throw new Error('募集の再表示に失敗しました');
+  console.info('[ConnectBloom] admin activity post restored', { success: true });
+  return data;
 }
 
 export type AdminDeleteActivityPostResult = {
@@ -667,17 +678,31 @@ export async function reopenActivityPost(postId: string): Promise<ActivityPost> 
   return data;
 }
 
-export async function archiveActivityPost(postId: string): Promise<ActivityPost> {
-  assertNotDemoMode('募集アーカイブ');
+export async function withdrawActivityPost(postId: string): Promise<ActivityPost> {
+  assertNotDemoMode('募集取り下げ');
   const { data, error } = await requireSupabaseClient()
-    .from('activity_posts')
-    .update({ status: 'archived', closed_at: new Date().toISOString() })
-    .eq('id', postId)
-    .select(activityPostColumns)
+    .rpc('owner_withdraw_activity_post', { p_post_id: postId })
     .single<ActivityPost>();
 
   if (error) throw error;
-  console.info('[ConnectBloom] activity post archived', { success: true });
+  if (!data) throw new Error('募集の取り下げに失敗しました');
+  console.info('[ConnectBloom] activity post withdrawn', { success: true });
+  return data;
+}
+
+export async function archiveActivityPost(postId: string): Promise<ActivityPost> {
+  return withdrawActivityPost(postId);
+}
+
+export async function archiveActivityPostForAdmin(postId: string): Promise<ActivityPost> {
+  assertNotDemoMode('管理者募集非表示');
+  const { data, error } = await requireSupabaseClient()
+    .rpc('admin_archive_activity_post', { p_post_id: postId })
+    .single<ActivityPost>();
+
+  if (error) throw error;
+  if (!data) throw new Error('募集の非表示に失敗しました');
+  console.info('[ConnectBloom] admin activity post archived', { success: true });
   return data;
 }
 
