@@ -1,11 +1,9 @@
 import {
   ArrowRight,
-  Blocks,
   CheckCircle2,
   ClipboardCheck,
   Compass,
   Flower2,
-  HeartHandshake,
   LockKeyhole,
   MessageCircle,
   MessagesSquare,
@@ -25,8 +23,8 @@ import { enableDemoMode } from '../lib/demoSession';
 
 const aboutCards = [
   { icon: Compass, titleKey: 'landing.about.card1.title', bodyKey: 'landing.about.card1.body' },
-  { icon: Blocks, titleKey: 'landing.about.card2.title', bodyKey: 'landing.about.card2.body' },
-  { icon: HeartHandshake, titleKey: 'landing.about.card3.title', bodyKey: 'landing.about.card3.body' },
+  { icon: MessageCircle, titleKey: 'landing.about.card2.title', bodyKey: 'landing.about.card2.body' },
+  { icon: ClipboardCheck, titleKey: 'landing.about.card3.title', bodyKey: 'landing.about.card3.body' },
 ] as const;
 
 const featureCards = [
