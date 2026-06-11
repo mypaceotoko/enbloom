@@ -42,6 +42,11 @@ export type AdminArchiveActivityPostResult = ActivityPostWithdrawalResult & {
   moderation_locked: boolean;
 };
 
+export type ActivityPostDeleteResult = {
+  success: boolean;
+  deleted_post_id: string;
+};
+
 const legacyActivityPostColumns = [
   'id',
   'created_by',
@@ -704,6 +709,34 @@ export async function withdrawActivityPost(postId: string): Promise<ActivityPost
 
 export async function archiveActivityPost(postId: string): Promise<ActivityPostWithdrawalResult> {
   return withdrawActivityPost(postId);
+}
+
+export async function restoreActivityPostForOwner(postId: string): Promise<ActivityPostWithdrawalResult> {
+  assertNotDemoMode('募集再開');
+  const rpcName = 'owner_restore_activity_post';
+  const rpcPayload = { p_post_id: postId };
+  const { data, error } = await requireSupabaseClient()
+    .rpc(rpcName, rpcPayload)
+    .single<ActivityPostWithdrawalResult>();
+
+  if (error) throw error;
+  if (!data?.success) throw new Error('募集の再開に失敗しました');
+  console.info('[ConnectBloom] activity post restored by owner', { success: true, action: rpcName, postId, status: data.status });
+  return data;
+}
+
+export async function deleteActivityPostForOwner(postId: string): Promise<ActivityPostDeleteResult> {
+  assertNotDemoMode('募集完全削除');
+  const rpcName = 'owner_delete_activity_post';
+  const rpcPayload = { p_post_id: postId };
+  const { data, error } = await requireSupabaseClient()
+    .rpc(rpcName, rpcPayload)
+    .single<ActivityPostDeleteResult>();
+
+  if (error) throw error;
+  if (!data?.success) throw new Error('募集の完全削除に失敗しました');
+  console.info('[ConnectBloom] activity post deleted by owner', { success: true, action: rpcName, postId });
+  return data;
 }
 
 export async function archiveActivityPostForAdmin(postId: string): Promise<AdminArchiveActivityPostResult> {

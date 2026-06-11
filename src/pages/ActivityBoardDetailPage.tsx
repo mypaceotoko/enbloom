@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, ShieldAlert, Trash2, UsersRound, XCircle } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CheckCircle2, MapPin, MessageSquareText, Monitor, Pencil, RotateCcw, ShieldAlert, Trash2, UsersRound, XCircle } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -21,6 +21,8 @@ import {
   getMyActivityPostInterest,
   archiveActivityPostForAdmin,
   restoreActivityPostForAdmin,
+  deleteActivityPostForOwner,
+  restoreActivityPostForOwner,
   withdrawActivityPost,
 } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
@@ -97,7 +99,9 @@ export function ActivityBoardDetailPage() {
   const useSupabaseBoard = isSupabaseMode && isAuthenticated && !isDemoModeEnabled();
   const isOwnPost = Boolean(user?.id && post?.created_by === user.id);
   const canUseFounderPostModeration = Boolean((isFounder || isAdmin) && useSupabaseBoard && post);
-  const canOwnerWithdrawPost = Boolean(isOwnPost && !post?.moderation_locked && post?.status === 'open');
+  const canOwnerManageOpenPost = Boolean(isOwnPost && !post?.moderation_locked && post?.status === 'open');
+  const canOwnerWithdrawPost = canOwnerManageOpenPost;
+  const canOwnerRestoreOrDeletePost = Boolean(isOwnPost && !post?.moderation_locked && post?.status === 'archived');
 
   useEffect(() => {
     let mounted = true;
@@ -233,6 +237,76 @@ export function ActivityBoardDetailPage() {
     }
   }
 
+
+  async function handleOwnerRestorePost() {
+    if (!post || !canOwnerRestoreOrDeletePost) return;
+
+    setInterestError('');
+    setNotice('');
+    setSaving(true);
+    try {
+      const restored = await restoreActivityPostForOwner(post.id);
+      setPost((current) => (current ? {
+        ...current,
+        status: restored.status,
+        moderation_locked: false,
+        closed_at: null,
+        archived_by: null,
+        archived_at: null,
+        updated_at: new Date().toISOString(),
+      } : current));
+      setNotice('募集を再開しました');
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] activity post owner restore failed', {
+        action: 'owner_restore_activity_post',
+        currentUserId: user?.id ?? null,
+        currentUserEmail: user?.email ?? null,
+        postId: post.id,
+        postOwnerId: post.created_by,
+        isOwner: isOwnPost,
+        statusBefore: post.status,
+        moderationLocked: Boolean(post.moderation_locked),
+        rpcName: 'owner_restore_activity_post',
+        rpcPayloadKeys: ['p_post_id'],
+        ...getSafeErrorLog(caughtError, 'owner_restore_activity_post'),
+      });
+      setNotice(getShortErrorMessage(caughtError, '募集の再開に失敗しました'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleOwnerDeletePost() {
+    if (!post || !canOwnerRestoreOrDeletePost) return;
+
+    setInterestError('');
+    setNotice('');
+    const confirmed = window.confirm('募集を完全削除しますか？\n\nこの操作は元に戻せません。');
+    if (!confirmed) return;
+
+    setSaving(true);
+    try {
+      await deleteActivityPostForOwner(post.id);
+      navigate('/board', { state: { message: '募集を完全削除しました' } });
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] activity post owner delete failed', {
+        action: 'owner_delete_activity_post',
+        currentUserId: user?.id ?? null,
+        currentUserEmail: user?.email ?? null,
+        postId: post.id,
+        postOwnerId: post.created_by,
+        isOwner: isOwnPost,
+        statusBefore: post.status,
+        moderationLocked: Boolean(post.moderation_locked),
+        rpcName: 'owner_delete_activity_post',
+        rpcPayloadKeys: ['p_post_id'],
+        ...getSafeErrorLog(caughtError, 'owner_delete_activity_post'),
+      });
+      setNotice(getShortErrorMessage(caughtError, '募集の完全削除に失敗しました'));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleOwnerWithdrawPost() {
     if (!post || !canOwnerWithdrawPost) return;
@@ -429,7 +503,7 @@ export function ActivityBoardDetailPage() {
                 </div>
               </div>
             ) : null}
-            {isOwnPost ? (
+            {canOwnerManageOpenPost ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 <a className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-4 py-2 text-[13px] font-bold text-theme-main-dark shadow-sm shadow-theme-sky/15" href="#activity-participants"><UsersRound size={16} />参加者を管理</a>
                 <Link className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-theme-main px-4 py-2 text-[13px] font-bold text-white" to={`/board/${post.id}/edit`}><Pencil size={16} />募集内容を編集</Link>
@@ -439,6 +513,16 @@ export function ActivityBoardDetailPage() {
               <Button className="w-full" disabled={saving || !useSupabaseBoard} onClick={() => { void handleOwnerWithdrawPost(); }} type="button" variant="danger">
                 <Trash2 size={16} />募集を取り下げる
               </Button>
+            ) : null}
+            {canOwnerRestoreOrDeletePost ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button disabled={saving || !useSupabaseBoard} onClick={() => { void handleOwnerRestorePost(); }} type="button" variant="secondary">
+                  <RotateCcw size={16} />再開
+                </Button>
+                <Button disabled={saving || !useSupabaseBoard} onClick={() => { void handleOwnerDeletePost(); }} type="button" variant="danger">
+                  <Trash2 size={16} />完全削除
+                </Button>
+              </div>
             ) : null}
             {isOwnPost && post.status === 'archived' ? (
               <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-700">{post.moderation_locked ? 'この募集は管理者により非表示になっています。投稿者から再表示することはできません。' : 'この募集は取り下げ済みです。募集一覧には表示されません。'}</p>
@@ -466,10 +550,10 @@ export function ActivityBoardDetailPage() {
               </div>
             ) : null}
             {!useSupabaseBoard ? <p className="text-xs font-bold text-theme-muted">Supabaseログイン時に{t('board.detail.interestedPeople')}を管理できます。</p> : null}
-            {isOwnPost ? <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認済みになると、参加者と1対1の会話を始められます。</p> : null}
+            {canOwnerManageOpenPost ? <p className="rounded-xl bg-theme-accent-soft/60 p-3 text-xs font-bold leading-6 text-theme-muted">承認済みになると、参加者と1対1の会話を始められます。</p> : null}
           </Card>
 
-          {isOwnPost ? (
+          {canOwnerManageOpenPost ? (
             <Card className="space-y-4" id="activity-participants">
               <div className="space-y-2">
                 <h2 className="flex items-center gap-1.5 text-lg font-black text-theme-text"><UsersRound size={18} />{t('board.detail.interestedPeople')}</h2>
