@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Archive, CalendarDays, MapPin, MessageSquareText, Pencil, RotateCcw, UsersRound, XCircle } from 'lucide-react';
+import { Archive, CalendarDays, MapPin, MessageSquareText, Pencil, RotateCcw, Trash2, UsersRound, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -9,7 +9,7 @@ import { mockActivityPosts } from '../data/mockActivityPosts';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../hooks/useLanguage';
 import type { TranslationKey } from '../lib/i18n';
-import { closeActivityPost, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost, withdrawActivityPost } from '../lib/activityBoardApi';
+import { closeActivityPost, deleteActivityPostForOwner, getActivityPostInterestsForOwner, getMyActivityPosts, reopenActivityPost, restoreActivityPostForOwner, withdrawActivityPost } from '../lib/activityBoardApi';
 import { formatConversationFailureMessage, getActivityInterestConversationPath } from '../lib/matchApi';
 import { getSafeErrorLog, getShortErrorMessage } from '../lib/errorMessage';
 import type { ActivityPostInterestWithProfile, ActivityPostStatus, ActivityPostWithStats } from '../types/activityBoard';
@@ -85,9 +85,9 @@ export function MyBoardPage() {
     };
   }, [useSupabaseBoard, user?.id]);
 
-  function applyPostStatus(postId: string, status: ActivityPostStatus, closedAt?: string | null) {
+  function applyPostStatus(postId: string, status: ActivityPostStatus, closedAt?: string | null, moderationLocked?: boolean) {
     setPosts((current) => current.map((post) => (
-      post.id === postId ? { ...post, status, closed_at: closedAt ?? post.closed_at } : post
+      post.id === postId ? { ...post, status, closed_at: closedAt ?? post.closed_at, moderation_locked: moderationLocked ?? post.moderation_locked } : post
     )));
   }
 
@@ -161,6 +161,69 @@ export function MyBoardPage() {
     }
   }
 
+  async function handleOwnerRestore(post: ActivityPostWithStats) {
+    if (!useSupabaseBoard) return;
+
+    setUpdatingPostId(post.id);
+    setError('');
+    try {
+      const restored = await restoreActivityPostForOwner(post.id);
+      applyPostStatus(post.id, restored.status, null, false);
+      setPosts((current) => current.map((currentPost) => (
+        currentPost.id === post.id ? { ...currentPost, archived_by: null, archived_at: null, updated_at: new Date().toISOString() } : currentPost
+      )));
+      setNotice('募集を再開しました');
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] activity post owner restore failed', {
+        action: 'owner_restore_activity_post',
+        currentUserId: user?.id ?? null,
+        currentUserEmail: user?.email ?? null,
+        postId: post.id,
+        postOwnerId: post.created_by,
+        isOwner: Boolean(user?.id && post.created_by === user.id),
+        statusBefore: post.status,
+        moderationLocked: Boolean(post.moderation_locked),
+        rpcName: 'owner_restore_activity_post',
+        rpcPayloadKeys: ['p_post_id'],
+        ...getSafeErrorLog(caughtError, 'owner_restore_activity_post'),
+      });
+      setError(getShortErrorMessage(caughtError, '募集の再開に失敗しました'));
+    } finally {
+      setUpdatingPostId(null);
+    }
+  }
+
+  async function handleOwnerDelete(post: ActivityPostWithStats) {
+    if (!useSupabaseBoard) return;
+    const confirmed = window.confirm('募集を完全削除しますか？\n\nこの操作は元に戻せません。');
+    if (!confirmed) return;
+
+    setUpdatingPostId(post.id);
+    setError('');
+    try {
+      await deleteActivityPostForOwner(post.id);
+      setPosts((current) => current.filter((currentPost) => currentPost.id !== post.id));
+      setNotice('募集を完全削除しました');
+    } catch (caughtError) {
+      console.warn('[ConnectBloom] activity post owner delete failed', {
+        action: 'owner_delete_activity_post',
+        currentUserId: user?.id ?? null,
+        currentUserEmail: user?.email ?? null,
+        postId: post.id,
+        postOwnerId: post.created_by,
+        isOwner: Boolean(user?.id && post.created_by === user.id),
+        statusBefore: post.status,
+        moderationLocked: Boolean(post.moderation_locked),
+        rpcName: 'owner_delete_activity_post',
+        rpcPayloadKeys: ['p_post_id'],
+        ...getSafeErrorLog(caughtError, 'owner_delete_activity_post'),
+      });
+      setError(getShortErrorMessage(caughtError, '募集の完全削除に失敗しました'));
+    } finally {
+      setUpdatingPostId(null);
+    }
+  }
+
   async function handleArchive(post: ActivityPostWithStats) {
     if (!useSupabaseBoard) return;
     const confirmed = window.confirm('この募集を取り下げますか？');
@@ -228,15 +291,28 @@ export function MyBoardPage() {
               </div>
             ) : null}
             <div className="space-y-2 border-t border-white/60 pt-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-3 py-2 text-[13px] font-black text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />{t('myBoard.manage')}</Link>
-                <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-3 py-2 text-[13px] font-black text-theme-text" to={`/board/${post.id}/edit`}><Pencil size={16} />{t('myBoard.edit')}</Link>
-              </div>
-              <div className="grid gap-2 text-xs sm:grid-cols-3">
-                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={15} />{t('myBoard.close')}</Button>
-                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'closed'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={15} />{t('myBoard.reopen')}</Button>
-                <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status === 'archived'} onClick={() => void handleArchive(post)} variant="danger"><Archive size={15} />{t('myBoard.archive')}</Button>
-              </div>
+              {post.status === 'archived' && post.moderation_locked ? (
+                <p className="rounded-xl bg-amber-50 p-3 text-xs font-bold leading-6 text-amber-700">この募集は管理者により非表示になっています。投稿者から再開や完全削除はできません。</p>
+              ) : null}
+              {post.status === 'archived' && !post.moderation_locked ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button className="min-h-10 px-3 py-2 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id} onClick={() => void handleOwnerRestore(post)} variant="secondary"><RotateCcw size={15} />再開</Button>
+                  <Button className="min-h-10 px-3 py-2 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id} onClick={() => void handleOwnerDelete(post)} variant="danger"><Trash2 size={15} />完全削除</Button>
+                </div>
+              ) : null}
+              {post.status !== 'archived' && !post.moderation_locked ? (
+                <>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-theme-sky/30 bg-gradient-to-r from-theme-yellow/85 to-theme-sky/55 px-3 py-2 text-[13px] font-black text-theme-main-dark shadow-sm shadow-theme-sky/15" to={`/board/${post.id}`}><UsersRound size={16} />{t('myBoard.manage')}</Link>
+                    <Link className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl bg-theme-accent-soft px-3 py-2 text-[13px] font-black text-theme-text" to={`/board/${post.id}/edit`}><Pencil size={16} />{t('myBoard.edit')}</Link>
+                  </div>
+                  <div className="grid gap-2 text-xs sm:grid-cols-3">
+                    <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleClose(post.id)} variant="secondary"><XCircle size={15} />{t('myBoard.close')}</Button>
+                    <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'closed'} onClick={() => void handleReopen(post.id)} variant="secondary"><RotateCcw size={15} />{t('myBoard.reopen')}</Button>
+                    <Button className="min-h-9 px-3 py-1.5 text-xs" disabled={!useSupabaseBoard || updatingPostId === post.id || post.status !== 'open'} onClick={() => void handleArchive(post)} variant="danger"><Archive size={15} />{t('myBoard.archive')}</Button>
+                  </div>
+                </>
+              ) : null}
             </div>
           </Card>
         ))}
